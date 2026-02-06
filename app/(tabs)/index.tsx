@@ -7,8 +7,15 @@ const colors = {
   accent: "#4CAF50",
 };
 
+type Session = {
+  id: string;
+  startTime: Date;
+  endTime: Date | null;
+};
+
+
 export default function HomeScreen() {
-  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [activeSession, setActiveSession] = useState<Session | null>(null);
 
   return (
     <View
@@ -23,9 +30,13 @@ export default function HomeScreen() {
         Siddhant's Gym Log
       </Text>
 
-      {!sessionStartTime ? (
+      {!activeSession ? (
         <Pressable
-          onPress={() => setSessionStartTime(new Date())}
+          onPress={() => setActiveSession({
+            id: Date.now().toString(),
+            startTime: new Date(),
+            endTime: null
+          })}
           style={{
             backgroundColor: colors.accent,
             paddingVertical: 12,
@@ -38,13 +49,34 @@ export default function HomeScreen() {
           </Text>
         </Pressable>
       ) : (
-        <Text style={{ color: colors.text, fontSize: 16 }}>
-          Session started at{" "}
-          {sessionStartTime?.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </Text>
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ color: colors.text, fontSize: 16, marginBottom: 16 }}>
+            Session started at{" "}
+            {activeSession.startTime.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+
+          <Pressable
+            onPress={() =>
+               setActiveSession((prev) => {
+                if (!prev) return null;
+                const finishedSession = { ...prev, endTime: new Date() };
+                console.log("Finished Session:", finishedSession);
+                return null;
+              })
+            }
+            style={{
+              backgroundColor: "#e91616",
+              paddingVertical: 12,
+              paddingHorizontal: 24,
+              borderRadius: 6,
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 19 }}>End Session</Text>
+          </Pressable>
+        </View>
       )}
     </View>
   );
