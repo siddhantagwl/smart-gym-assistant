@@ -1,4 +1,3 @@
-// app/components/History.tsx
 import { View, Text } from "react-native";
 
 type StoredSession = {
@@ -10,6 +9,22 @@ type StoredSession = {
 type HistoryProps = {
   sessions: StoredSession[];
 };
+
+function formatDuration(start: string, end: string): string {
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+
+  const diffMinutes = Math.floor((endMs - startMs) / 60000);
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min`;
+  }
+
+  const hours = Math.floor(diffMinutes / 60);
+  const minutes = diffMinutes % 60;
+
+  return `${hours}h ${minutes}m`;
+}
 
 export function History({ sessions }: HistoryProps) {
   return (
@@ -23,16 +38,18 @@ export function History({ sessions }: HistoryProps) {
       ) : (
         sessions.map((s) => (
           <Text key={s.id} style={{ color: "#fff", marginBottom: 6 }}>
-            {new Date(s.start_time).toLocaleDateString()}{" "}
-            {new Date(s.start_time).toLocaleTimeString([], {
+            {new Date(s.start_time).toLocaleDateString("en-GB")}{"     "}
+            {new Date(s.start_time).toLocaleTimeString("en-GB", {
               hour: "2-digit",
               minute: "2-digit",
             })}
             {" – "}
-            {new Date(s.end_time).toLocaleTimeString([], {
+            {new Date(s.end_time).toLocaleTimeString("en-GB", {
               hour: "2-digit",
               minute: "2-digit",
             })}
+            {"  ·  "}
+            {formatDuration(s.start_time, s.end_time)}
           </Text>
         ))
       )}

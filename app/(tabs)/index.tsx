@@ -3,8 +3,6 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { initDb } from "../db/schema";
 import { insertSession, StoredSession } from "../db/sessions";
-import { getAllSessions } from "../db/sessions";
-import { History } from "@/components/history";
 
 const colors = {
   background: "#0F0F0F",
@@ -21,11 +19,9 @@ type Session = {
 
 export default function HomeScreen() {
   const [activeSession, setActiveSession] = useState<Session | null>(null);
-  const [sessions, setSessions] = useState<StoredSession[]>([]);
 
   useEffect(() => {
     initDb();
-    setSessions(getAllSessions()); // read once on load
   }, []);
 
   return (
@@ -63,7 +59,7 @@ export default function HomeScreen() {
         <View style={{ alignItems: "center" }}>
           <Text style={{ color: colors.text, fontSize: 16, marginBottom: 16 }}>
             Session started at{" "}
-            {activeSession.startTime.toLocaleTimeString([], {
+            {activeSession.startTime.toLocaleTimeString("en-GB", {
               hour: "2-digit",
               minute: "2-digit",
             })}
@@ -77,7 +73,6 @@ export default function HomeScreen() {
 
                 insertSession(finishedSession);
                 console.log("Session saved:", finishedSession);
-                setSessions(getAllSessions());
 
                 return null;
               })
@@ -93,7 +88,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       )}
-      <History sessions={sessions} />
+
     </View>
   );
 }
