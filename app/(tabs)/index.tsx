@@ -1,5 +1,10 @@
 import { View, Text, Pressable } from "react-native";
 import { useState } from "react";
+import { useEffect } from "react";
+import { initDb } from "../db/schema";
+import { insertSession, StoredSession } from "../db/sessions";
+import { getAllSessions } from "../db/sessions";
+import { History } from "@/components/history";
 
 const colors = {
   background: "#0F0F0F",
@@ -16,6 +21,12 @@ type Session = {
 
 export default function HomeScreen() {
   const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [sessions, setSessions] = useState<StoredSession[]>([]);
+
+  useEffect(() => {
+    initDb();
+    setSessions(getAllSessions()); // read once on load
+  }, []);
 
   return (
     <View
@@ -63,7 +74,11 @@ export default function HomeScreen() {
                setActiveSession((prev) => {
                 if (!prev) return null;
                 const finishedSession = { ...prev, endTime: new Date() };
-                console.log("Finished Session:", finishedSession);
+
+                insertSession(finishedSession);
+                console.log("Session saved:", finishedSession);
+                setSessions(getAllSessions());
+
                 return null;
               })
             }
@@ -78,6 +93,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       )}
+      <History sessions={sessions} />
     </View>
   );
 }
