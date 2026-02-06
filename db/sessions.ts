@@ -35,3 +35,27 @@ export function getAllSessions(): StoredSession[] {
     `
   ) as StoredSession[];
 }
+
+export type ExerciseInput = {
+  id: string;
+  sessionId: string;
+  name: string;
+  sets: number;
+  reps: number;
+};
+
+export function insertExercise(exercise: ExerciseInput) {
+  db.runSync(
+    `
+    INSERT INTO exercises (id, session_id, name, sets, reps)
+    VALUES (?, ?, ?, ?, ?);
+    `,
+    [
+      exercise.id,
+      exercise.sessionId,
+      exercise.name,
+      exercise.sets,
+      exercise.reps,
+    ]
+  );
+}

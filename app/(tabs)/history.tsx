@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { useEffect, useState } from "react";
-import { initDb } from "../db/schema";
-import { getAllSessions, StoredSession } from "../db/sessions";
+import { initDb } from "@/db/schema";
+import { getAllSessions, StoredSession } from "@/db/sessions";
 import { History } from "../../components/history";
 
 const colors = {
