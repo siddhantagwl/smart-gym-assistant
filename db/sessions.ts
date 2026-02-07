@@ -42,13 +42,14 @@ export type ExerciseInput = {
   name: string;
   sets: number;
   reps: number;
+  weightKg: number;
 };
 
 export function insertExercise(exercise: ExerciseInput) {
   db.runSync(
     `
-    INSERT INTO exercises (id, session_id, name, sets, reps)
-    VALUES (?, ?, ?, ?, ?);
+    INSERT INTO exercises (id, session_id, name, sets, reps, weight_kg)
+    VALUES (?, ?, ?, ?, ?, ?);
     `,
     [
       exercise.id,
@@ -56,6 +57,7 @@ export function insertExercise(exercise: ExerciseInput) {
       exercise.name,
       exercise.sets,
       exercise.reps,
+      exercise.weightKg,
     ]
   );
 }

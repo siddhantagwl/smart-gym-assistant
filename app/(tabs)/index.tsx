@@ -1,8 +1,11 @@
 import { View, Text, Pressable } from "react-native";
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+
 import { initDb } from "@/db/schema";
 import { insertSession, insertExercise } from "@/db/sessions";
+import AddExercise from "@/components/AddExercise";
+
+type WorkoutType = "Push" | "Pull" | "Legs";
 
 const colors = {
   background: "#0F0F0F",
@@ -14,14 +17,28 @@ type Session = {
   id: string;
   startTime: Date;
   endTime: Date | null;
+  workoutType: WorkoutType;
 };
 
+const suggestedExercises: Record<WorkoutType, string[]> = {
+  Push: [
+    "Bench Press",
+    "Overhead Press",
+    "Incline Dumbbell Press",
+    "Lateral Raises",
+    "Triceps Pushdown",
+  ],
+  Pull: ["Pull Ups", "Barbell Row", "Lat Pulldown", "Face Pull", "Biceps Curl"],
+  Legs: ["Squat", "Romanian Deadlift", "Leg Press", "Leg Curl", "Calf Raises"],
+};
 
 export default function HomeScreen() {
   const [activeSession, setActiveSession] = useState<Session | null>(null);
+
   const [exerciseName, setExerciseName] = useState("");
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
+  const [weightKg, setWeightKg] = useState(1);
 
   useEffect(() => {
     initDb();
@@ -37,30 +54,56 @@ export default function HomeScreen() {
       }}
     >
       <Text style={{ color: colors.text, fontSize: 28, marginBottom: 20 }}>
-        Siddhant's Gym Log
+        Siddhant&apos;s Gym Log
       </Text>
 
       {!activeSession ? (
-        <Pressable
-          onPress={() => setActiveSession({
-            id: Date.now().toString(),
-            startTime: new Date(),
-            endTime: null
-          })}
-          style={{
-            backgroundColor: colors.accent,
-            paddingVertical: 12,
-            paddingHorizontal: 24,
-            borderRadius: 6,
-          }}
-        >
-          <Text style={{ color: "#fff", fontSize: 19}}>
-            Start Session
+        <View style={{ width: "100%", paddingHorizontal: 24 }}>
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 16,
+              marginBottom: 12,
+              textAlign: "center",
+            }}
+          >
+            Choose today&apos;s workout
           </Text>
-        </Pressable>
+
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            {(["Push", "Pull", "Legs"] as WorkoutType[]).map((t) => (
+              <Pressable
+                key={t}
+                onPress={() =>
+                  setActiveSession({
+                    id: Date.now().toString(),
+                    startTime: new Date(),
+                    endTime: null,
+                    workoutType: t,
+                  })
+                }
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.accent,
+                  paddingVertical: 12,
+                  borderRadius: 6,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#000", fontSize: 16 }}>{t}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
       ) : (
         <View style={{ alignItems: "center" }}>
-          <Text style={{ color: colors.text, fontSize: 16, marginBottom: 16 }}>
+          <Text style={{ color: colors.text, fontSize: 16, marginBottom: 10 }}>
             Session started at{" "}
             {activeSession.startTime.toLocaleTimeString("en-GB", {
               hour: "2-digit",
@@ -68,35 +111,39 @@ export default function HomeScreen() {
             })}
           </Text>
 
-          <View style={{ marginBottom: 16, width: "100%", paddingHorizontal: 24 }}>
-            <Text style={{ color: colors.text, marginBottom: 8 }}>Add exercise</Text>
-            <Pressable onPress={() => setExerciseName("Bench Press")} style={{ marginBottom: 6 }}>
-              <Text style={{ color: "#aaa" }}>Name: {exerciseName || "tap to set example"}</Text>
-            </Pressable>
-            <Text style={{ color: "#aaa" }}>Sets: {sets}  Reps: {reps}</Text>
-            <Pressable
-              onPress={() => {
-                if (!activeSession || !exerciseName) return;
-                insertExercise({
-                  id: Date.now().toString(),
-                  sessionId: activeSession.id,
-                  name: exerciseName,
-                  sets,
-                  reps,
-                });
-                setExerciseName("");
-              }}
-              style={{
-                backgroundColor: colors.accent,
-                paddingVertical: 10,
-                borderRadius: 6,
-                marginTop: 8,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: "#000" }}>Save Exercise</Text>
-            </Pressable>
-          </View>
+          <Text style={{ color: "#aaa", marginBottom: 12 }}>
+            Workout: {activeSession.workoutType}
+          </Text>
+
+          <AddExercise
+            titleColor={colors.text}
+            accentColor={colors.accent}
+            workoutLabel={activeSession.workoutType}
+            suggestions={suggestedExercises[activeSession.workoutType]}
+            exerciseName={exerciseName}
+            sets={sets}
+            reps={reps}
+            weightKg={weightKg}
+            onSelectExercise={(name) => setExerciseName(name)}
+            onSetsMinus={() => setSets((s) => Math.max(1, s - 1))}
+            onSetsPlus={() => setSets((s) => s + 1)}
+            onRepsMinus={() => setReps((r) => Math.max(1, r - 1))}
+            onRepsPlus={() => setReps((r) => r + 1)}
+            onWeightMinus={() => setWeightKg((w) => Math.max(0, Math.round((w - 2.5) * 10) / 10))}
+            onWeightPlus={() => setWeightKg((w) => Math.round((w + 2.5) * 10) / 10)}
+            onSave={() => {
+              if (!exerciseName) return;
+              insertExercise({
+                id: Date.now().toString(),
+                sessionId: activeSession.id,
+                name: exerciseName,
+                sets,
+                reps,
+                weightKg,
+              });
+              setExerciseName("");
+            }}
+          />
 
           <Pressable
             onPress={() =>

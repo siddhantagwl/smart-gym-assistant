@@ -16,7 +16,14 @@ export function initDb() {
         name TEXT NOT NULL,
         sets INTEGER NOT NULL,
         reps INTEGER NOT NULL,
+        weight_kg REAL NOT NULL,
         FOREIGN KEY (session_id) REFERENCES sessions(id)
     );
     `);
+
+    try {
+        db.execSync(`ALTER TABLE exercises ADD COLUMN weight_kg REAL NOT NULL DEFAULT 0;`);
+    } catch (e) {
+        // ignore if column already exists
+    }
 }
