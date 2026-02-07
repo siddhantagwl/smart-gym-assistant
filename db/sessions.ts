@@ -22,18 +22,24 @@ export function insertSession(session: Session) {
 
 export type StoredSession = {
   id: string;
-  start_time: string;
-  end_time: string;
+  startTime: string;
+  endTime: string;
 };
 
 export function getAllSessions(): StoredSession[] {
-  return db.getAllSync(
+  const rows = db.getAllSync(
     `
     SELECT id, start_time, end_time
     FROM sessions
     ORDER BY start_time DESC;
     `
-  ) as StoredSession[];
+  ) as any[];
+
+  return rows.map((r) => ({
+    id: String(r.id),
+    startTime: String(r.start_time),
+    endTime: String(r.end_time),
+  }));
 }
 
 export type ExerciseInput = {
@@ -60,4 +66,41 @@ export function insertExercise(exercise: ExerciseInput) {
       exercise.weightKg,
     ]
   );
+}
+
+export type StoredExercise = {
+  id: string;
+  sessionId: string;
+  name: string;
+  sets: number;
+  reps: number;
+  weightKg: number;
+};
+
+export function getExercisesForSession(sessionId: string): StoredExercise[] {
+  const rows = db.getAllSync(
+    `SELECT id, session_id, name, sets, reps, weight_kg
+     FROM exercises
+     WHERE session_id = ?
+     ORDER BY rowid ASC;`,
+    [sessionId]
+  ) as any[];
+
+  return rows.map((r) => ({
+    id: String(r.id),
+    sessionId: String(r.session_id),
+    name: String(r.name),
+    sets: Number(r.sets),
+    reps: Number(r.reps),
+    weightKg: Number(r.weight_kg),
+  }));
+}
+
+export function getExerciseCountForSession(sessionId: string): number {
+  const row = db.getFirstSync(
+    `SELECT COUNT(1) as c FROM exercises WHERE session_id = ?;`,
+    [sessionId]
+  ) as any;
+
+  return row ? Number(row.c) : 0;
 }
