@@ -129,8 +129,8 @@ export default function HomeScreen() {
             onSetsPlus={() => setSets((s) => s + 1)}
             onRepsMinus={() => setReps((r) => Math.max(1, r - 1))}
             onRepsPlus={() => setReps((r) => r + 1)}
-            onWeightMinus={() => setWeightKg((w) => Math.max(0, Math.round((w - 2.5) * 10) / 10))}
-            onWeightPlus={() => setWeightKg((w) => Math.round((w + 2.5) * 10) / 10)}
+            onWeightMinus={() => setWeightKg((w) => Math.max(0, Math.round((w - 0.5) * 10) / 10))}
+            onWeightPlus={() => setWeightKg((w) => Math.round((w + 0.5) * 10) / 10)}
             onSave={() => {
               if (!exerciseName) return;
               insertExercise({
