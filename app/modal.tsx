@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { initDb } from "@/db/schema";
-import { getExercisesForSession, StoredExercise } from "@/db/sessions";
+import { getAllSessions, getExercisesForSession, StoredExercise } from "@/db/sessions";
 
 const colors = {
   background: "#0F0F0F",
@@ -24,12 +24,21 @@ export default function ModalScreen() {
   }, [params.sessionId]);
 
   const [exercises, setExercises] = useState<StoredExercise[]>([]);
+  const [workoutType, setWorkoutType] = useState<string>("Unknown");
+  const [sessionNote, setSessionNote] = useState<string>("");
 
   useEffect(() => {
     initDb();
 
+    const sessions = getAllSessions();
+    const s = sessions.find((x) => x.id === sessionId);
+    setWorkoutType(s?.workoutType || "Unknown");
+    setSessionNote(s?.note || "");
+
     if (!sessionId) {
       setExercises([]);
+      setWorkoutType("Unknown");
+      setSessionNote("");
       return;
     }
 
@@ -47,7 +56,17 @@ export default function ModalScreen() {
           alignItems: "center",
         }}
       >
-        <Text style={{ color: colors.text, fontSize: 18 }}>Session details</Text>
+        <View>
+          <Text style={{ color: colors.text, fontSize: 18 }}>Session details</Text>
+          <Text style={{ color: colors.muted, marginTop: 4 }}>
+            Workout: {workoutType}
+          </Text>
+          {sessionNote ? (
+            <Text style={{ color: colors.muted, marginTop: 4 }} numberOfLines={3}>
+              Note: {sessionNote}
+            </Text>
+          ) : null}
+        </View>
         <Pressable onPress={() => router.back()}>
           <Text style={{ color: colors.accent, fontSize: 16 }}>Close</Text>
         </Pressable>
@@ -81,6 +100,12 @@ export default function ModalScreen() {
               <Text style={{ color: colors.muted }}>
                 {item.sets} sets  ·  {item.reps} reps  ·  {item.weightKg} kg
               </Text>
+
+              {item.note ? (
+                <Text style={{ color: colors.muted, marginTop: 6 }} numberOfLines={3}>
+                  Note: {item.note}
+                </Text>
+              ) : null}
             </View>
           )}
         />

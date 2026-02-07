@@ -132,13 +132,34 @@ export default function HistoryScreen() {
                   marginBottom: 12,
                 }}
               >
-                <Text style={{ color: colors.text, fontSize: 16, marginBottom: 6 }}>
-                  {formatDate(start)}
-                </Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <Text style={{ color: colors.text, fontSize: 16 }}>
+                    {formatDate(start)}
+                  </Text>
 
-                <Text style={{ color: colors.muted, marginBottom: 10 }}>
+                  <View style={{
+                    paddingVertical: 4,
+                    paddingHorizontal: 10,
+                    borderRadius: 999,
+                    backgroundColor: "#0f0f0f",
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}>
+                    <Text style={{ color: colors.accent, fontSize: 17 }}>
+                      {item.workoutType || "Unknown"}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={{ color: colors.muted, marginBottom: item.note ? 6 : 10 }}>
                   {formatTime(start)}{end ? ` to ${formatTime(end)}` : ""}{end ? `  ·  ${durationMinutes(start, end)}` : ""}
                 </Text>
+
+                {item.note ? (
+                  <Text style={{ color: colors.muted, marginBottom: 10 }} numberOfLines={2}>
+                    Note: {item.note}
+                  </Text>
+                ) : null}
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <Text style={{ color: colors.muted }}>
