@@ -4,18 +4,22 @@ type Session = {
   id: string;
   startTime: Date;
   endTime: Date;
+  workoutType: string;
+  note: string;
 };
 
 export function insertSession(session: Session) {
   db.runSync(
     `
-    INSERT INTO sessions (id, start_time, end_time)
-    VALUES (?, ?, ?);
+    INSERT INTO sessions (id, start_time, end_time, workout_type, note)
+    VALUES (?, ?, ?, ?, ?);
     `,
     [
       session.id,
       session.startTime.toISOString(),
       session.endTime.toISOString(),
+      session.workoutType,
+      session.note,
     ]
   );
 }
@@ -24,12 +28,14 @@ export type StoredSession = {
   id: string;
   startTime: string;
   endTime: string;
+  workoutType: string;
+  note: string;
 };
 
 export function getAllSessions(): StoredSession[] {
   const rows = db.getAllSync(
     `
-    SELECT id, start_time, end_time
+    SELECT id, start_time, end_time, workout_type, note
     FROM sessions
     ORDER BY start_time DESC;
     `
@@ -39,6 +45,8 @@ export function getAllSessions(): StoredSession[] {
     id: String(r.id),
     startTime: String(r.start_time),
     endTime: String(r.end_time),
+    workoutType: r.workout_type ? String(r.workout_type) : "Unknown",
+    note: r.note ? String(r.note) : "",
   }));
 }
 
@@ -49,13 +57,14 @@ export type ExerciseInput = {
   sets: number;
   reps: number;
   weightKg: number;
+  note: string;
 };
 
 export function insertExercise(exercise: ExerciseInput) {
   db.runSync(
     `
-    INSERT INTO exercises (id, session_id, name, sets, reps, weight_kg)
-    VALUES (?, ?, ?, ?, ?, ?);
+    INSERT INTO exercises (id, session_id, name, sets, reps, weight_kg, note)
+    VALUES (?, ?, ?, ?, ?, ?, ?);
     `,
     [
       exercise.id,
@@ -64,6 +73,7 @@ export function insertExercise(exercise: ExerciseInput) {
       exercise.sets,
       exercise.reps,
       exercise.weightKg,
+      exercise.note,
     ]
   );
 }
@@ -75,11 +85,12 @@ export type StoredExercise = {
   sets: number;
   reps: number;
   weightKg: number;
+  note: string;
 };
 
 export function getExercisesForSession(sessionId: string): StoredExercise[] {
   const rows = db.getAllSync(
-    `SELECT id, session_id, name, sets, reps, weight_kg
+    `SELECT id, session_id, name, sets, reps, weight_kg, note
      FROM exercises
      WHERE session_id = ?
      ORDER BY rowid ASC;`,
@@ -93,6 +104,7 @@ export function getExercisesForSession(sessionId: string): StoredExercise[] {
     sets: Number(r.sets),
     reps: Number(r.reps),
     weightKg: Number(r.weight_kg),
+    note: r.note ? String(r.note) : "",
   }));
 }
 

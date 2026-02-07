@@ -1,4 +1,4 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, TextInput } from "react-native";
 
 type AddExerciseProps = {
   titleColor: string;
@@ -11,6 +11,9 @@ type AddExerciseProps = {
   sets: number;
   reps: number;
   weightKg: number;
+  note: string;
+
+  onNoteChange: (text: string) => void;
 
   onSelectExercise: (name: string) => void;
 
@@ -35,6 +38,8 @@ export default function AddExercise({
   sets,
   reps,
   weightKg,
+  note,
+  onNoteChange,
   onSelectExercise,
   onSetsMinus,
   onSetsPlus,
@@ -187,6 +192,27 @@ export default function AddExercise({
           <Text style={{ color: "#fff" }}>Kg +</Text>
         </Pressable>
       </View>
+
+      <Text style={{ color: "#aaa", marginBottom: 6 }}>
+        Note (optional)
+      </Text>
+
+      <TextInput
+        value={note}
+        onChangeText={onNoteChange}
+        placeholder="How did it feel?"
+        placeholderTextColor="#666"
+        style={{
+          borderWidth: 1,
+          borderColor: "#222",
+          borderRadius: 6,
+          paddingVertical: 10,
+          paddingHorizontal: 12,
+          color: "#fff",
+          backgroundColor: "#111",
+          marginBottom: 2,
+        }}
+      />
 
       <Pressable
         onPress={onSave}

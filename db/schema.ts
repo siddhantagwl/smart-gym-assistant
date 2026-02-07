@@ -5,9 +5,24 @@ export function initDb() {
         CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY NOT NULL,
         start_time TEXT NOT NULL,
-        end_time TEXT NOT NULL
+        end_time TEXT NOT NULL,
+        workout_type TEXT NOT NULL,
+        note TEXT NOT NULL
         );
     `);
+
+    try {
+        db.execSync(`ALTER TABLE sessions ADD COLUMN workout_type TEXT NOT NULL DEFAULT 'Unknown';`);
+    } catch (e) {
+        // ignore if column already exists
+    }
+
+    try {
+        db.execSync(`ALTER TABLE sessions ADD COLUMN note TEXT NOT NULL DEFAULT '';`);
+    } catch (e) {
+        // ignore if column already exists
+    }
+
 
     db.execSync(`
     CREATE TABLE IF NOT EXISTS exercises (
@@ -17,12 +32,19 @@ export function initDb() {
         sets INTEGER NOT NULL,
         reps INTEGER NOT NULL,
         weight_kg REAL NOT NULL,
+        note TEXT NOT NULL,
         FOREIGN KEY (session_id) REFERENCES sessions(id)
     );
     `);
 
     try {
         db.execSync(`ALTER TABLE exercises ADD COLUMN weight_kg REAL NOT NULL DEFAULT 0;`);
+    } catch (e) {
+        // ignore if column already exists
+    }
+
+    try {
+        db.execSync(`ALTER TABLE exercises ADD COLUMN note TEXT NOT NULL DEFAULT '';`);
     } catch (e) {
         // ignore if column already exists
     }
