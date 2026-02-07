@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Pressable, TextInput } from "react-native";
 
 import AddExercise from "@/components/AddExercise";
-import { insertExercise, insertSession } from "@/db/sessions";
+import { getLatestExerciseByName, insertExercise, insertSession, LatestExercise } from "@/db/sessions";
 
 type WorkoutType = "Push" | "Pull" | "Legs";
 
@@ -38,6 +38,18 @@ export default function ActiveSession({
 
   const [exerciseNote, setExerciseNote] = useState("");
   const [sessionNote, setSessionNote] = useState("");
+  const [latest, setLatest] = useState<LatestExercise | null>(null);
+
+  useEffect(() => {
+    const trimmed = exerciseName.trim();
+    if (!trimmed) {
+      setLatest(null);
+      return;
+    }
+
+    const rec = getLatestExerciseByName(trimmed);
+    setLatest(rec);
+  }, [exerciseName]);
 
   return (
     <View style={{ width: "100%", alignItems: "center" }}>
@@ -63,7 +75,10 @@ export default function ActiveSession({
         reps={reps}
         weightKg={weightKg}
         note={exerciseNote}
-        onSelectExercise={(name) => setExerciseName(name)}
+        onSelectExercise={(name) => {
+          setExerciseName(name);
+          setExerciseNote("");
+        }}
         onSetsMinus={() => setSets((s) => Math.max(1, s - 1))}
         onSetsPlus={() => setSets((s) => s + 1)}
         onRepsMinus={() => setReps((r) => Math.max(1, r - 1))}
@@ -90,6 +105,43 @@ export default function ActiveSession({
           setExerciseNote("");
         }}
       />
+
+      {latest ? (
+        <View style={{ width: "100%", paddingHorizontal: 24, marginTop: -8, marginBottom: 10 }}>
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: "#222",
+              backgroundColor: "#111",
+              borderRadius: 8,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+            }}
+          >
+            <Text style={{ color: "#aaa", fontSize: 12, marginBottom: 4 }}>
+              Last time
+            </Text>
+
+            <Text style={{ color: colors.text }}>
+              {latest.sets} sets  ·  {latest.reps} reps  ·  {latest.weightKg} kg
+            </Text>
+
+            <Text style={{ color: "#aaa", marginTop: 4, fontSize: 12 }}>
+              {new Date(latest.sessionStartTime).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+              })}{" "}
+              {latest.workoutType}
+            </Text>
+
+            {latest.note ? (
+              <Text style={{ color: "#aaa", marginTop: 6, fontSize: 12 }} numberOfLines={2}>
+                Note: {latest.note}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
 
       <Text style={{ color: "#aaa", marginBottom: 6, marginTop: 6 }}>
         Session Note (optional)

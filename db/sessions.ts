@@ -116,3 +116,49 @@ export function getExerciseCountForSession(sessionId: string): number {
 
   return row ? Number(row.c) : 0;
 }
+
+export type LatestExercise = {
+  name: string;
+  sets: number;
+  reps: number;
+  weightKg: number;
+  note: string;
+  sessionStartTime: string;
+  workoutType: string;
+};
+
+export function getLatestExerciseByName(exerciseName: string): LatestExercise | null {
+  const trimmed = exerciseName.trim();
+  if (!trimmed) return null;
+
+  const row = db.getFirstSync(
+    `
+    SELECT
+      e.name as name,
+      e.sets as sets,
+      e.reps as reps,
+      e.weight_kg as weight_kg,
+      e.note as note,
+      s.start_time as session_start_time,
+      s.workout_type as workout_type
+    FROM exercises e
+    JOIN sessions s ON s.id = e.session_id
+    WHERE LOWER(e.name) = LOWER(?)
+    ORDER BY s.start_time DESC, e.rowid DESC
+    LIMIT 1;
+    `,
+    [trimmed]
+  ) as any;
+
+  if (!row) return null;
+
+  return {
+    name: String(row.name),
+    sets: Number(row.sets),
+    reps: Number(row.reps),
+    weightKg: Number(row.weight_kg),
+    note: row.note ? String(row.note) : "",
+    sessionStartTime: String(row.session_start_time),
+    workoutType: row.workout_type ? String(row.workout_type) : "Unknown",
+  };
+}
