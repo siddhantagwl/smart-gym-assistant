@@ -8,7 +8,8 @@ export function initDb() {
             start_time TEXT NOT NULL,
             end_time TEXT,
             workout_type TEXT NOT NULL,
-            note TEXT NOT NULL
+            note TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'live'
         );
     `);
 
@@ -37,4 +38,12 @@ export function initDb() {
     `);
 
     seedExerciseLibrary();
+
+    try {
+        db.execSync(`
+            ALTER TABLE sessions ADD COLUMN source TEXT DEFAULT 'live';
+        `);
+    } catch (err) {
+        // If the column already exists, this error is expected and can be ignored
+    }
 }

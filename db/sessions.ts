@@ -7,13 +7,14 @@ type Session = {
   endTime: Date | null;
   workoutType: string;
   note: string;
+  source: "live" | "manual";
 };
 
 export function insertSession(session: Session) {
   db.runSync(
     `
-    INSERT INTO sessions (id, start_time, end_time, workout_type, note)
-    VALUES (?, ?, ?, ?, ?);
+    INSERT INTO sessions (id, start_time, end_time, workout_type, note, source)
+    VALUES (?, ?, ?, ?, ?, ?);
     `,
     [
       session.id,
@@ -21,6 +22,7 @@ export function insertSession(session: Session) {
       session.endTime ? session.endTime.toISOString() : null,
       session.workoutType,
       session.note,
+      "live",
     ]
   );
 }
@@ -32,12 +34,13 @@ export type StoredSession = {
   endTime: string | null;
   workoutType: string;
   note: string;
+  source: "live" | "manual";
 };
 
 export function getAllSessions(): StoredSession[] {
   const rows = db.getAllSync(
     `
-    SELECT id, start_time, end_time, workout_type, note
+    SELECT id, start_time, end_time, workout_type, note, source
     FROM sessions
     ORDER BY start_time DESC;
     `
@@ -49,6 +52,7 @@ export function getAllSessions(): StoredSession[] {
     endTime: String(r.end_time),
     workoutType: r.workout_type ? String(r.workout_type) : "Unknown",
     note: r.note ? String(r.note) : "",
+    source: (r.source as "live" | "manual") || "live",
   }));
 }
 
@@ -172,7 +176,7 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
 export function getActiveSession(): StoredSession | null {
   const row = db.getFirstSync(
     `
-    SELECT id, start_time, end_time, workout_type, note
+    SELECT id, start_time, end_time, workout_type, note, source
     FROM sessions
     WHERE end_time IS NULL
     LIMIT 1;
@@ -187,6 +191,7 @@ export function getActiveSession(): StoredSession | null {
     endTime: row.end_time ? String(row.end_time) : null,
     workoutType: row.workout_type ? String(row.workout_type) : "Unknown",
     note: row.note ? String(row.note) : "",
+    source: (row.source as "live" | "manual") || "live",
   };
 }
 
@@ -224,10 +229,10 @@ export function insertManualSession(params: {
     // 1) Insert session
     db.runSync(
       `
-      INSERT INTO sessions (id, start_time, end_time, workout_type, note)
-      VALUES (?, ?, ?, ?, ?);
+      INSERT INTO sessions (id, start_time, end_time, workout_type, note, source)
+      VALUES (?, ?, ?, ?, ?, ?);
       `,
-      [sessionId, startTime, endTime, params.workoutType, params.note || ""]
+      [sessionId, startTime, endTime, params.workoutType, params.note || "", "manual"]
     );
 
     // 2) Insert exercises

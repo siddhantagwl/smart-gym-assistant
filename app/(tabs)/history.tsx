@@ -163,22 +163,51 @@ export default function HistoryScreen() {
                   marginBottom: 12,
                 }}
               >
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 6,
+                  }}
+                >
                   <Text style={{ color: colors.text, fontSize: 16 }}>
                     {formatDate(start)}
                   </Text>
 
-                  <View style={{
-                    paddingVertical: 4,
-                    paddingHorizontal: 10,
-                    borderRadius: 999,
-                    backgroundColor: "#0f0f0f",
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}>
-                    <Text style={{ color: colors.accent, fontSize: 17 }}>
-                      {item.workoutType || "Unknown"}
-                    </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    {item.source === "manual" && (
+                      <View
+                        style={{
+                          paddingVertical: 2,
+                          paddingHorizontal: 8,
+                          borderRadius: 999,
+                          backgroundColor: "rgba(76,175,80,0.15)",
+                          borderWidth: 1,
+                          borderColor: colors.accent,
+                          marginRight: 8,
+                        }}
+                      >
+                        <Text style={{ color: colors.accent, fontSize: 12 }}>
+                          Manual
+                        </Text>
+                      </View>
+                    )}
+
+                    <View
+                      style={{
+                        paddingVertical: 4,
+                        paddingHorizontal: 10,
+                        borderRadius: 999,
+                        backgroundColor: "#0f0f0f",
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }}
+                    >
+                      <Text style={{ color: colors.accent, fontSize: 17 }}>
+                        {item.workoutType || "Unknown"}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
