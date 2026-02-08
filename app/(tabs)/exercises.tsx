@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, TextInput, SectionList, Pressable, Linking } from "react-native";
+import { View, Text, TextInput, SectionList, Pressable, Linking, Animated } from "react-native";
 import { getAllExercises, ExerciseLibraryItem } from "../../db/exerciseLibrary";
 
 const colors = {
@@ -14,11 +14,20 @@ export default function ExercisesScreen() {
   console.debug("Rendering ExercisesScreen");
   const [query, setQuery] = useState("");
   const [exercises, setExercises] = useState<ExerciseLibraryItem[]>([]);
+  const clearAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
     const data = getAllExercises();
     setExercises(data);
   }, []);
+
+  useEffect(() => {
+    Animated.timing(clearAnim, {
+      toValue: query.length > 0 ? 1 : 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [query]);
 
   const sections = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -75,23 +84,34 @@ export default function ExercisesScreen() {
           }}
         />
 
-        {query.length > 0 ? (
+        <Animated.View
+          pointerEvents={query.length > 0 ? "auto" : "none"}
+          style={{
+            position: "absolute",
+            right: 10,
+            top: "50%",
+            transform: [
+              { translateY: -10 },
+              {
+                scale: clearAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1],
+                }),
+              },
+            ],
+            opacity: clearAnim,
+          }}
+        >
           <Pressable
             onPress={() => setQuery("")}
             hitSlop={10}
-            style={({ pressed }) => ({
-              position: "absolute",
-              right: 10,
-              top: "50%",
-              transform: [{ translateY: -10 }],
-              opacity: pressed ? 0.6 : 1,
-            })}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
           >
             <Text style={{ color: "#ff5c5c", fontSize: 16, fontWeight: "600" }}>
               ✕
             </Text>
           </Pressable>
-        ) : null}
+        </Animated.View>
       </View>
 
       <SectionList
