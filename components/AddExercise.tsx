@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Keyboard } from "react-native";
 import { View, Text, Pressable, TextInput, ScrollView } from "react-native";
 
 type AddExerciseProps = {
@@ -27,6 +28,10 @@ type AddExerciseProps = {
   onWeightPlus: () => void;
 
   onSave: () => void;
+
+  onSetsCommit: (v: number) => void;
+  onRepsCommit: (v: number) => void;
+  onWeightCommit: (v: number) => void;
 };
 
 function Stepper({
@@ -34,12 +39,24 @@ function Stepper({
   value,
   onMinus,
   onPlus,
+  onCommit,
 }: {
   label: string;
-  value: string;
+  value: number;
   onMinus: () => void;
   onPlus: () => void;
+  onCommit: (v: number) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+
+  function commit() {
+    const n = Number(draft);
+    if (!Number.isNaN(n)) onCommit(n);
+    setEditing(false);
+    Keyboard.dismiss();
+  }
+
   return (
     <View style={{ width: "100%" }}>
       <Text style={{ color: "#aaa", marginBottom: 6, fontSize: 12 }}>{label}</Text>
@@ -58,23 +75,51 @@ function Stepper({
           <Text style={{ color: "#fff", fontSize: 18 }}>-</Text>
         </Pressable>
 
-        <View
+        <Pressable
+          onPress={() => {
+            setDraft(String(value));
+            setEditing(true);
+          }}
           style={{
-            minWidth: 52,
+            minWidth: 64,
             height: 40,
             borderRadius: 8,
             borderWidth: 1,
-            borderColor: "#222",
+            borderColor: editing ? "#444" : "#222",
             backgroundColor: "#111",
             alignItems: "center",
             justifyContent: "center",
             paddingHorizontal: 10,
           }}
         >
-          <Text style={{ color: "#fff", fontSize: 16, fontVariant: ["tabular-nums"] }}>
-            {value}
-          </Text>
-        </View>
+          {editing ? (
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              keyboardType="number-pad"
+              autoFocus
+              onBlur={commit}
+              style={{
+                color: "#fff",
+                fontSize: 16,
+                padding: 0,
+                margin: 0,
+                textAlign: "center",
+                width: "100%",
+              }}
+            />
+          ) : (
+            <Text
+              style={{
+                color: "#fff",
+                fontSize: 16,
+                fontVariant: ["tabular-nums"],
+              }}
+            >
+              {value}
+            </Text>
+          )}
+        </Pressable>
 
         <Pressable
           onPress={onPlus}
@@ -113,6 +158,9 @@ export default function AddExercise({
   onWeightMinus,
   onWeightPlus,
   onSave,
+  onSetsCommit,
+  onRepsCommit,
+  onWeightCommit,
 }: AddExerciseProps) {
   const [showNote, setShowNote] = useState(false);
 
@@ -174,18 +222,42 @@ export default function AddExercise({
 
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1 }}>
-            <Stepper label="Sets" value={String(sets)} onMinus={onSetsMinus} onPlus={onSetsPlus} />
+            <Stepper
+              label="Sets"
+              value={sets}
+              onMinus={onSetsMinus}
+              onPlus={onSetsPlus}
+              onCommit={(v) => {
+                if (v > 0) onSetsCommit(v);
+              }}
+            />
           </View>
 
           <View style={{ flex: 1 }}>
-            <Stepper label="Reps" value={String(reps)} onMinus={onRepsMinus} onPlus={onRepsPlus} />
+            <Stepper
+              label="Reps"
+              value={reps}
+              onMinus={onRepsMinus}
+              onPlus={onRepsPlus}
+              onCommit={(v) => {
+                if (v > 0) onRepsCommit(v);
+              }}
+            />
           </View>
         </View>
 
         <View style={{ height: 10 }} />
 
         <View style={{ width: "100%" }}>
-          <Stepper label="Kg" value={String(weightKg)} onMinus={onWeightMinus} onPlus={onWeightPlus} />
+          <Stepper
+            label="Kg"
+            value={weightKg}
+            onMinus={onWeightMinus}
+            onPlus={onWeightPlus}
+            onCommit={(v) => {
+              if (v >= 0) onWeightCommit(v);
+            }}
+          />
         </View>
 
         <View style={{ height: 12 }} />

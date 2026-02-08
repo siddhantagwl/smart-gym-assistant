@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, Pressable, TextInput } from "react-native";
 
 import AddExercise from "@/components/AddExercise";
-import { getLatestExerciseByName, insertExercise, insertSession, LatestExercise } from "@/db/sessions";
+import { endSession, getLatestExerciseByName, insertExercise, LatestExercise } from "@/db/sessions";
 
 type WorkoutType = "Push" | "Pull" | "Legs";
 
@@ -34,11 +34,13 @@ export default function ActiveSession({
   const [exerciseName, setExerciseName] = useState("");
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
-  const [weightKg, setWeightKg] = useState(1);
+  const [weightKg, setWeightKg] = useState(10);
 
   const [exerciseNote, setExerciseNote] = useState("");
   const [sessionNote, setSessionNote] = useState("");
   const [latest, setLatest] = useState<LatestExercise | null>(null);
+
+  const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
     const trimmed = exerciseName.trim();
@@ -64,6 +66,12 @@ export default function ActiveSession({
       <Text style={{ color: "#aaa", marginBottom: 12 }}>
         Workout: {activeSession.workoutType}
       </Text>
+
+      {savedFlash ? (
+        <Text style={{ color: "#4CAF50", marginBottom: 6 }}>
+          ✓ Exercise saved
+        </Text>
+      ) : null}
 
       <AddExercise
         titleColor={colors.text}
@@ -103,7 +111,17 @@ export default function ActiveSession({
 
           setExerciseName("");
           setExerciseNote("");
+
+          setSets(3);
+          setReps(10);
+          setWeightKg(10);
+
+          setSavedFlash(true);
+          setTimeout(() => setSavedFlash(false), 1500);
         }}
+        onWeightCommit={(v) => setWeightKg(v)}
+        onSetsCommit={(v) => setSets(v)}
+        onRepsCommit={(v) => setReps(v)}
       />
 
       {latest ? (
@@ -167,16 +185,7 @@ export default function ActiveSession({
 
       <Pressable
         onPress={() => {
-          const finishedSession = { ...activeSession, endTime: new Date() };
-
-          insertSession({
-            id: finishedSession.id,
-            startTime: finishedSession.startTime,
-            endTime: finishedSession.endTime!,
-            workoutType: finishedSession.workoutType,
-            note: sessionNote,
-          });
-
+          endSession(activeSession.id, new Date(), sessionNote);
           setSessionNote("");
           onEnd();
         }}
