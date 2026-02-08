@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, TextInput, FlatList, Pressable } from "react-native";
+import { View, Text, TextInput, SectionList } from "react-native";
 import { getAllExercises, ExerciseLibraryItem } from "../../db/exerciseLibrary";
 
 const colors = {
@@ -19,15 +19,35 @@ export default function ExercisesScreen() {
     setExercises(data);
   }, []);
 
-  const filtered = useMemo(() => {
+  const sections = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return exercises;
 
-    return exercises.filter((e) =>
-      e.name.toLowerCase().includes(q) ||
-      e.primaryMuscle.toLowerCase().includes(q) ||
-      e.tags.toLowerCase().includes(q)
+    const filtered = q
+      ? exercises.filter((e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.primaryMuscle.toLowerCase().includes(q) ||
+          e.tags.toLowerCase().includes(q)
+        )
+      : exercises;
+
+    const sorted = [...filtered].sort((a, b) =>
+      a.name.localeCompare(b.name)
     );
+
+    const map: Record<string, ExerciseLibraryItem[]> = {};
+
+    sorted.forEach((ex) => {
+      const letter = ex.name[0].toUpperCase();
+      if (!map[letter]) map[letter] = [];
+      map[letter].push(ex);
+    });
+
+    return Object.keys(map)
+      .sort()
+      .map((letter) => ({
+        title: letter,
+        data: map[letter],
+      }));
   }, [query, exercises]);
 
   return (
@@ -53,10 +73,24 @@ export default function ExercisesScreen() {
         }}
       />
 
-      <FlatList
-        data={filtered}
+      <SectionList
+        sections={sections}
+        stickySectionHeadersEnabled
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
+        renderSectionHeader={({ section }) => (
+          <Text
+            style={{
+              color: "#aaa",
+              fontSize: 14,
+              fontWeight: "600",
+              marginTop: 16,
+              marginBottom: 6,
+            }}
+          >
+            {section.title}
+          </Text>
+        )}
         renderItem={({ item }) => (
           <View
             style={{
@@ -64,12 +98,13 @@ export default function ExercisesScreen() {
               paddingHorizontal: 12,
               borderBottomWidth: 1,
               borderBottomColor: colors.border,
+              marginLeft: 8,
             }}
           >
-            <Text style={{ color: colors.text, fontSize: 16 }}>
+            <Text style={{ color: colors.text, fontSize: 17}}>
               {item.name}
             </Text>
-            <Text style={{ color: colors.sub, fontSize: 12, marginTop: 2 }}>
+            <Text style={{ color: colors.sub, fontSize: 12, marginTop: 2}}>
               {item.primaryMuscle} · {item.tags}
             </Text>
           </View>
