@@ -75,8 +75,8 @@ export default function HomeScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={{ color: colors.text, fontSize: 28, marginBottom: 20 }}>
-          Siddhant&apos;s Gym Log
+        <Text style={{ color: colors.text, fontSize: 28, marginBottom: 20, marginTop: 40 }}>
+          Train. Log. Repeat.
         </Text>
 
         {activeSession ? (
