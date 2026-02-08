@@ -2,7 +2,6 @@ import { View, Text, Pressable, FlatList } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
-import { initDb } from "@/db/schema";
 import { getAllSessions, getExercisesForSession, StoredExercise } from "@/db/sessions";
 
 const colors = {
@@ -28,8 +27,6 @@ export default function ModalScreen() {
   const [sessionNote, setSessionNote] = useState<string>("");
 
   useEffect(() => {
-    initDb();
-
     const sessions = getAllSessions();
     const s = sessions.find((x) => x.id === sessionId);
     setWorkoutType(s?.workoutType || "Unknown");

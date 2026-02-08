@@ -1,7 +1,6 @@
 import { View, Text, Pressable, ScrollView } from "react-native";
 import { useState, useEffect } from "react";
 
-import { initDb } from "@/db/schema";
 import ActiveSession from "@/components/ActiveSession";
 import { StoredSession, getActiveSession, insertSession, endSession } from "@/db/sessions";
 
@@ -37,7 +36,6 @@ export default function HomeScreen() {
   const [pendingSession, setPendingSession] = useState<StoredSession | null>(null); // “DB knows about it, but it hasn’t started yet” state
 
   useEffect(() => {
-    initDb();
     const s = getActiveSession();
     if (s) setPendingSession(s);
   }, []);

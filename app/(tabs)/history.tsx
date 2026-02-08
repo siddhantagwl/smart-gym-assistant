@@ -10,7 +10,6 @@ import { View, Text, Pressable, FlatList } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 
-import { initDb } from "@/db/schema";
 import { getAllSessions, StoredSession, getExerciseCountForSession } from "@/db/sessions";
 
 const colors = {
@@ -50,10 +49,8 @@ export default function HistoryScreen() {
   // useCallback will ensure that the load function is stable across renders,
   // so that we can safely use it in useEffect and useFocusEffect without causing unnecessary re-renders or infinite loops.
   const load = useCallback(() => {
-    initDb();
 
     const sessions = getAllSessions();
-    console.log("[History] sessions from DB:", sessions.length);
 
     const enriched = sessions
       .map((s) => ({
@@ -66,7 +63,6 @@ export default function HistoryScreen() {
         return bt - at;
       });
 
-    console.log("[History] enriched sessions rows:", enriched.length);
     setRows(enriched);
   }, []);
 
