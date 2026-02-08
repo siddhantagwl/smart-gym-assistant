@@ -56,6 +56,7 @@ export default function ActiveSession({
       reps: number;
       weightKg: number;
       note: string | null;
+      createdAt: string;
     }[]
   >([]);
 
@@ -74,6 +75,11 @@ export default function ActiveSession({
     const rows = getExercisesForSession(activeSession.id);
     setSessionExercises(rows);
   }, [activeSession.id]);
+
+  function minutesBetween(a: Date, b: Date) {
+    const ms = a.getTime() - b.getTime();
+    return Math.max(0, Math.round(ms / 60000));
+  }
 
   return (
     <View style={{ width: "100%", alignItems: "center" }}>
@@ -129,6 +135,7 @@ export default function ActiveSession({
             reps,
             weightKg,
             note: exerciseNote,
+            createdAt: new Date().toISOString(),
           });
 
           const rows = getExercisesForSession(activeSession.id);
@@ -155,34 +162,50 @@ export default function ActiveSession({
             This session
           </Text>
 
-          {sessionExercises.map((e) => (
-            <View
-              key={e.id}
-              style={{
-                borderWidth: 1,
-                borderColor: "#222",
-                backgroundColor: "#111",
-                borderRadius: 8,
-                paddingVertical: 8,
-                paddingHorizontal: 12,
-                marginBottom: 6,
-              }}
-            >
-              <Text style={{ color: colors.text, fontSize: 14 }}>
-                {e.name}
-              </Text>
+          {[...sessionExercises].reverse().map((e, idx) => {
+            const originalIndex = sessionExercises.findIndex(x => x.id === e.id);
 
-              <Text style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
-                {e.sets} sets · {e.reps} reps · {e.weightKg} kg
-              </Text>
+            const currentTime = new Date(e.createdAt);
 
-              {e.note ? (
-                <Text style={{ color: "#aaa", fontSize: 12, marginTop: 4 }} numberOfLines={2}>
-                  Note: {e.note}
+            const baseTime =
+              originalIndex === 0
+                ? activeSession.startTime
+                : new Date(sessionExercises[originalIndex - 1].createdAt);
+
+            const minutes = minutesBetween(currentTime, baseTime);
+
+            return (
+              <View
+                key={e.id}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#222",
+                  backgroundColor: "#111",
+                  borderRadius: 8,
+                  paddingVertical: 8,
+                  paddingHorizontal: 12,
+                  marginBottom: 6,
+                }}
+              >
+                <Text style={{ color: colors.text, fontSize: 14 }}>
+                  {e.name}
                 </Text>
-              ) : null}
-            </View>
-          ))}
+
+                <Text style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
+                  {e.sets} sets · {e.reps} reps · {e.weightKg} kg
+                </Text>
+                <Text style={{ color: "#777", fontSize: 11, marginTop: 2 }}>
+                  ⏱ {minutes} min
+                </Text>
+
+                {e.note ? (
+                  <Text style={{ color: "#aaa", fontSize: 12, marginTop: 4 }} numberOfLines={2}>
+                    Note: {e.note}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          })}
         </View>
       ) : null}
 

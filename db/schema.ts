@@ -11,6 +11,21 @@ export function initDb() {
         );
     `);
 
+    db.execSync(`
+        CREATE TABLE IF NOT EXISTS exercises (
+            id TEXT PRIMARY KEY NOT NULL,
+            session_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            sets INTEGER NOT NULL,
+            reps INTEGER NOT NULL,
+            weight_kg REAL NOT NULL,
+            note TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (session_id) REFERENCES sessions(id)
+        );
+    `);
+
+
     try {
         db.execSync(`ALTER TABLE sessions ADD COLUMN workout_type TEXT NOT NULL DEFAULT 'Unknown';`);
     } catch (e) {
@@ -23,20 +38,6 @@ export function initDb() {
         // ignore if column already exists
     }
 
-
-    db.execSync(`
-    CREATE TABLE IF NOT EXISTS exercises (
-        id TEXT PRIMARY KEY NOT NULL,
-        session_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        sets INTEGER NOT NULL,
-        reps INTEGER NOT NULL,
-        weight_kg REAL NOT NULL,
-        note TEXT NOT NULL,
-        FOREIGN KEY (session_id) REFERENCES sessions(id)
-    );
-    `);
-
     try {
         db.execSync(`ALTER TABLE exercises ADD COLUMN weight_kg REAL NOT NULL DEFAULT 0;`);
     } catch (e) {
@@ -45,6 +46,12 @@ export function initDb() {
 
     try {
         db.execSync(`ALTER TABLE exercises ADD COLUMN note TEXT NOT NULL DEFAULT '';`);
+    } catch (e) {
+        // ignore if column already exists
+    }
+
+    try {
+        db.execSync(`ALTER TABLE exercises ADD COLUMN created_at TEXT NOT NULL DEFAULT '';`);
     } catch (e) {
         // ignore if column already exists
     }

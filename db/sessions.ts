@@ -60,13 +60,14 @@ export type ExerciseInput = {
   reps: number;
   weightKg: number;
   note: string;
+  createdAt: string;
 };
 
 export function insertExercise(exercise: ExerciseInput) {
   db.runSync(
     `
-    INSERT INTO exercises (id, session_id, name, sets, reps, weight_kg, note)
-    VALUES (?, ?, ?, ?, ?, ?, ?);
+    INSERT INTO exercises (id, session_id, name, sets, reps, weight_kg, note, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?);
     `,
     [
       exercise.id,
@@ -76,6 +77,7 @@ export function insertExercise(exercise: ExerciseInput) {
       exercise.reps,
       exercise.weightKg,
       exercise.note,
+      new Date().toISOString(),
     ]
   );
 }
@@ -88,14 +90,15 @@ export type StoredExercise = {
   reps: number;
   weightKg: number;
   note: string;
+  createdAt: string;
 };
 
 export function getExercisesForSession(sessionId: string): StoredExercise[] {
   const rows = db.getAllSync(
-    `SELECT id, session_id, name, sets, reps, weight_kg, note
+    `SELECT id, session_id, name, sets, reps, weight_kg, note, created_at
      FROM exercises
      WHERE session_id = ?
-     ORDER BY rowid ASC;`,
+     ORDER BY created_at ASC;`,
     [sessionId]
   ) as any[];
 
@@ -107,6 +110,7 @@ export function getExercisesForSession(sessionId: string): StoredExercise[] {
     reps: Number(r.reps),
     weightKg: Number(r.weight_kg),
     note: r.note ? String(r.note) : "",
+    createdAt: String(r.created_at),
   }));
 }
 
