@@ -32,6 +32,14 @@ type AddExerciseProps = {
   onSetsCommit: (v: number) => void;
   onRepsCommit: (v: number) => void;
   onWeightCommit: (v: number) => void;
+
+  lastTime?: {
+    sets: number;
+    reps: number;
+    weightKg: number;
+    workoutType: string;
+    sessionStartTime: string;
+  } | null;
 };
 
 function Stepper({
@@ -161,6 +169,7 @@ export default function AddExercise({
   onSetsCommit,
   onRepsCommit,
   onWeightCommit,
+  lastTime,
 }: AddExerciseProps) {
   const [showNote, setShowNote] = useState(false);
 
@@ -198,6 +207,33 @@ export default function AddExercise({
             marginBottom: 8,
           }}
         />
+
+        {exerciseName.trim() && lastTime ? (
+          <View
+            style={{
+              alignSelf: "flex-start",
+              marginBottom: 10,
+              paddingVertical: 4,
+              paddingHorizontal: 10,
+              borderRadius: 999,
+              backgroundColor: "rgba(255, 193, 7, 0.12)",
+              borderWidth: 1,
+              borderColor: "rgba(255, 193, 7, 0.5)",
+            }}
+          >
+            <Text
+              style={{
+                color: "#FFC107",
+                fontSize: 12,
+                fontWeight: "500",
+              }}
+            >
+              Last time · {lastTime.sets}×{lastTime.reps} · {lastTime.weightKg}kg · {lastTime.workoutType}
+            </Text>
+          </View>
+        ) : (
+          <View style={{ height: 8 }} />
+        )}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {suggestions.map((name) => (

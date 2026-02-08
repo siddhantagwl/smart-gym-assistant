@@ -219,6 +219,17 @@ export default function ActiveSession({
         onWeightCommit={(v) => setWeightKg(v)}
         onSetsCommit={(v) => setSets(v)}
         onRepsCommit={(v) => setReps(v)}
+        lastTime={
+          latest
+            ? {
+                sets: latest.sets,
+                reps: latest.reps,
+                weightKg: latest.weightKg,
+                workoutType: latest.workoutType,
+                sessionStartTime: String(latest.sessionStartTime),
+              }
+            : null
+        }
       />
 
       {sessionExercises.length > 0 ? (
@@ -271,43 +282,6 @@ export default function ActiveSession({
               </View>
             );
           })}
-        </View>
-      ) : null}
-
-      {latest ? (
-        <View style={{ width: "100%", paddingHorizontal: 24, marginTop: -8, marginBottom: 10 }}>
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: "#222",
-              backgroundColor: "#111",
-              borderRadius: 8,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-            }}
-          >
-            <Text style={{ color: "#aaa", fontSize: 12, marginBottom: 4 }}>
-              Last time
-            </Text>
-
-            <Text style={{ color: colors.text }}>
-              {latest.sets} sets  ·  {latest.reps} reps  ·  {latest.weightKg} kg
-            </Text>
-
-            <Text style={{ color: "#aaa", marginTop: 4, fontSize: 12 }}>
-              {new Date(latest.sessionStartTime).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-              })}{" "}
-              {latest.workoutType}
-            </Text>
-
-            {latest.note ? (
-              <Text style={{ color: "#aaa", marginTop: 6, fontSize: 12 }} numberOfLines={2}>
-                Note: {latest.note}
-              </Text>
-            ) : null}
-          </View>
         </View>
       ) : null}
 
