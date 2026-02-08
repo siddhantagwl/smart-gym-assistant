@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, TextInput } from "react-native";
+import { View, Text, Pressable, TextInput, Animated } from "react-native";
 
 import AddExercise from "@/components/AddExercise";
 import {
@@ -81,15 +81,80 @@ export default function ActiveSession({
     return Math.max(0, Math.round(ms / 60000));
   }
 
+  function formatDurationMinutes(totalMinutes: number) {
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
+  const [now, setNow] = useState(new Date());
+  const pulse = useState(new Animated.Value(0))[0];
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setNow(new Date());
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(pulse, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(pulse, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [now]);
+
+  const totalSessionMinutes = minutesBetween(
+    now,
+    activeSession.startTime
+  );
+
   return (
     <View style={{ width: "100%", alignItems: "center" }}>
-      <Text style={{ color: colors.text, fontSize: 16, marginBottom: 10 }}>
+      <Text style={{ color: colors.text, fontSize: 16, marginBottom: 4 }}>
         Session started at{" "}
         {activeSession.startTime.toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
         })}
       </Text>
+
+      <Animated.View
+        style={{
+          marginBottom: 14,
+          paddingVertical: 6,
+          paddingHorizontal: 14,
+          borderRadius: 20,
+          backgroundColor: "rgba(76, 175, 80, 0.12)",
+          borderWidth: 1,
+          borderColor: pulse.interpolate({
+            inputRange: [0, 1],
+            outputRange: ["rgba(76, 175, 80, 0.4)", "rgba(76, 175, 80, 0.9)"]
+          }),
+        }}
+      >
+        <Text
+          style={{
+            color: "#4CAF50",
+            fontSize: 17,
+            fontWeight: "600",
+            letterSpacing: 0.3,
+          }}
+        >
+          ⏱ Total time · {formatDurationMinutes(totalSessionMinutes)}
+        </Text>
+      </Animated.View>
 
       <Text style={{ color: "#aaa", marginBottom: 12 }}>
         Workout: {activeSession.workoutType}
