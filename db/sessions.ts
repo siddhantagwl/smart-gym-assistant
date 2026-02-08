@@ -200,3 +200,66 @@ export function endSession(sessionId: string, endTime: Date, note: string) {
     [endTime.toISOString(), note, sessionId]
   );
 }
+
+export function insertManualSession(params: {
+  date: Date;
+  workoutType: string;
+  note: string;
+  exercises: {
+    name: string;
+    sets: number;
+    reps: number;
+    weightKg: number;
+    note?: string;
+  }[];
+}) {
+  const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const startTime = params.date.toISOString();
+  const endTime = startTime;
+
+  db.execSync("BEGIN TRANSACTION;");
+
+  try {
+    // 1) Insert session
+    db.runSync(
+      `
+      INSERT INTO sessions (id, start_time, end_time, workout_type, note)
+      VALUES (?, ?, ?, ?, ?);
+      `,
+      [sessionId, startTime, endTime, params.workoutType, params.note || ""]
+    );
+
+    // 2) Insert exercises
+    params.exercises.forEach((ex, idx) => {
+      const exerciseId = `${sessionId}-ex-${idx}`;
+      const createdAt = new Date(
+        params.date.getTime() + idx * 60 * 1000
+      ).toISOString();
+
+      db.runSync(
+        `
+        INSERT INTO exercises
+          (id, session_id, name, sets, reps, weight_kg, note, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        `,
+        [
+          exerciseId,
+          sessionId,
+          ex.name,
+          ex.sets,
+          ex.reps,
+          ex.weightKg,
+          ex.note || "",
+          createdAt,
+        ]
+      );
+    });
+
+    db.execSync("COMMIT;");
+    return sessionId;
+  } catch (err) {
+    db.execSync("ROLLBACK;");
+    throw err;
+  }
+}

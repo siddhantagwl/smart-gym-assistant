@@ -84,16 +84,51 @@ export default function HistoryScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 56 }}>
-      <View style={{ paddingHorizontal: 16, marginBottom: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <View
+        style={{
+          paddingHorizontal: 16,
+          marginBottom: 12,
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Text style={{ color: colors.text, fontSize: 22 }}>
           History
         </Text>
 
-        <Pressable onPress={load} style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
-          <Text style={{ color: colors.accent, fontSize: 14 }}>
-            Refresh
-          </Text>
-        </Pressable>
+        <View style={{ flexDirection: "row" }}>
+          <Pressable
+            onPress={() => router.push("/manual-session")}
+            style={{
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.accent,
+              marginRight: 8,
+            }}
+          >
+            <Text style={{ color: colors.accent, fontSize: 14 }}>
+              + Add session
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={load}
+            style={{
+              paddingVertical: 6,
+              paddingHorizontal: 10,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Text style={{ color: colors.accent, fontSize: 14 }}>
+              Refresh
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {rows.length === 0 ? (

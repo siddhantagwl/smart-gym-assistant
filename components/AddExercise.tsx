@@ -40,6 +40,8 @@ type AddExerciseProps = {
     workoutType: string;
     sessionStartTime: string;
   } | null;
+
+  mode?: "live" | "manual";
 };
 
 function Stepper({
@@ -148,6 +150,7 @@ function Stepper({
 }
 
 export default function AddExercise({
+  mode = "live",
   titleColor,
   accentColor,
   workoutLabel,
@@ -185,7 +188,9 @@ export default function AddExercise({
         }}
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
-          <Text style={{ color: titleColor, fontSize: 16 }}>Add exercise</Text>
+          <Text style={{ color: titleColor, fontSize: 16 }}>
+            {mode === "manual" ? "Add exercise (manual)" : "Add exercise"}
+          </Text>
           <Text style={{ color: "#aaa", fontSize: 12 }}>{workoutLabel}</Text>
         </View>
 
@@ -208,7 +213,7 @@ export default function AddExercise({
           }}
         />
 
-        {exerciseName.trim() && lastTime ? (
+        {mode === "live" && exerciseName.trim() && lastTime ? (
           <View
             style={{
               alignSelf: "flex-start",
