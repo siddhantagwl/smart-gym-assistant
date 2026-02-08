@@ -7,7 +7,6 @@ type Session = {
   endTime: Date | null;
   workoutType: string;
   note: string;
-  source: "live" | "manual";
 };
 
 export function insertSession(session: Session) {

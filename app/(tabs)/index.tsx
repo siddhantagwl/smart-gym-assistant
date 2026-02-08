@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 
 import ActiveSession from "@/components/ActiveSession";
 import { StoredSession, getActiveSession, insertSession, endSession } from "@/db/sessions";
+import { HelloWave } from "@/components/hello-wave";
 
 type WorkoutType = "Push" | "Pull" | "Legs";
 
@@ -189,6 +190,7 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+      <HelloWave></HelloWave>
     </View>
   );
 }
