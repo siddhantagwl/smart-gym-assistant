@@ -1,9 +1,10 @@
 import { db } from "./database";
 
+// Session is an in memory domain model.
 type Session = {
   id: string;
   startTime: Date;
-  endTime: Date;
+  endTime: Date | null;
   workoutType: string;
   note: string;
 };
@@ -17,17 +18,18 @@ export function insertSession(session: Session) {
     [
       session.id,
       session.startTime.toISOString(),
-      session.endTime.toISOString(),
+      session.endTime ? session.endTime.toISOString() : null,
       session.workoutType,
       session.note,
     ]
   );
 }
 
+// StoredSession is the shape of session data as stored in the database.
 export type StoredSession = {
   id: string;
   startTime: string;
-  endTime: string;
+  endTime: string | null;
   workoutType: string;
   note: string;
 };
@@ -161,4 +163,36 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
     sessionStartTime: String(row.session_start_time),
     workoutType: row.workout_type ? String(row.workout_type) : "Unknown",
   };
+}
+
+export function getActiveSession(): StoredSession | null {
+  const row = db.getFirstSync(
+    `
+    SELECT id, start_time, end_time, workout_type, note
+    FROM sessions
+    WHERE end_time IS NULL
+    LIMIT 1;
+    `
+  ) as any;
+
+  if (!row) return null;
+
+  return {
+    id: String(row.id),
+    startTime: String(row.start_time),
+    endTime: row.end_time ? String(row.end_time) : null,
+    workoutType: row.workout_type ? String(row.workout_type) : "Unknown",
+    note: row.note ? String(row.note) : "",
+  };
+}
+
+export function endSession(sessionId: string, endTime: Date, note: string) {
+  db.runSync(
+    `
+    UPDATE sessions
+    SET end_time = ?, note = ?
+    WHERE id = ?;
+    `,
+    [endTime.toISOString(), note, sessionId]
+  );
 }
