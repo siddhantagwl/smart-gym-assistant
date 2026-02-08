@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { View, Text, Pressable, TextInput } from "react-native";
 
 import AddExercise from "@/components/AddExercise";
-import { endSession, getLatestExerciseByName, insertExercise, LatestExercise } from "@/db/sessions";
+import {
+  endSession,
+  getLatestExerciseByName,
+  insertExercise,
+  getExercisesForSession,
+  LatestExercise,
+} from "@/db/sessions";
 
 type WorkoutType = "Push" | "Pull" | "Legs";
 
@@ -42,6 +48,17 @@ export default function ActiveSession({
 
   const [savedFlash, setSavedFlash] = useState(false);
 
+  const [sessionExercises, setSessionExercises] = useState<
+    {
+      id: string;
+      name: string;
+      sets: number;
+      reps: number;
+      weightKg: number;
+      note: string | null;
+    }[]
+  >([]);
+
   useEffect(() => {
     const trimmed = exerciseName.trim();
     if (!trimmed) {
@@ -52,6 +69,11 @@ export default function ActiveSession({
     const rec = getLatestExerciseByName(trimmed);
     setLatest(rec);
   }, [exerciseName]);
+
+  useEffect(() => {
+    const rows = getExercisesForSession(activeSession.id);
+    setSessionExercises(rows);
+  }, [activeSession.id]);
 
   return (
     <View style={{ width: "100%", alignItems: "center" }}>
@@ -109,6 +131,9 @@ export default function ActiveSession({
             note: exerciseNote,
           });
 
+          const rows = getExercisesForSession(activeSession.id);
+          setSessionExercises(rows);
+
           setExerciseName("");
           setExerciseNote("");
 
@@ -123,6 +148,43 @@ export default function ActiveSession({
         onSetsCommit={(v) => setSets(v)}
         onRepsCommit={(v) => setReps(v)}
       />
+
+      {sessionExercises.length > 0 ? (
+        <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 8 }}>
+          <Text style={{ color: "#aaa", fontSize: 13, marginBottom: 6 }}>
+            This session
+          </Text>
+
+          {sessionExercises.map((e) => (
+            <View
+              key={e.id}
+              style={{
+                borderWidth: 1,
+                borderColor: "#222",
+                backgroundColor: "#111",
+                borderRadius: 8,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+                marginBottom: 6,
+              }}
+            >
+              <Text style={{ color: colors.text, fontSize: 14 }}>
+                {e.name}
+              </Text>
+
+              <Text style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
+                {e.sets} sets · {e.reps} reps · {e.weightKg} kg
+              </Text>
+
+              {e.note ? (
+                <Text style={{ color: "#aaa", fontSize: 12, marginTop: 4 }} numberOfLines={2}>
+                  Note: {e.note}
+                </Text>
+              ) : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       {latest ? (
         <View style={{ width: "100%", paddingHorizontal: 24, marginTop: -8, marginBottom: 10 }}>
