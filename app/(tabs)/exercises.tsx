@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, TextInput, SectionList } from "react-native";
+import { View, Text, TextInput, SectionList, Pressable, Linking } from "react-native";
 import { getAllExercises, ExerciseLibraryItem } from "../../db/exerciseLibrary";
 
 const colors = {
@@ -11,6 +11,7 @@ const colors = {
 };
 
 export default function ExercisesScreen() {
+  console.debug("Rendering ExercisesScreen");
   const [query, setQuery] = useState("");
   const [exercises, setExercises] = useState<ExerciseLibraryItem[]>([]);
 
@@ -56,22 +57,42 @@ export default function ExercisesScreen() {
         Exercises
       </Text>
 
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Search exercises"
-        placeholderTextColor="#666"
-        style={{
-          backgroundColor: colors.card,
-          color: colors.text,
-          borderRadius: 8,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
-          borderWidth: 1,
-          borderColor: colors.border,
-          marginBottom: 12,
-        }}
-      />
+      <View style={{ position: "relative", marginBottom: 12 }}>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search exercises"
+          placeholderTextColor="#666"
+          style={{
+            backgroundColor: colors.card,
+            color: colors.text,
+            borderRadius: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            paddingRight: 36,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        />
+
+        {query.length > 0 ? (
+          <Pressable
+            onPress={() => setQuery("")}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              position: "absolute",
+              right: 10,
+              top: "50%",
+              transform: [{ translateY: -10 }],
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Text style={{ color: "#ff5c5c", fontSize: 16, fontWeight: "600" }}>
+              ✕
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       <SectionList
         sections={sections}
@@ -101,12 +122,111 @@ export default function ExercisesScreen() {
               marginLeft: 8,
             }}
           >
-            <Text style={{ color: colors.text, fontSize: 17}}>
-              {item.name}
-            </Text>
-            <Text style={{ color: colors.sub, fontSize: 12, marginTop: 2}}>
-              {item.primaryMuscle} · {item.tags}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 17 }}>
+                  {item.name}
+                </Text>
+
+                <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}>
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: "#2ecc71",
+                      backgroundColor: "rgba(46,204,113,0.15)",
+                      borderRadius: 12,
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      marginRight: 6,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <Text style={{ color: "#7bed9f", fontSize: 11, fontWeight: "500" }}>
+                      {item.primaryMuscle}
+                    </Text>
+                  </View>
+
+                  {(() => {
+                    const tags = item.tags
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter(Boolean);
+
+                    const visible = tags.slice(0, 3);
+                    const hiddenCount = tags.length - visible.length;
+
+                    return (
+                      <>
+                        {visible.map((tag) => (
+                          <View
+                            key={tag}
+                            style={{
+                              borderWidth: 1,
+                              borderColor: "#333",
+                              backgroundColor: "rgba(255,255,255,0.04)",
+                              borderRadius: 12,
+                              paddingHorizontal: 8,
+                              paddingVertical: 2,
+                              marginRight: 6,
+                              marginBottom: 4,
+                            }}
+                          >
+                            <Text style={{ color: "#aaa", fontSize: 11 }}>
+                              {tag}
+                            </Text>
+                          </View>
+                        ))}
+
+                        {hiddenCount > 0 ? (
+                          <View
+                            style={{
+                              borderWidth: 1,
+                              borderColor: "#222",
+                              backgroundColor: "rgba(255,255,255,0.02)",
+                              borderRadius: 12,
+                              paddingHorizontal: 8,
+                              paddingVertical: 2,
+                              marginRight: 6,
+                              marginBottom: 4,
+                            }}
+                          >
+                            <Text style={{ color: "#777", fontSize: 11 }}>
+                              +{hiddenCount}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </>
+                    );
+                  })()}
+                </View>
+              </View>
+
+              {item.videoUrl ? (
+                <Pressable
+                  onPress={() => Linking.openURL(item.videoUrl)}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: "#3a5eff",
+                      backgroundColor: "rgba(58,94,255,0.12)",
+                      borderRadius: 6,
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                    }}
+                  >
+                    <Text style={{ color: "#9bb0ff", fontSize: 11, fontWeight: "500" }}>
+                      ▶ video ↗
+                    </Text>
+                  </View>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         )}
         ListEmptyComponent={
