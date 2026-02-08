@@ -18,6 +18,7 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'clock.fill': 'history',
   'gearshape.fill': 'settings',
+  'dumbbell': 'fitness-center',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
 } as IconMapping;
