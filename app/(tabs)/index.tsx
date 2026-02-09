@@ -3,11 +3,11 @@ import { useState, useEffect } from "react";
 
 import ActiveSession from "@/components/ActiveSession";
 import PendingMode from "@/components/home/PendingMode";
+import IdleMode, { WorkoutType as IdleWorkoutType, Session as IdleSession } from "@/components/home/IdleMode";
 
 import { StoredSession, getActiveSession, insertSession, endSession } from "@/db/sessions";
 import RecentSessions from "@/components/RecentSessions";
 
-type WorkoutType = "Push" | "Pull" | "Legs";
 type HomeMode = "idle" | "pending" | "active";
 
 const colors = {
@@ -20,10 +20,10 @@ type Session = {
   id: string;
   startTime: Date;
   endTime: Date | null;
-  workoutType: WorkoutType;
+  workoutType: IdleWorkoutType;
 };
 
-const suggestedExercises: Record<WorkoutType, string[]> = {
+const suggestedExercises: Record<IdleWorkoutType, string[]> = {
   Push: [
     "Bench Press",
     "Overhead Press",
@@ -57,7 +57,7 @@ export default function HomeScreen() {
       id: pendingSession.id,
       startTime: new Date(pendingSession.startTime),
       endTime: null,
-      workoutType: pendingSession.workoutType as WorkoutType,
+      workoutType: pendingSession.workoutType as IdleWorkoutType,
     });
     setPendingSession(null);
   }
@@ -107,52 +107,19 @@ export default function HomeScreen() {
         )}
 
         {mode === "idle" && (
-          <View style={{ width: "100%", paddingHorizontal: 24 }}>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: 16,
-                marginBottom: 16,
-                textAlign: "center",
-              }}
-            >
-              Choose today&apos;s workout
-            </Text>
-
-            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-              {(["Push", "Pull", "Legs"] as WorkoutType[]).map((t) => (
-                <Pressable
-                  key={t}
-                  onPress={() => {
-                    const id = Date.now().toString();
-                    const startTime = new Date();
-                    insertSession({
-                      id,
-                      startTime,
-                      endTime: null,
-                      workoutType: t,
-                      note: "",
-                    });
-                    setActiveSession({
-                      id,
-                      startTime,
-                      endTime: null,
-                      workoutType: t,
-                    });
-                  }}
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.accent,
-                    paddingVertical: 12,
-                    borderRadius: 6,
-                    alignItems: "center",
-                  }}
-                >
-                  <Text style={{ color: "#000", fontSize: 16 }}>{t}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+          <IdleMode
+            colors={{ text: colors.text, accent: colors.accent }}
+            onStart={(session: IdleSession) => {
+              insertSession({
+                id: session.id,
+                startTime: session.startTime,
+                endTime: session.endTime,
+                workoutType: session.workoutType,
+                note: "",
+              });
+              setActiveSession(session);
+            }}
+          />
         )}
         {mode !== "active" && (
           <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 24 }}>
