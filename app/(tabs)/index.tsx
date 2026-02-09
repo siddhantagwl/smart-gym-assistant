@@ -1,9 +1,9 @@
-import { View, Text, Pressable, ScrollView } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useState, useEffect } from "react";
 
-import ActiveSession from "@/components/ActiveSession";
 import PendingMode from "@/components/home/PendingMode";
 import IdleMode, { WorkoutType as IdleWorkoutType, Session as IdleSession } from "@/components/home/IdleMode";
+import ActiveMode from "@/components/home/ActiveMode";
 
 import { StoredSession, getActiveSession, insertSession, endSession } from "@/db/sessions";
 import RecentSessions from "@/components/RecentSessions";
@@ -88,9 +88,9 @@ export default function HomeScreen() {
           Train. Log. Repeat.
         </Text>
 
-        {mode === "active" && (
-          <ActiveSession
-            activeSession={activeSession!}
+        {mode === "active" && activeSession && (
+          <ActiveMode
+            session={activeSession}
             onEnd={() => setActiveSession(null)}
             colors={{ text: colors.text, accent: colors.accent }}
             suggestedExercises={suggestedExercises}
@@ -121,6 +121,7 @@ export default function HomeScreen() {
             }}
           />
         )}
+        
         {mode !== "active" && (
           <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 24 }}>
             <RecentSessions limit={3} />
