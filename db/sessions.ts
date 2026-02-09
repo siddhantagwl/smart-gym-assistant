@@ -48,7 +48,7 @@ export function getAllSessions(): StoredSession[] {
   return rows.map((r) => ({
     id: String(r.id),
     startTime: String(r.start_time),
-    endTime: String(r.end_time),
+    endTime: r.end_time ? String(r.end_time) : null,
     workoutType: r.workout_type ? String(r.workout_type) : "Unknown",
     note: r.note ? String(r.note) : "",
     source: (r.source as "live" | "manual") || "live",
@@ -266,4 +266,35 @@ export function insertManualSession(params: {
     db.execSync("ROLLBACK;");
     throw err;
   }
+}
+
+type RecentSession = {
+  id: string;
+  startTime: string;
+  endTime: string | null;
+  workoutType: string;
+  source: "live" | "manual";
+};
+
+export function getRecentSessions(limit: number = 3): RecentSession[] {
+  const safeLimit = Math.max(1, Math.min(10, Number(limit) || 3));
+
+  const rows = db.getAllSync(
+    `
+    SELECT id, start_time, end_time, workout_type, source
+    FROM sessions
+    WHERE note != '__DISCARDED__'
+    ORDER BY start_time DESC
+    LIMIT ?;
+    `,
+    [safeLimit]
+  ) as any[];
+
+  return rows.map((r) => ({
+    id: String(r.id),
+    startTime: String(r.start_time),
+    endTime: r.end_time ? String(r.end_time) : null,
+    workoutType: r.workout_type ? String(r.workout_type) : "Unknown",
+    source: (r.source as "live" | "manual") || "live",
+  }));
 }

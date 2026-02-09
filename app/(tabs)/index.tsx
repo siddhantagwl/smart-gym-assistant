@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 
 import ActiveSession from "@/components/ActiveSession";
 import { StoredSession, getActiveSession, insertSession, endSession } from "@/db/sessions";
-import { HelloWave } from "@/components/hello-wave";
+import RecentSessions from "@/components/RecentSessions";
 
 type WorkoutType = "Push" | "Pull" | "Legs";
 
@@ -146,7 +146,7 @@ export default function HomeScreen() {
               style={{
                 color: colors.text,
                 fontSize: 16,
-                marginBottom: 12,
+                marginBottom: 16,
                 textAlign: "center",
               }}
             >
@@ -189,8 +189,12 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
+        <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 24 }}>
+          <RecentSessions limit={3} />
+        </View>
+
+        <View style={{ height: 24 }} />
       </ScrollView>
-      <HelloWave></HelloWave>
     </View>
   );
 }
