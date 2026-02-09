@@ -1,13 +1,18 @@
 import { View, Text, Pressable } from "react-native";
-import { StoredSession } from "@/db/sessions";
+
+export type PendingSessionUI = {
+  id: string;
+  startTime: Date;
+  workoutType: string;
+};
 
 export default function PendingMode(props: {
-  pendingSession: StoredSession;
-  onResume: () => void;
-  onDiscard: () => void;
+  session: PendingSessionUI;
+  onResume: (session: PendingSessionUI) => void;
+  onDiscard: (sessionId: string) => void;
   colors: { text: string; accent: string };
 }) {
-  const { pendingSession, onResume, onDiscard, colors } = props;
+  const { session, onResume, onDiscard, colors } = props;
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24 }}>
@@ -24,20 +29,20 @@ export default function PendingMode(props: {
           Unfinished session found
         </Text>
         <Text style={{ color: "#aaa", marginBottom: 12 }}>
-          {new Date(pendingSession.startTime).toLocaleDateString("en-GB", {
+          {new Date(session.startTime).toLocaleDateString("en-GB", {
             day: "2-digit",
             month: "short",
           })}{" "}
-          · {new Date(pendingSession.startTime).toLocaleTimeString("en-GB", {
+          · {new Date(session.startTime).toLocaleTimeString("en-GB", {
             hour: "2-digit",
             minute: "2-digit",
           })}{" "}
-          · {pendingSession.workoutType}
+          · {session.workoutType}
         </Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Pressable
-            onPress={onResume}
+            onPress={() => onResume(session)}
             style={{
               flex: 1,
               backgroundColor: colors.accent,
@@ -50,7 +55,7 @@ export default function PendingMode(props: {
           </Pressable>
 
           <Pressable
-            onPress={onDiscard}
+            onPress={() => onDiscard(session.id)}
             style={{
               flex: 1,
               backgroundColor: "#8B2E2E",

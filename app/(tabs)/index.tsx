@@ -1,7 +1,7 @@
 import { View, Text, ScrollView } from "react-native";
 import { useState, useEffect } from "react";
 
-import PendingMode from "@/components/home/PendingMode";
+import PendingMode, { PendingSessionUI } from "@/components/home/PendingMode";
 import IdleMode, { WorkoutType as IdleWorkoutType, Session as IdleSession } from "@/components/home/IdleMode";
 import ActiveMode from "@/components/home/ActiveMode";
 
@@ -51,22 +51,6 @@ export default function HomeScreen() {
     if (s) setPendingSession(s);
   }, []);
 
-  function resumePending() {
-    if (!pendingSession) return;
-    setActiveSession({
-      id: pendingSession.id,
-      startTime: new Date(pendingSession.startTime),
-      endTime: null,
-      workoutType: pendingSession.workoutType as IdleWorkoutType,
-    });
-    setPendingSession(null);
-  }
-
-  function discardPending() {
-    if (!pendingSession) return;
-    endSession(pendingSession.id, new Date(), "__DISCARDED__");
-    setPendingSession(null);
-  }
 
   return (
     <View
@@ -99,9 +83,24 @@ export default function HomeScreen() {
 
         {mode === "pending" && pendingSession && (
           <PendingMode
-            pendingSession={pendingSession}
-            onResume={resumePending}
-            onDiscard={discardPending}
+            session={{
+              id: pendingSession.id,
+              startTime: new Date(pendingSession.startTime),
+              workoutType: pendingSession.workoutType,
+            }}
+            onResume={(s: PendingSessionUI) => {
+              setActiveSession({
+                id: s.id,
+                startTime: s.startTime,
+                endTime: null,
+                workoutType: s.workoutType as IdleWorkoutType,
+              });
+              setPendingSession(null);
+            }}
+            onDiscard={(sessionId) => {
+              endSession(sessionId, new Date(), "__DISCARDED__");
+              setPendingSession(null);
+            }}
             colors={{ text: colors.text, accent: colors.accent }}
           />
         )}
@@ -121,7 +120,7 @@ export default function HomeScreen() {
             }}
           />
         )}
-        
+
         {mode !== "active" && (
           <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 24 }}>
             <RecentSessions limit={3} />
