@@ -2,10 +2,13 @@ import { View, Text, Pressable, ScrollView } from "react-native";
 import { useState, useEffect } from "react";
 
 import ActiveSession from "@/components/ActiveSession";
+import PendingMode from "@/components/home/PendingMode";
+
 import { StoredSession, getActiveSession, insertSession, endSession } from "@/db/sessions";
 import RecentSessions from "@/components/RecentSessions";
 
 type WorkoutType = "Push" | "Pull" | "Legs";
+type HomeMode = "idle" | "pending" | "active";
 
 const colors = {
   background: "#0F0F0F",
@@ -32,9 +35,16 @@ const suggestedExercises: Record<WorkoutType, string[]> = {
   Legs: ["Squat", "Romanian Deadlift", "Leg Press", "Leg Curl", "Calf Raises"],
 };
 
+
 export default function HomeScreen() {
   const [activeSession, setActiveSession] = useState<Session | null>(null); // “In-progress session that the user is currently working on” state
   const [pendingSession, setPendingSession] = useState<StoredSession | null>(null); // “DB knows about it, but it hasn’t started yet” state
+
+  const mode: HomeMode = activeSession
+    ? "active"
+    : pendingSession
+    ? "pending"
+    : "idle";
 
   useEffect(() => {
     const s = getActiveSession();
@@ -78,69 +88,25 @@ export default function HomeScreen() {
           Train. Log. Repeat.
         </Text>
 
-        {activeSession ? (
+        {mode === "active" && (
           <ActiveSession
-            activeSession={activeSession}
+            activeSession={activeSession!}
             onEnd={() => setActiveSession(null)}
             colors={{ text: colors.text, accent: colors.accent }}
             suggestedExercises={suggestedExercises}
           />
-        ) : pendingSession ? (
-          <View style={{ width: "100%", paddingHorizontal: 24 }}>
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: "#222",
-                borderRadius: 10,
-                padding: 16,
-                backgroundColor: "#111",
-              }}
-            >
-              <Text style={{ color: colors.text, fontSize: 16, marginBottom: 6 }}>
-                Unfinished session found
-              </Text>
-              <Text style={{ color: "#aaa", marginBottom: 12 }}>
-                {new Date(pendingSession.startTime).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                })}{" "}
-                · {new Date(pendingSession.startTime).toLocaleTimeString("en-GB", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}{" "}
-                · {pendingSession.workoutType}
-              </Text>
+        )}
 
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pressable
-                  onPress={resumePending}
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.accent,
-                    paddingVertical: 12,
-                    borderRadius: 6,
-                    alignItems: "center",
-                  }}
-                >
-                  <Text style={{ color: "#000", fontSize: 16 }}>Resume</Text>
-                </Pressable>
+        {mode === "pending" && pendingSession && (
+          <PendingMode
+            pendingSession={pendingSession}
+            onResume={resumePending}
+            onDiscard={discardPending}
+            colors={{ text: colors.text, accent: colors.accent }}
+          />
+        )}
 
-                <Pressable
-                  onPress={discardPending}
-                  style={{
-                    flex: 1,
-                    backgroundColor: "#8B2E2E",
-                    paddingVertical: 12,
-                    borderRadius: 6,
-                    alignItems: "center",
-                  }}
-                >
-                  <Text style={{ color: colors.text, fontSize: 16 }}>Discard</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        ) : (
+        {mode === "idle" && (
           <View style={{ width: "100%", paddingHorizontal: 24 }}>
             <Text
               style={{
@@ -158,7 +124,6 @@ export default function HomeScreen() {
                 <Pressable
                   key={t}
                   onPress={() => {
-                    if (pendingSession) return;
                     const id = Date.now().toString();
                     const startTime = new Date();
                     insertSession({
@@ -189,9 +154,11 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-        <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 24 }}>
-          <RecentSessions limit={3} />
-        </View>
+        {mode !== "active" && (
+          <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 24 }}>
+            <RecentSessions limit={3} />
+          </View>
+        )}
 
         <View style={{ height: 24 }} />
       </ScrollView>
