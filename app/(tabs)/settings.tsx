@@ -1,8 +1,28 @@
+function formatDateTime(ts: string) {
+  const d = new Date(ts);
+
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 import { View, Text, Pressable, Alert } from "react-native";
+import { useEffect, useState } from "react";
 import * as Sharing from "expo-sharing";
 import { exportAllDataToFile } from "@/db/export";
+import { syncToGoogleSheets, getLastGoogleSheetsSync } from "@/services/googleSheetsSync";
 
 export default function SettingsScreen() {
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    getLastGoogleSheetsSync().then(setLastSync);
+  }, []);
+
   async function onExport() {
     try {
       const path = await exportAllDataToFile();
@@ -66,6 +86,47 @@ export default function SettingsScreen() {
           Share backup
         </Text>
       </Pressable>
+      <View style={{ height: 12 }} />
+
+      <Pressable
+        onPress={async () => {
+          if (syncing) return;
+
+          try {
+            setSyncing(true);
+            await syncToGoogleSheets();
+            const ts = await getLastGoogleSheetsSync();
+            setLastSync(ts);
+            Alert.alert("Sync complete", "Data synced to Google Sheets");
+          } catch (e) {
+            Alert.alert("Sync failed", String(e));
+          } finally {
+            setSyncing(false);
+          }
+        }}
+        style={({ pressed }) => ({
+          backgroundColor: syncing ? "#1f5fa8" : "#2D8CFF",
+          paddingVertical: 14,
+          borderRadius: 8,
+          alignItems: "center",
+          opacity: syncing ? 0.6 : pressed ? 0.85 : 1,
+        })}
+      >
+        <Text style={{ color: "#fff", fontSize: 16 }}>
+          {syncing ? "Syncing…" : "Sync to Google Sheets"}
+        </Text>
+      </Pressable>
+      {lastSync && (
+        <Text
+          style={{
+            marginTop: 10,
+            color: "rgba(255,255,255,0.6)",
+            fontSize: 12,
+          }}
+        >
+          Last synced at: {formatDateTime(lastSync)}
+        </Text>
+      )}
     </View>
   );
 }

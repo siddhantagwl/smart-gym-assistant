@@ -96,6 +96,27 @@ export type StoredExercise = {
   createdAt: string;
 };
 
+export function getAllExercises(): StoredExercise[] {
+  const rows = db.getAllSync(
+    `
+    SELECT id, session_id, name, sets, reps, weight_kg, note, created_at
+    FROM exercises
+    ORDER BY created_at ASC;
+    `
+  ) as any[];
+
+  return rows.map((r) => ({
+    id: String(r.id),
+    sessionId: String(r.session_id),
+    name: String(r.name),
+    sets: Number(r.sets),
+    reps: Number(r.reps),
+    weightKg: Number(r.weight_kg),
+    note: r.note ? String(r.note) : "",
+    createdAt: String(r.created_at),
+  }));
+}
+
 export function getExercisesForSession(sessionId: string): StoredExercise[] {
   const rows = db.getAllSync(
     `SELECT id, session_id, name, sets, reps, weight_kg, note, created_at
