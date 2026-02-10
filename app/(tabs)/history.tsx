@@ -10,7 +10,8 @@ import { View, Text, Pressable, FlatList } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 
-import { getAllSessions, StoredSession, getExerciseCountForSession } from "@/db/sessions";
+import { getAllSessions, StoredSession } from "@/db/sessions";
+import { getExerciseCountForSession } from "@/db/exercise";
 
 const colors = {
   background: "#0F0F0F",
@@ -196,7 +197,7 @@ export default function HistoryScreen() {
 
                     <View
                       style={{
-                        paddingVertical: 4,
+                        paddingVertical: 3,
                         paddingHorizontal: 10,
                         borderRadius: 999,
                         backgroundColor: "#0f0f0f",
@@ -204,8 +205,8 @@ export default function HistoryScreen() {
                         borderColor: colors.border,
                       }}
                     >
-                      <Text style={{ color: colors.accent, fontSize: 17 }}>
-                        {item.workoutType || "Unknown"}
+                      <Text style={{ color: colors.text, fontSize: 13 }}>
+                        {item.sessionLabel?.trim() || "Session"}
                       </Text>
                     </View>
                   </View>

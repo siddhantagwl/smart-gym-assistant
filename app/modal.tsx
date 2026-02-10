@@ -2,7 +2,8 @@ import { View, Text, Pressable, FlatList } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
-import { getAllSessions, getExercisesForSession, StoredExercise } from "@/db/sessions";
+import { getAllSessions } from "@/db/sessions";
+import { getExercisesForSession, StoredExercise } from "@/db/exercise";
 
 const colors = {
   background: "#0F0F0F",
@@ -23,18 +24,17 @@ export default function ModalScreen() {
   }, [params.sessionId]);
 
   const [exercises, setExercises] = useState<StoredExercise[]>([]);
-  const [workoutType, setWorkoutType] = useState<string>("Unknown");
   const [sessionNote, setSessionNote] = useState<string>("");
+  const [sessionLabel, setSessionLabel] = useState<string | null>(null);
 
   useEffect(() => {
     const sessions = getAllSessions();
     const s = sessions.find((x) => x.id === sessionId);
-    setWorkoutType(s?.workoutType || "Unknown");
     setSessionNote(s?.note || "");
+    setSessionLabel(s?.sessionLabel || null);
 
     if (!sessionId) {
       setExercises([]);
-      setWorkoutType("Unknown");
       setSessionNote("");
       return;
     }
@@ -43,7 +43,7 @@ export default function ModalScreen() {
   }, [sessionId]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 16 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 16, marginTop: 56 }}>
       <View
         style={{
           paddingHorizontal: 16,
@@ -56,7 +56,7 @@ export default function ModalScreen() {
         <View>
           <Text style={{ color: colors.text, fontSize: 18 }}>Session details</Text>
           <Text style={{ color: colors.muted, marginTop: 4 }}>
-            Workout: {workoutType}
+            {sessionLabel?.trim() || "Session"}
           </Text>
           {sessionNote ? (
             <Text style={{ color: colors.muted, marginTop: 4 }} numberOfLines={3}>
