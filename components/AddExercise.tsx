@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Keyboard } from "react-native";
-import { View, Text, Pressable, TextInput, ScrollView } from "react-native";
+import { View, Text, Pressable, TextInput, ScrollView, Keyboard } from "react-native";
 
 type AddExerciseProps = {
   titleColor: string;
@@ -37,7 +36,7 @@ type AddExerciseProps = {
     sets: number;
     reps: number;
     weightKg: number;
-    workoutType: string;
+    sessionLabel?: string | null;
     sessionStartTime: string;
   } | null;
 
@@ -70,12 +69,12 @@ function Stepper({
   return (
     <View style={{ width: "100%" }}>
       <Text style={{ color: "#aaa", marginBottom: 6, fontSize: 12 }}>{label}</Text>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Pressable
           onPress={onMinus}
           style={{
             width: 34,
-            height: 40,
+            height: 34,
             borderRadius: 8,
             backgroundColor: "#222",
             alignItems: "center",
@@ -94,8 +93,6 @@ function Stepper({
             minWidth: 64,
             height: 40,
             borderRadius: 8,
-            borderWidth: 1,
-            borderColor: editing ? "#444" : "#222",
             backgroundColor: "#111",
             alignItems: "center",
             justifyContent: "center",
@@ -122,7 +119,7 @@ function Stepper({
             <Text
               style={{
                 color: "#fff",
-                fontSize: 16,
+                fontSize: 20,
                 fontVariant: ["tabular-nums"],
               }}
             >
@@ -135,7 +132,7 @@ function Stepper({
           onPress={onPlus}
           style={{
             width: 34,
-            height: 40,
+            height: 34,
             borderRadius: 8,
             backgroundColor: "#222",
             alignItems: "center",
@@ -177,11 +174,9 @@ export default function AddExercise({
   const [showNote, setShowNote] = useState(false);
 
   return (
-    <View style={{ width: "100%", paddingHorizontal: 16, marginBottom: 14 }}>
+    <View style={{ width: "100%", marginBottom: 1 }}>
       <View
         style={{
-          borderWidth: 1,
-          borderColor: "#222",
           backgroundColor: "#111",
           borderRadius: 12,
           padding: 12,
@@ -191,10 +186,10 @@ export default function AddExercise({
           <Text style={{ color: titleColor, fontSize: 16 }}>
             {mode === "manual" ? "Add exercise (manual)" : "Add exercise"}
           </Text>
-          <Text style={{ color: "#aaa", fontSize: 12 }}>{workoutLabel}</Text>
+          {workoutLabel.trim() ? (
+            <Text style={{color: "#aaa", fontSize: 12}}>{workoutLabel}</Text>
+          ) : null}
         </View>
-
-        <Text style={{ color: "#aaa", marginBottom: 6, fontSize: 12 }}>Exercise</Text>
 
         <TextInput
           value={exerciseName}
@@ -226,14 +221,9 @@ export default function AddExercise({
               borderColor: "rgba(255, 193, 7, 0.5)",
             }}
           >
-            <Text
-              style={{
-                color: "#FFC107",
-                fontSize: 12,
-                fontWeight: "500",
-              }}
-            >
-              Last time · {lastTime.sets}×{lastTime.reps} · {lastTime.weightKg}kg · {lastTime.workoutType}
+            <Text style={{ color: "#FFC107", fontSize: 12, fontWeight: "500" }}>
+              Previously logged · {lastTime.sets}×{lastTime.reps} · {lastTime.weightKg}kg
+              {lastTime.sessionLabel ? ` · ${lastTime.sessionLabel}` : ""}
             </Text>
           </View>
         ) : (
@@ -249,19 +239,19 @@ export default function AddExercise({
                 paddingVertical: 8,
                 paddingHorizontal: 10,
                 borderRadius: 999,
-                backgroundColor: exerciseName === name ? accentColor : "#222",
+                backgroundColor: exerciseName === name ? "#1a1a1a" : "#222",
               }}
             >
-              <Text style={{ color: exerciseName === name ? "#000" : "#fff", fontSize: 12 }}>
+              <Text style={{ color: "#fff", fontSize: 12 }}>
                 {name}
               </Text>
             </Pressable>
           ))}
         </ScrollView>
 
-        <View style={{ height: 12 }} />
+        <View style={{ height: 8 }} />
 
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 16 }}>
           <View style={{ flex: 1 }}>
             <Stepper
               label="Sets"
@@ -287,7 +277,7 @@ export default function AddExercise({
           </View>
         </View>
 
-        <View style={{ height: 10 }} />
+        <View style={{ height: 8 }} />
 
         <View style={{ width: "100%" }}>
           <Stepper
@@ -340,16 +330,19 @@ export default function AddExercise({
           />
         ) : null}
 
+        <View style={{ height: 4 }} />
         <Pressable
           onPress={onSave}
           style={{
             backgroundColor: accentColor,
-            paddingVertical: 12,
+            paddingVertical: 10,
             borderRadius: 10,
             alignItems: "center",
           }}
         >
-          <Text style={{ color: "#000", fontSize: 14 }}>Save</Text>
+          <Text style={{ color: "#000", fontSize: 14, fontWeight: "600", letterSpacing: 0.3 }}>
+            Save exercise
+          </Text>
         </Pressable>
       </View>
     </View>

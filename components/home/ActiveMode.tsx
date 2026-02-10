@@ -1,27 +1,18 @@
 import ActiveSession from "@/components/ActiveSession";
-import { WorkoutType } from "@/components/home/IdleMode";
-
-export type ActiveSessionState = {
-  id: string;
-  startTime: Date;
-  endTime: Date | null;
-  workoutType: WorkoutType;
-};
+import { Session } from "@/domain/session";
 
 export default function ActiveMode(props: {
-  session: ActiveSessionState;
+  session: Session;
   onEnd: () => void;
   colors: { text: string; accent: string };
-  suggestedExercises: Record<WorkoutType, string[]>;
 }) {
-  const { session, onEnd, colors, suggestedExercises } = props;
+  const { session, onEnd, colors } = props;
 
   return (
     <ActiveSession
       activeSession={session}
       onEnd={onEnd}
       colors={colors}
-      suggestedExercises={suggestedExercises}
     />
   );
 }

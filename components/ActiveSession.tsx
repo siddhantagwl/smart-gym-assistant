@@ -2,22 +2,9 @@ import { useEffect, useState } from "react";
 import { View, Text, Pressable, TextInput, Animated } from "react-native";
 
 import AddExercise from "@/components/AddExercise";
-import {
-  endSession,
-  getLatestExerciseByName,
-  insertExercise,
-  getExercisesForSession,
-  LatestExercise,
-} from "@/db/sessions";
-
-type WorkoutType = "Push" | "Pull" | "Legs";
-
-type Session = {
-  id: string;
-  startTime: Date;
-  endTime: Date | null;
-  workoutType: WorkoutType;
-};
+import { Session } from "@/domain/session";
+import { endSession } from "@/db/sessions";
+import {getLatestExerciseByName, insertExercise, getExercisesForSession, LatestExercise } from "@/db/exercise";
 
 type Colors = {
   text: string;
@@ -28,20 +15,94 @@ type Props = {
   activeSession: Session;
   onEnd: () => void;
   colors: Colors;
-  suggestedExercises: Record<WorkoutType, string[]>;
 };
 
-export default function ActiveSession({
-  activeSession,
-  onEnd,
-  colors,
-  suggestedExercises,
-}: Props) {
+function SessionExerciseList({
+  exercises,
+  sessionStart,
+  textColor,
+}: {
+  exercises: {
+    id: string;
+    name: string;
+    sets: number;
+    reps: number;
+    weightKg: number;
+    note: string | null;
+    createdAt: string;
+  }[];
+  sessionStart: Date;
+  textColor: string;
+}) {
+
+  function minutesBetween(a: Date, b: Date) {
+    const ms = a.getTime() - b.getTime();
+    return Math.max(0, Math.round(ms / 60000));
+  }
+
+  if (exercises.length === 0) return null;
+
+  return (
+    <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 1 }}>
+      <Text style={{ color: "#aaa", fontSize: 13, marginBottom: 6 }}>
+        Exercises this session
+      </Text>
+
+      {[...exercises].reverse().map((e) => {
+        const index = exercises.findIndex(x => x.id === e.id);
+
+        const currentTime = new Date(e.createdAt);
+        const baseTime =
+          index === 0
+            ? sessionStart
+            : new Date(exercises[index - 1].createdAt);
+
+        const minutes = minutesBetween(currentTime, baseTime);
+
+        return (
+          <View
+            key={e.id}
+            style={{
+              borderWidth: 1,
+              borderColor: "#1a1a1a",
+              backgroundColor: "#0e0e0e",
+              borderRadius: 8,
+              paddingVertical: 5,
+              paddingHorizontal: 12,
+              marginBottom: 6,
+            }}
+          >
+            <Text style={{ color: textColor, fontSize: 12 }}>
+              {e.name}
+            </Text>
+
+            <Text style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
+              {e.sets} sets · {e.reps} reps · {e.weightKg} kg
+            </Text>
+
+            <Text style={{ color: "#777", fontSize: 11, marginTop: 2 }}>
+              ⏱ {minutes} min
+            </Text>
+
+            {e.note ? (
+              <Text style={{ color: "#aaa", fontSize: 12, marginTop: 4 }} numberOfLines={2}>
+                Note: {e.note}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   const [exerciseName, setExerciseName] = useState("");
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
   const [weightKg, setWeightKg] = useState(10);
 
+  const [showSessionNote, setShowSessionNote] = useState(false);
   const [exerciseNote, setExerciseNote] = useState("");
   const [sessionNote, setSessionNote] = useState("");
   const [latest, setLatest] = useState<LatestExercise | null>(null);
@@ -61,13 +122,13 @@ export default function ActiveSession({
   >([]);
 
   useEffect(() => {
-    const trimmed = exerciseName.trim();
-    if (!trimmed) {
+    const exerciseNameTrimmed = exerciseName.trim();
+    if (!exerciseNameTrimmed) {
       setLatest(null);
       return;
     }
 
-    const rec = getLatestExerciseByName(trimmed);
+    const rec = getLatestExerciseByName(exerciseNameTrimmed);
     setLatest(rec);
   }, [exerciseName]);
 
@@ -121,8 +182,18 @@ export default function ActiveSession({
   );
 
   return (
-    <View style={{ width: "100%", alignItems: "center" }}>
-      <Text style={{ color: colors.text, fontSize: 16, marginBottom: 4 }}>
+    <View
+      style={{
+        width: "100%",
+        alignItems: "center",
+        paddingVertical: 16,
+        paddingHorizontal: 12,
+        marginBottom: 18,
+        backgroundColor: "#0b0b0b",
+        borderRadius: 14,
+      }}
+    >
+      <Text style={{ color: colors.text, fontSize: 16, marginBottom: 9 }}>
         Session started at{" "}
         {activeSession.startTime.toLocaleTimeString("en-GB", {
           hour: "2-digit",
@@ -156,9 +227,82 @@ export default function ActiveSession({
         </Text>
       </Animated.View>
 
-      <Text style={{ color: "#aaa", marginBottom: 12 }}>
-        Workout: {activeSession.workoutType}
-      </Text>
+      <View style={{ height: 4 }} />
+
+      <View
+        style={{
+          width: "100%",
+          padding: 6,
+          borderRadius: 12,
+          backgroundColor: "#0d0d0d",
+          marginBottom: 5,
+        }}
+      >
+        <AddExercise
+          titleColor={colors.text}
+          accentColor={colors.accent}
+          workoutLabel={activeSession.sessionLabel ?? ""}
+          suggestions={[]}
+          exerciseName={exerciseName}
+          sets={sets}
+          reps={reps}
+          weightKg={weightKg}
+          note={exerciseNote}
+          onSelectExercise={(name) => {
+            setExerciseName(name);
+            setExerciseNote("");
+          }}
+          onSetsMinus={() => setSets((s) => Math.max(1, s - 1))}
+          onSetsPlus={() => setSets((s) => s + 1)}
+          onRepsMinus={() => setReps((r) => Math.max(1, r - 1))}
+          onRepsPlus={() => setReps((r) => r + 1)}
+          onWeightMinus={() =>
+            setWeightKg((w) => Math.max(0, Math.round((w - 0.5) * 10) / 10))
+          }
+          onWeightPlus={() => setWeightKg((w) => Math.round((w + 0.5) * 10) / 10)}
+          onNoteChange={(text) => setExerciseNote(text)}
+          onSave={() => {
+            if (!exerciseName) return;
+
+            insertExercise({
+              id: Date.now().toString(),
+              sessionId: activeSession.id,
+              name: exerciseName,
+              sets,
+              reps,
+              weightKg,
+              note: exerciseNote,
+            });
+
+            const rows = getExercisesForSession(activeSession.id);
+            setSessionExercises(rows);
+
+            setExerciseName("");
+            setExerciseNote("");
+
+            setSets(3);
+            setReps(10);
+            setWeightKg(10);
+
+            setSavedFlash(true);
+            setTimeout(() => setSavedFlash(false), 1500);
+          }}
+          onWeightCommit={(v) => setWeightKg(v)}
+          onSetsCommit={(v) => setSets(v)}
+          onRepsCommit={(v) => setReps(v)}
+          lastTime={
+            latest
+              ? {
+                  sets: latest.sets,
+                  reps: latest.reps,
+                  weightKg: latest.weightKg,
+                  sessionLabel: latest.sessionLabel,
+                  sessionStartTime: String(latest.sessionStartTime),
+                }
+              : null
+          }
+        />
+      </View>
 
       {savedFlash ? (
         <Text style={{ color: "#4CAF50", marginBottom: 6 }}>
@@ -166,146 +310,51 @@ export default function ActiveSession({
         </Text>
       ) : null}
 
-      <AddExercise
-        titleColor={colors.text}
-        accentColor={colors.accent}
-        workoutLabel={activeSession.workoutType}
-        suggestions={suggestedExercises[activeSession.workoutType]}
-        exerciseName={exerciseName}
-        sets={sets}
-        reps={reps}
-        weightKg={weightKg}
-        note={exerciseNote}
-        onSelectExercise={(name) => {
-          setExerciseName(name);
-          setExerciseNote("");
-        }}
-        onSetsMinus={() => setSets((s) => Math.max(1, s - 1))}
-        onSetsPlus={() => setSets((s) => s + 1)}
-        onRepsMinus={() => setReps((r) => Math.max(1, r - 1))}
-        onRepsPlus={() => setReps((r) => r + 1)}
-        onWeightMinus={() =>
-          setWeightKg((w) => Math.max(0, Math.round((w - 0.5) * 10) / 10))
-        }
-        onWeightPlus={() => setWeightKg((w) => Math.round((w + 0.5) * 10) / 10)}
-        onNoteChange={(text) => setExerciseNote(text)}
-        onSave={() => {
-          if (!exerciseName) return;
-
-          insertExercise({
-            id: Date.now().toString(),
-            sessionId: activeSession.id,
-            name: exerciseName,
-            sets,
-            reps,
-            weightKg,
-            note: exerciseNote,
-            createdAt: new Date().toISOString(),
-          });
-
-          const rows = getExercisesForSession(activeSession.id);
-          setSessionExercises(rows);
-
-          setExerciseName("");
-          setExerciseNote("");
-
-          setSets(3);
-          setReps(10);
-          setWeightKg(10);
-
-          setSavedFlash(true);
-          setTimeout(() => setSavedFlash(false), 1500);
-        }}
-        onWeightCommit={(v) => setWeightKg(v)}
-        onSetsCommit={(v) => setSets(v)}
-        onRepsCommit={(v) => setReps(v)}
-        lastTime={
-          latest
-            ? {
-                sets: latest.sets,
-                reps: latest.reps,
-                weightKg: latest.weightKg,
-                workoutType: latest.workoutType,
-                sessionStartTime: String(latest.sessionStartTime),
-              }
-            : null
-        }
+      <SessionExerciseList
+        exercises={sessionExercises}
+        sessionStart={activeSession.startTime}
+        textColor={colors.text}
       />
 
-      {sessionExercises.length > 0 ? (
-        <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 8 }}>
-          <Text style={{ color: "#aaa", fontSize: 13, marginBottom: 6 }}>
-            This session
-          </Text>
+      <View style={{ height: 14 }} />
 
-          {[...sessionExercises].reverse().map((e, idx) => {
-            const originalIndex = sessionExercises.findIndex(x => x.id === e.id);
-
-            const currentTime = new Date(e.createdAt);
-
-            const baseTime =
-              originalIndex === 0
-                ? activeSession.startTime
-                : new Date(sessionExercises[originalIndex - 1].createdAt);
-
-            const minutes = minutesBetween(currentTime, baseTime);
-
-            return (
-              <View
-                key={e.id}
-                style={{
-                  borderWidth: 1,
-                  borderColor: "#222",
-                  backgroundColor: "#111",
-                  borderRadius: 8,
-                  paddingVertical: 8,
-                  paddingHorizontal: 12,
-                  marginBottom: 6,
-                }}
-              >
-                <Text style={{ color: colors.text, fontSize: 14 }}>
-                  {e.name}
-                </Text>
-
-                <Text style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
-                  {e.sets} sets · {e.reps} reps · {e.weightKg} kg
-                </Text>
-                <Text style={{ color: "#777", fontSize: 11, marginTop: 2 }}>
-                  ⏱ {minutes} min
-                </Text>
-
-                {e.note ? (
-                  <Text style={{ color: "#aaa", fontSize: 12, marginTop: 4 }} numberOfLines={2}>
-                    Note: {e.note}
-                  </Text>
-                ) : null}
-              </View>
-            );
-          })}
-        </View>
-      ) : null}
-
-      <Text style={{ color: "#aaa", marginBottom: 6, marginTop: 6 }}>
-        Session Note (optional)
-      </Text>
-
-      <TextInput
-        value={sessionNote}
-        onChangeText={setSessionNote}
-        placeholder="Sleep, energy, pain, PR"
-        placeholderTextColor="#666"
+      <Pressable
+        onPress={() => setShowSessionNote(v => !v)}
         style={{
-          width: 320,
+          alignSelf: "flex-start",
+          paddingVertical: 6,
+          paddingHorizontal: 12,
+          borderRadius: 999,
           borderWidth: 1,
           borderColor: "#222",
-          borderRadius: 6,
-          paddingVertical: 10,
-          paddingHorizontal: 12,
-          backgroundColor: "#111",
-          color: "#fff",
-          marginBottom: 12,
+          backgroundColor: "#0f0f0f",
+          marginBottom: showSessionNote ? 8 : 14,
         }}
-      />
+      >
+        <Text style={{ color: "#aaa", fontSize: 12 }}>
+          {showSessionNote ? "Hide session note" : "Add session note"}
+        </Text>
+      </Pressable>
+
+      {showSessionNote ? (
+        <TextInput
+          value={sessionNote}
+          onChangeText={setSessionNote}
+          placeholder="Sleep, energy, pain, PR"
+          placeholderTextColor="#666"
+          style={{
+            width: "100%",
+            borderWidth: 1,
+            borderColor: "#222",
+            borderRadius: 6,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            backgroundColor: "#111",
+            color: "#fff",
+            marginBottom: 12,
+          }}
+        />
+      ) : null}
 
       <Pressable
         onPress={() => {
@@ -315,9 +364,9 @@ export default function ActiveSession({
         }}
         style={{
           backgroundColor: "#e91616",
-          paddingVertical: 12,
+          paddingVertical: 10,
           paddingHorizontal: 24,
-          borderRadius: 6,
+          borderRadius: 8,
         }}
       >
         <Text style={{ color: "#FFFFFF", fontSize: 19 }}>End Session</Text>
