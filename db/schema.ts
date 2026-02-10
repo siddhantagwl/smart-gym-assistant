@@ -2,13 +2,14 @@ import { db } from "./database";
 import { seedExerciseLibrary } from "./seedExercises";
 
 export function initDb() {
+
     db.execSync(`
         CREATE TABLE IF NOT EXISTS sessions (
             id TEXT PRIMARY KEY NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT,
-            workout_type TEXT NOT NULL,
-            note TEXT NOT NULL,
+            workout_type TEXT,
+            note TEXT NOT NULL DEFAULT '',
             source TEXT NOT NULL DEFAULT 'live'
         );
     `);
@@ -21,7 +22,7 @@ export function initDb() {
             sets INTEGER NOT NULL,
             reps INTEGER NOT NULL,
             weight_kg REAL NOT NULL,
-            note TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL,
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         );
@@ -39,11 +40,4 @@ export function initDb() {
 
     seedExerciseLibrary();
 
-    try {
-        db.execSync(`
-            ALTER TABLE sessions ADD COLUMN source TEXT DEFAULT 'live';
-        `);
-    } catch (err) {
-        // If the column already exists, this error is expected and can be ignored
-    }
 }
