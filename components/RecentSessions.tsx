@@ -3,14 +3,7 @@ import { View, Text, Pressable } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import { getRecentSessions } from "@/db/sessions";
-
-type RecentSessionRow = {
-  id: string;
-  startTime: string;
-  endTime?: string | null;
-  workoutType: string;
-  source: "live" | "manual";
-};
+import { RecentSession } from "@/domain/session";
 
 function formatShortDate(iso: string) {
   const d = new Date(iso);
@@ -19,12 +12,6 @@ function formatShortDate(iso: string) {
   const day = String(d.getDate()).padStart(2, "0");
   const month = d.toLocaleString(undefined, { month: "short" });
   return `${day} ${month}`;
-}
-
-function capitalize(s: string) {
-  const t = (s || "").trim();
-  if (!t) return "";
-  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 function formatTime(iso: string) {
@@ -48,11 +35,11 @@ function formatDuration(startIso: string, endIso?: string | null) {
 
 export default function RecentSessions(props: { limit?: number }) {
   const limit = props.limit ?? 3;
-  const [items, setItems] = useState<RecentSessionRow[]>([]);
+  const [items, setItems] = useState<RecentSession[]>([]);
   const router = useRouter();
 
   const load = useCallback(() => {
-    const data = getRecentSessions(limit) as RecentSessionRow[];
+    const data = getRecentSessions(limit) as RecentSession[];
     setItems(data);
   }, [limit]);
 
@@ -131,7 +118,7 @@ export default function RecentSessions(props: { limit?: number }) {
                 }}
               >
                 <Text style={{ color: "#fff", fontSize: 13 }}>
-                  {capitalize(s.workoutType)}
+                  {s.sessionLabel?.trim() || "Session"}
                 </Text>
               </View>
             </View>

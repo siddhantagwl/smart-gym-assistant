@@ -1,3 +1,4 @@
+// domain/session.ts
 
 // Session is an in-memory domain model.
 export type Session = {
