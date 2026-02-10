@@ -1,12 +1,13 @@
 import { View, Text, ScrollView } from "react-native";
 import { useState, useEffect } from "react";
 
-import PendingMode, { PendingSessionUI } from "@/components/home/PendingMode";
-import IdleMode, { WorkoutType as IdleWorkoutType, Session as IdleSession } from "@/components/home/IdleMode";
-import ActiveMode from "@/components/home/ActiveMode";
-
+import { Session } from "@/domain/session";
 import { StoredSession, getActiveSession, insertSession, endSession } from "@/db/sessions";
+
+import IdleMode from "@/components/home/IdleMode";
+import ActiveMode from "@/components/home/ActiveMode";
 import RecentSessions from "@/components/RecentSessions";
+import PendingMode, { PendingSessionUI } from "@/components/home/PendingMode";
 
 type HomeMode = "idle" | "pending" | "active";
 
@@ -14,25 +15,6 @@ const colors = {
   background: "#0F0F0F",
   text: "#FFFFFF",
   accent: "#4CAF50",
-};
-
-type Session = {
-  id: string;
-  startTime: Date;
-  endTime: Date | null;
-  workoutType: IdleWorkoutType;
-};
-
-const suggestedExercises: Record<IdleWorkoutType, string[]> = {
-  Push: [
-    "Bench Press",
-    "Overhead Press",
-    "Incline Dumbbell Press",
-    "Lateral Raises",
-    "Triceps Pushdown",
-  ],
-  Pull: ["Pull Ups", "Barbell Row", "Lat Pulldown", "Face Pull", "Biceps Curl"],
-  Legs: ["Squat", "Romanian Deadlift", "Leg Press", "Leg Curl", "Calf Raises"],
 };
 
 
@@ -69,7 +51,7 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={{ color: colors.text, fontSize: 28, marginBottom: 20, marginTop: 40 }}>
-          Train. Log. Repeat.
+          Train. Log. Progress.
         </Text>
 
         {mode === "active" && activeSession && (
@@ -77,7 +59,6 @@ export default function HomeScreen() {
             session={activeSession}
             onEnd={() => setActiveSession(null)}
             colors={{ text: colors.text, accent: colors.accent }}
-            suggestedExercises={suggestedExercises}
           />
         )}
 
@@ -86,14 +67,12 @@ export default function HomeScreen() {
             session={{
               id: pendingSession.id,
               startTime: new Date(pendingSession.startTime),
-              workoutType: pendingSession.workoutType,
             }}
             onResume={(s: PendingSessionUI) => {
               setActiveSession({
                 id: s.id,
                 startTime: s.startTime,
                 endTime: null,
-                workoutType: s.workoutType as IdleWorkoutType,
               });
               setPendingSession(null);
             }}
@@ -108,12 +87,12 @@ export default function HomeScreen() {
         {mode === "idle" && (
           <IdleMode
             colors={{ text: colors.text, accent: colors.accent }}
-            onStart={(session: IdleSession) => {
+            onStart={(session: Session) => {
               insertSession({
                 id: session.id,
                 startTime: session.startTime,
                 endTime: session.endTime,
-                workoutType: session.workoutType,
+                sessionLabel: null,
                 note: "",
               });
               setActiveSession(session);

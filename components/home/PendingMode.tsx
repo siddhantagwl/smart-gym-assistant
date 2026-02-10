@@ -3,7 +3,7 @@ import { View, Text, Pressable } from "react-native";
 export type PendingSessionUI = {
   id: string;
   startTime: Date;
-  workoutType: string;
+  sessionLabel?: string | null;
 };
 
 export default function PendingMode(props: {
@@ -36,8 +36,8 @@ export default function PendingMode(props: {
           · {new Date(session.startTime).toLocaleTimeString("en-GB", {
             hour: "2-digit",
             minute: "2-digit",
-          })}{" "}
-          · {session.workoutType}
+          })}
+          {session.sessionLabel ? ` · ${session.sessionLabel}` : ""}
         </Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
