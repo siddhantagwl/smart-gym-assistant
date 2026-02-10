@@ -83,7 +83,7 @@ export function endSession(sessionId: string, endTime: Date, note: string) {
 
 export function insertManualSession(params: {
   date: Date;
-  sessionLabel: string;
+  sessionLabel: string | null;
   note: string;
   exercises: {
     name: string;

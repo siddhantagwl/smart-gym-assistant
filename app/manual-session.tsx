@@ -26,10 +26,8 @@ export default function ManualSessionScreen() {
   const router = useRouter();
   const [date, setDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
-  const [workoutType, setWorkoutType] = useState<
-    "push" | "pull" | "legs" | "other"
-  >("push");
-  const [note, setNote] = useState("");
+  const [sessionLabel, setSessionLabel] = useState("");
+  const [sessionNote, setSessionNote] = useState("");
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [exName, setExName] = useState("");
   const [exSets, setExSets] = useState("3");
@@ -86,41 +84,25 @@ export default function ManualSessionScreen() {
         </Pressable>
       </View>
 
-      <View style={{ marginBottom: 20 }}>
-        <Text style={{ color: colors.sub, marginBottom: 8 }}>
-          Workout type
+      <View style={{ marginBottom: 24 }}>
+        <Text style={{ color: colors.sub, marginBottom: 6 }}>
+          Session label (optional)
         </Text>
 
-        <View style={{ flexDirection: "row" }}>
-          {["push", "pull", "legs", "other"].map((type) => {
-            const selected = workoutType === type;
-
-            return (
-              <Pressable
-                key={type}
-                onPress={() => setWorkoutType(type as any)}
-                style={{
-                  paddingVertical: 8,
-                  paddingHorizontal: 12,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: selected ? colors.accent : colors.border,
-                  backgroundColor: selected ? "rgba(58,94,255,0.15)" : "transparent",
-                  marginRight: 8,
-                }}
-              >
-                <Text
-                  style={{
-                    color: selected ? colors.accent : colors.sub,
-                    fontSize: 14,
-                  }}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <TextInput
+          value={sessionLabel}
+          onChangeText={setSessionLabel}
+          placeholder="e.g. Legs + Shoulders, Cardio, Evening workout"
+          placeholderTextColor="#666"
+          style={{
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 8,
+            padding: 12,
+            color: colors.text,
+            minHeight: 40,
+          }}
+        />
       </View>
 
       <View style={{ marginBottom: 24 }}>
@@ -129,11 +111,10 @@ export default function ManualSessionScreen() {
         </Text>
 
         <TextInput
-          value={note}
-          onChangeText={setNote}
+          value={sessionNote}
+          onChangeText={setSessionNote}
           placeholder="Anything to remember about this session"
           placeholderTextColor="#666"
-          multiline
           style={{
             borderWidth: 1,
             borderColor: colors.border,
@@ -389,8 +370,8 @@ export default function ManualSessionScreen() {
             try {
               insertManualSession({
                 date,
-                workoutType,
-                note,
+                sessionLabel: sessionLabel.trim() || null,
+                note: sessionNote.trim() || "",
                 exercises,
               });
 
