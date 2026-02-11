@@ -45,11 +45,13 @@ function SessionExerciseList({
   return (
     <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 1 }}>
       <Text style={{ color: "#aaa", fontSize: 13, marginBottom: 6 }}>
-        Exercises this session
+        Exercises this session ({exercises.length})
       </Text>
 
-      {[...exercises].reverse().map((e) => {
+      {[...exercises].reverse().map((e, reversedIndex) => {
         const index = exercises.findIndex(x => x.id === e.id);
+
+        const serialNumber = exercises.length - reversedIndex;
 
         const currentTime = new Date(e.createdAt);
         const baseTime =
@@ -73,7 +75,7 @@ function SessionExerciseList({
             }}
           >
             <Text style={{ color: textColor, fontSize: 12 }}>
-              {e.name}
+              {serialNumber}. {e.name}
             </Text>
 
             <Text style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
