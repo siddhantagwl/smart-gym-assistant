@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { initDb } from "@/db/schema";
 
 export const unstable_settings = {
@@ -13,10 +13,16 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [dbReady, setDbReady] = useState(false);
 
   useEffect(() => {
     initDb();
+    setDbReady(true);
   }, []);
+
+  if (!dbReady) {
+    return null; // DB not ready yet, block rendering
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
