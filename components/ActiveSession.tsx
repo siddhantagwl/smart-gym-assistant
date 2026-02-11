@@ -44,9 +44,6 @@ function SessionExerciseList({
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 1 }}>
-      <Text style={{ color: "#aaa", fontSize: 13, marginBottom: 6 }}>
-        Exercises this session ({exercises.length})
-      </Text>
 
       {[...exercises].reverse().map((e, reversedIndex) => {
         const index = exercises.findIndex(x => x.id === e.id);
@@ -122,6 +119,8 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
       createdAt: string;
     }[]
   >([]);
+
+  const [showExercises, setShowExercises] = useState(true);
 
   useEffect(() => {
     const exerciseNameTrimmed = exerciseName.trim();
@@ -220,7 +219,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
         <Text
           style={{
             color: "#4CAF50",
-            fontSize: 17,
+            fontSize: 25,
             fontWeight: "600",
             letterSpacing: 0.3,
           }}
@@ -312,11 +311,35 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
         </Text>
       ) : null}
 
-      <SessionExerciseList
-        exercises={sessionExercises}
-        sessionStart={activeSession.startTime}
-        textColor={colors.text}
-      />
+      <View style={{ width: "100%" }}>
+        {sessionExercises.length > 0 ? (
+          <Pressable
+            onPress={() => setShowExercises((v) => !v)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingHorizontal: 24,
+              marginTop: 6,
+            }}
+          >
+            <Text style={{ color: "#aaa", fontSize: 13 }}>
+              Exercises this session ({sessionExercises.length})
+            </Text>
+            <Text style={{ color: "#777", fontSize: 19 }}>
+              {showExercises ? "▾" : "▸"}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {showExercises ? (
+          <SessionExerciseList
+            exercises={sessionExercises}
+            sessionStart={activeSession.startTime}
+            textColor={colors.text}
+          />
+        ) : null}
+      </View>
 
       <View style={{ height: 14 }} />
 
