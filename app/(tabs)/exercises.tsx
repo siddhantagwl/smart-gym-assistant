@@ -29,6 +29,7 @@ export default function ExercisesScreen() {
     }).start();
   }, [query]);
 
+  // searching happens here - filter, sort, and group exercises into sections
   const sections = useMemo(() => {
     const q = query.trim().toLowerCase();
 
@@ -36,7 +37,7 @@ export default function ExercisesScreen() {
       ? exercises.filter((e) =>
           e.name.toLowerCase().includes(q) ||
           e.primaryMuscle.toLowerCase().includes(q) ||
-          e.tags.toLowerCase().includes(q)
+          e.tags.some(tag => tag.toLowerCase().includes(q))
         )
       : exercises;
 
@@ -166,58 +167,25 @@ export default function ExercisesScreen() {
                     </Text>
                   </View>
 
-                  {(() => {
-                    const tags = item.tags
-                      .split(",")
-                      .map((t) => t.trim())
-                      .filter(Boolean);
-
-                    const visible = tags.slice(0, 3);
-                    const hiddenCount = tags.length - visible.length;
-
-                    return (
-                      <>
-                        {visible.map((tag) => (
-                          <View
-                            key={tag}
-                            style={{
-                              borderWidth: 1,
-                              borderColor: "#333",
-                              backgroundColor: "rgba(255,255,255,0.04)",
-                              borderRadius: 12,
-                              paddingHorizontal: 8,
-                              paddingVertical: 2,
-                              marginRight: 6,
-                              marginBottom: 4,
-                            }}
-                          >
-                            <Text style={{ color: "#aaa", fontSize: 11 }}>
-                              {tag}
-                            </Text>
-                          </View>
-                        ))}
-
-                        {hiddenCount > 0 ? (
-                          <View
-                            style={{
-                              borderWidth: 1,
-                              borderColor: "#222",
-                              backgroundColor: "rgba(255,255,255,0.02)",
-                              borderRadius: 12,
-                              paddingHorizontal: 8,
-                              paddingVertical: 2,
-                              marginRight: 6,
-                              marginBottom: 4,
-                            }}
-                          >
-                            <Text style={{ color: "#777", fontSize: 11 }}>
-                              +{hiddenCount}
-                            </Text>
-                          </View>
-                        ) : null}
-                      </>
-                    );
-                  })()}
+                  {item.tags.map((tag) => (
+                    <View
+                      key={tag}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: "#333",
+                        backgroundColor: "rgba(255,255,255,0.04)",
+                        borderRadius: 12,
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        marginRight: 6,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <Text style={{ color: "#aaa", fontSize: 11 }}>
+                        {tag}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
               </View>
 

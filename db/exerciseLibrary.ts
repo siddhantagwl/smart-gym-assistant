@@ -7,7 +7,7 @@ export type ExerciseLibraryItem = {
   name: string;
   videoUrl: string;
   primaryMuscle: string;
-  tags: string;
+  tags: string[];
 };
 
 export function getAllExercises(): ExerciseLibraryItem[] {
@@ -20,6 +20,12 @@ export function getAllExercises(): ExerciseLibraryItem[] {
     name: String(r.name),
     videoUrl: String(r.video_url),
     primaryMuscle: String(r.primary_muscle),
-    tags: String(r.tags),
+    tags: (() => {
+      try {
+        return JSON.parse(r.tags ?? "[]");
+      } catch {
+        return [];
+      }
+    })(),
   }));
 }

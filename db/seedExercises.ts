@@ -14,7 +14,7 @@ export function seedExerciseLibrary() {
         ex.name,
         ex.video_url ?? null,
         ex.primary_muscle,
-        ex.tags,
+        JSON.stringify(ex.tags ?? []),
       ]
     );
   });
