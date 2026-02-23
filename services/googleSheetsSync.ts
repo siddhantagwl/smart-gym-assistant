@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getAllSessions, getAllExercises } from "@/db/sessions";
+import { getAllSessions } from "@/db/sessions";
+import { getAllExercises } from "@/db/exercise";
 
 const WEBHOOK_URL = process.env.EXPO_PUBLIC_GSHEETS_WEBHOOK_URL!;
 const SHARED_SECRET = process.env.EXPO_PUBLIC_GSHEETS_SECRET!;
