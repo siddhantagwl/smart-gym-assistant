@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, SectionList, Pressable, Linking, Animated } from "react-native";
-import { getAllExercises, ExerciseLibraryItem } from "../../db/exerciseLibrary";
+import { getAllLibraryExercises, ExerciseLibraryItem } from "../../db/exerciseLibrary";
 
 const colors = {
   bg: "#000",
@@ -17,7 +17,7 @@ export default function ExercisesScreen() {
   const clearAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
-    const data = getAllExercises();
+    const data = getAllLibraryExercises();
     setExercises(data);
   }, []);
 

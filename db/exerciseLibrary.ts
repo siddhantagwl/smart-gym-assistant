@@ -10,7 +10,7 @@ export type ExerciseLibraryItem = {
   tags: string[];
 };
 
-export function getAllExercises(): ExerciseLibraryItem[] {
+export function getAllLibraryExercises(): ExerciseLibraryItem[] {
   const rows = db.getAllSync(
     `SELECT id, name, video_url, primary_muscle, tags FROM exercise_library;`
   ) as any[];
