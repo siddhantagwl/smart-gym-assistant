@@ -73,11 +73,18 @@ export default function HomeScreen() {
                 id: s.id,
                 startTime: s.startTime,
                 endTime: null,
+                sessionLabels: pendingSession?.sessionLabels ?? [],
+                note: pendingSession?.note ?? "",
               });
               setPendingSession(null);
             }}
             onDiscard={(sessionId) => {
-              endSession(sessionId, new Date(), "__DISCARDED__");
+              endSession(
+                sessionId,
+                new Date(),
+                "__DISCARDED__",
+                [],
+              );
               setPendingSession(null);
             }}
             colors={{ text: colors.text, accent: colors.accent }}
@@ -92,7 +99,7 @@ export default function HomeScreen() {
                 id: session.id,
                 startTime: session.startTime,
                 endTime: session.endTime,
-                sessionLabel: null,
+                sessionLabels: [],
                 note: "",
               });
               setActiveSession(session);

@@ -7,7 +7,7 @@ export type StoredSession = {
   id: string;
   startTime: string;
   endTime: string | null;
-  sessionLabel: string | null;
+  sessionLabels: string[];
   note: string;
   source: "live" | "manual";
 };
@@ -15,14 +15,14 @@ export type StoredSession = {
 export function insertSession(session: Session) {
   db.runSync(
     `
-    INSERT INTO sessions (id, start_time, end_time, workout_type, note, source)
+    INSERT INTO sessions (id, start_time, end_time, session_labels, note, source)
     VALUES (?, ?, ?, ?, ?, ?);
     `,
     [
       session.id,
       session.startTime.toISOString(),
       session.endTime ? session.endTime.toISOString() : null,
-      session.sessionLabel ?? null,
+      JSON.stringify(session.sessionLabels ?? []),
       session.note ?? "",
       "live",
     ]
@@ -32,7 +32,7 @@ export function insertSession(session: Session) {
 export function getAllSessions(): StoredSession[] {
   const rows = db.getAllSync(
     `
-    SELECT id, start_time, end_time, workout_type, note, source
+    SELECT id, start_time, end_time, session_labels, note, source
     FROM sessions
     ORDER BY start_time DESC;
     `
@@ -42,7 +42,7 @@ export function getAllSessions(): StoredSession[] {
     id: String(r.id),
     startTime: String(r.start_time),
     endTime: r.end_time ? String(r.end_time) : null,
-    sessionLabel: r.workout_type ? String(r.workout_type) : null,
+    sessionLabels: r.session_labels ? JSON.parse(r.session_labels) : [],
     note: r.note ? String(r.note) : "",
     source: (r.source as "live" | "manual") || "live",
   }));
@@ -51,7 +51,7 @@ export function getAllSessions(): StoredSession[] {
 export function getActiveSession(): StoredSession | null {
   const row = db.getFirstSync(
     `
-    SELECT id, start_time, end_time, workout_type, note, source
+    SELECT id, start_time, end_time, session_labels, note, source
     FROM sessions
     WHERE end_time IS NULL
     LIMIT 1;
@@ -64,20 +64,20 @@ export function getActiveSession(): StoredSession | null {
     id: String(row.id),
     startTime: String(row.start_time),
     endTime: row.end_time ? String(row.end_time) : null,
-    sessionLabel: row.workout_type ? String(row.workout_type) : null,
+    sessionLabels: row.session_labels ? JSON.parse(row.session_labels) : [],
     note: row.note ? String(row.note) : "",
     source: (row.source as "live" | "manual") || "live",
   };
 }
 
-export function endSession(sessionId: string, endTime: Date, note: string) {
+export function endSession(sessionId: string, endTime: Date, note: string, sessionLabels: string[]) {
   db.runSync(
     `
     UPDATE sessions
-    SET end_time = ?, note = ?
+    SET end_time = ?, note = ?, session_labels = ?
     WHERE id = ?;
     `,
-    [endTime.toISOString(), note, sessionId]
+    [endTime.toISOString(), note, JSON.stringify(sessionLabels), sessionId]
   );
 }
 
@@ -104,10 +104,10 @@ export function insertManualSession(params: {
     // 1) Insert session
     db.runSync(
       `
-      INSERT INTO sessions (id, start_time, end_time, workout_type, note, source)
+      INSERT INTO sessions (id, start_time, end_time, session_labels, note, source)
       VALUES (?, ?, ?, ?, ?, ?);
       `,
-      [sessionId, startTime, endTime, params.sessionLabel, params.note || "", "manual"]
+      [sessionId, startTime, endTime, JSON.stringify(params.sessionLabel ? [params.sessionLabel] : []), params.note || "", "manual"]
     );
 
     // 2) Insert exercises
@@ -142,7 +142,7 @@ export function getRecentSessions(limit: number = 3): RecentSession[] {
 
   const rows = db.getAllSync(
     `
-    SELECT id, start_time, end_time, workout_type, source
+    SELECT id, start_time, end_time, session_labels, source
     FROM sessions
     WHERE note != '__DISCARDED__'
     ORDER BY start_time DESC
@@ -155,7 +155,7 @@ export function getRecentSessions(limit: number = 3): RecentSession[] {
     id: String(r.id),
     startTime: String(r.start_time),
     endTime: r.end_time ? String(r.end_time) : null,
-    sessionLabel: r.workout_type ? String(r.workout_type) : null,
+    sessionLabels: r.session_labels ? JSON.parse(r.session_labels) : [],
     source: (r.source as "live" | "manual") || "live",
   }));
 }

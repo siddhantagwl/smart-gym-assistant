@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Pressable, TextInput, Animated } from "react-native";
 
 import AddExercise from "@/components/AddExercise";
@@ -250,7 +250,6 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
         <AddExercise
           titleColor={colors.text}
           accentColor={colors.accent}
-          workoutLabel={activeSession.sessionLabel ?? ""}
           suggestions={exerciseLibraryNames}
           exerciseName={exerciseName}
           sets={sets}
@@ -305,7 +304,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
                   sets: latest.sets,
                   reps: latest.reps,
                   weightKg: latest.weightKg,
-                  sessionLabel: latest.sessionLabel,
+                  sessionLabels: latest.sessionLabels,
                   sessionStartTime: String(latest.sessionStartTime),
                 }
               : null
@@ -391,7 +390,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
 
       <Pressable
         onPress={() => {
-          endSession(activeSession.id, new Date(), sessionNote);
+          endSession(activeSession.id, new Date(), sessionNote, activeSession.sessionLabels ?? []);
           setSessionNote("");
           onEnd();
         }}

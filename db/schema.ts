@@ -8,7 +8,7 @@ export function initDb() {
             id TEXT PRIMARY KEY NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT,
-            workout_type TEXT,
+            session_labels TEXT NOT NULL DEFAULT '[]',
             note TEXT NOT NULL DEFAULT '',
             source TEXT NOT NULL DEFAULT 'live'
         );

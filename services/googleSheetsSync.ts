@@ -28,7 +28,7 @@ export async function syncToGoogleSheets() {
               new Date(s.startTime).getTime()) / 60000
           )
         : "",
-      workout_type: s.workoutType,
+      sessionLabels: s.sessionLabels,
       source: s.source,
       note: s.note,
     })),

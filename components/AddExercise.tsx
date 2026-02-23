@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
-import { View, Text, Pressable, TextInput, ScrollView, Keyboard } from "react-native";
+import { View, Text, Pressable, TextInput, Keyboard } from "react-native";
 
 type AddExerciseProps = {
   titleColor: string;
   accentColor: string;
 
-  workoutLabel: string;
   suggestions: string[];
 
   exerciseName: string;
@@ -36,7 +35,7 @@ type AddExerciseProps = {
     sets: number;
     reps: number;
     weightKg: number;
-    sessionLabel?: string | null;
+    sessionLabels?: string[];
     sessionStartTime: string;
   } | null;
 
@@ -150,7 +149,6 @@ export default function AddExercise({
   mode = "live",
   titleColor,
   accentColor,
-  workoutLabel,
   suggestions,
   exerciseName,
   sets,
@@ -198,9 +196,6 @@ export default function AddExercise({
           <Text style={{ color: titleColor, fontSize: 16 }}>
             {mode === "manual" ? "Add exercise (manual)" : "Add exercise"}
           </Text>
-          {workoutLabel.trim() ? (
-            <Text style={{color: "#aaa", fontSize: 12}}>{workoutLabel}</Text>
-          ) : null}
         </View>
         <View style={{ marginBottom: 8 }}>
           {/* Input Row */}
@@ -292,7 +287,9 @@ export default function AddExercise({
           >
             <Text style={{ color: "#FFC107", fontSize: 12, fontWeight: "500" }}>
               Previously logged · {lastTime.sets}×{lastTime.reps} · {lastTime.weightKg}kg
-              {lastTime.sessionLabel ? ` · ${lastTime.sessionLabel}` : ""}
+              {lastTime.sessionLabels && lastTime.sessionLabels.length > 0
+                ? ` · ${lastTime.sessionLabels.join(", ")}`
+                : ""}
             </Text>
           </View>
         ) : (

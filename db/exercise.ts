@@ -21,7 +21,7 @@ export type LatestExercise = {
   weightKg: number;
   note: string;
   sessionStartTime: string;
-  sessionLabel: string | null;
+  sessionLabels: string[];
 };
 
 export function insertExercise(exercise: Exercise) {
@@ -108,7 +108,7 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
       e.weight_kg as weight_kg,
       e.note as note,
       s.start_time as session_start_time,
-      s.workout_type as workout_type
+      s.session_labels as session_labels
     FROM exercises e
     JOIN sessions s ON s.id = e.session_id
     WHERE LOWER(e.name) = LOWER(?)
@@ -127,6 +127,6 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
     weightKg: Number(row.weight_kg),
     note: row.note ? String(row.note) : "",
     sessionStartTime: String(row.session_start_time),
-    sessionLabel: row.workout_type ? String(row.workout_type) : null,
+    sessionLabels: row.session_labels ? JSON.parse(row.session_labels) : [],
   };
 }

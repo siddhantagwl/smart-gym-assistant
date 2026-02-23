@@ -5,7 +5,7 @@ export type Session = {
   id: string;
   startTime: Date;
   endTime: Date | null;
-  sessionLabel?: string | null;
+  sessionLabels: string[];
   note?: string;
 };
 
@@ -13,6 +13,6 @@ export type RecentSession = {
   id: string;
   startTime: string;
   endTime: string | null;
-  sessionLabel: string | null;
+  sessionLabels: string[];
   source: "live" | "manual";
 };
