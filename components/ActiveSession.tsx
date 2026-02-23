@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { View, Text, Pressable, TextInput, Animated } from "react-native";
 
 import AddExercise from "@/components/AddExercise";
 import { Session } from "@/domain/session";
 import { endSession } from "@/db/sessions";
 import {getLatestExerciseByName, insertExercise, getExercisesForSession, LatestExercise } from "@/db/exercise";
+import { getAllLibraryExercises } from "@/db/exerciseLibrary";
 
 type Colors = {
   text: string;
@@ -120,6 +121,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     }[]
   >([]);
 
+  const [exerciseLibraryNames, setExerciseLibraryNames] = useState<string[]>([]);
   const [showExercises, setShowExercises] = useState(true);
 
   useEffect(() => {
@@ -137,6 +139,12 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     const rows = getExercisesForSession(activeSession.id);
     setSessionExercises(rows);
   }, [activeSession.id]);
+
+  useEffect(() => {
+    const allLibExercises = getAllLibraryExercises();
+    const names = allLibExercises.map(e => e.name)
+    setExerciseLibraryNames(names);
+  }, []);
 
   function minutesBetween(a: Date, b: Date) {
     const ms = a.getTime() - b.getTime();
@@ -243,7 +251,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
           titleColor={colors.text}
           accentColor={colors.accent}
           workoutLabel={activeSession.sessionLabel ?? ""}
-          suggestions={[]}
+          suggestions={exerciseLibraryNames}
           exerciseName={exerciseName}
           sets={sets}
           reps={reps}

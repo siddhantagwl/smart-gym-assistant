@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, Pressable, TextInput, ScrollView, Keyboard } from "react-native";
 
 type AddExerciseProps = {
@@ -173,13 +173,25 @@ export default function AddExercise({
 }: AddExerciseProps) {
   const [showNote, setShowNote] = useState(false);
 
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const filteredSuggestions = useMemo(() => {
+    const query = exerciseName.trim().toLowerCase();
+    if (!query) return [];
+
+    return suggestions
+      .filter((name) => name.toLowerCase().includes(query))
+      .filter((name) => name.toLowerCase() !== query); // remove exact match
+  }, [exerciseName, suggestions]);
+
   return (
-    <View style={{ width: "100%", marginBottom: 1 }}>
+    <View style={{ width: "100%" }}>
       <View
         style={{
           backgroundColor: "#111",
           borderRadius: 12,
           padding: 12,
+          overflow: "visible",
         }}
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
@@ -190,23 +202,80 @@ export default function AddExercise({
             <Text style={{color: "#aaa", fontSize: 12}}>{workoutLabel}</Text>
           ) : null}
         </View>
+        <View style={{ marginBottom: 8 }}>
+          {/* Input Row */}
+          <View style={{ position: "relative" }}>
+            <TextInput
+              value={exerciseName}
+              onChangeText={(text) => {
+                onSelectExercise(text);
+                setShowSuggestions(true);
+              }}
+              placeholder="Type exercise name"
+              placeholderTextColor="#666"
+              style={{
+                borderWidth: 1,
+                borderColor: "#222",
+                borderRadius: 8,
+                height: 44,
+                paddingLeft: 12,
+                paddingRight: 40,
+                color: "#fff",
+                backgroundColor: "#0f0f0f",
+              }}
+            />
 
-        <TextInput
-          value={exerciseName}
-          onChangeText={onSelectExercise}
-          placeholder="Type exercise name"
-          placeholderTextColor="#666"
-          style={{
-            borderWidth: 1,
-            borderColor: "#222",
-            borderRadius: 8,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            color: "#fff",
-            backgroundColor: "#0f0f0f",
-            marginBottom: 8,
-          }}
-        />
+            {exerciseName.length > 0 && (
+              <Pressable
+                onPress={() => {
+                  onSelectExercise("");
+                  setShowSuggestions(false);
+                  Keyboard.dismiss();
+                }}
+                style={{
+                  position: "absolute",
+                  right: 10,
+                  top: 12,
+                }}
+              >
+                <Text style={{ color: "#ff4d4f", fontSize: 16 }}>✕</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Chips */}
+          {exerciseName.trim() && filteredSuggestions.length > 0 ? (
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                gap: 8,
+                marginTop: 8,
+              }}
+            >
+              {filteredSuggestions.map((name) => (
+                <Pressable
+                  key={name}
+                  onPress={() => {
+                    onSelectExercise(name);
+                    setShowSuggestions(false);
+                    Keyboard.dismiss();
+                  }}
+                  style={{
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 999,
+                    backgroundColor: "#1c1c1c",
+                    borderWidth: 1,
+                    borderColor: "#2a2a2a",
+                  }}
+                >
+                  <Text style={{ color: "#ddd", fontSize: 12 }}>{name}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
 
         {mode === "live" && exerciseName.trim() && lastTime ? (
           <View
@@ -230,24 +299,6 @@ export default function AddExercise({
           <View style={{ height: 8 }} />
         )}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {suggestions.map((name) => (
-            <Pressable
-              key={name}
-              onPress={() => onSelectExercise(name)}
-              style={{
-                paddingVertical: 8,
-                paddingHorizontal: 10,
-                borderRadius: 999,
-                backgroundColor: exerciseName === name ? "#1a1a1a" : "#222",
-              }}
-            >
-              <Text style={{ color: "#fff", fontSize: 12 }}>
-                {name}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
 
         <View style={{ height: 8 }} />
 
