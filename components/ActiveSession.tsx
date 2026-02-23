@@ -4,7 +4,7 @@ import { View, Text, Pressable, TextInput, Animated } from "react-native";
 import AddExercise from "@/components/AddExercise";
 import { Session } from "@/domain/session";
 import { endSession } from "@/db/sessions";
-import {getLatestExerciseByName, insertExercise, getExercisesForSession, LatestExercise } from "@/db/exercise";
+import { getLatestExerciseByName, insertExercise, getExercisesForSession, LatestExercise } from "@/db/exercise";
 import { getAllLibraryExercises } from "@/db/exerciseLibrary";
 
 type Colors = {
@@ -124,6 +124,14 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   const [exerciseLibraryNames, setExerciseLibraryNames] = useState<string[]>([]);
   const [showExercises, setShowExercises] = useState(true);
 
+  const [exerciseLibrary, setExerciseLibrary] = useState<
+    { id: string; name: string; primaryMuscle: string; tags: string[]; videoUrl: string }[]
+  >([]);
+
+  const [showLabelConfirm, setShowLabelConfirm] = useState(false);
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [inferredLabels, setInferredLabels] = useState<string[]>([]);
+
   useEffect(() => {
     const exerciseNameTrimmed = exerciseName.trim();
     if (!exerciseNameTrimmed) {
@@ -142,8 +150,8 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
 
   useEffect(() => {
     const allLibExercises = getAllLibraryExercises();
-    const names = allLibExercises.map(e => e.name)
-    setExerciseLibraryNames(names);
+    setExerciseLibrary(allLibExercises);
+    setExerciseLibraryNames(allLibExercises.map(e => e.name));
   }, []);
 
   function minutesBetween(a: Date, b: Date) {
@@ -189,6 +197,164 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     now,
     activeSession.startTime
   );
+
+  function inferLabels(): string[] {
+    const labelSet = new Set<string>();
+
+    sessionExercises.forEach(e => {
+      const lib = exerciseLibrary.find(l => l.name === e.name);
+      if (lib?.primaryMuscle) {
+        labelSet.add(lib.primaryMuscle);
+      }
+    });
+
+    return Array.from(labelSet);
+  }
+
+  if (showLabelConfirm) {
+    return (
+      <View
+        style={{
+          width: "100%",
+          padding: 20,
+          backgroundColor: "#0b0b0b",
+          borderRadius: 14,
+        }}
+      >
+        <Text style={{ color: colors.text, fontSize: 16, marginBottom: 12 }}>Confirm muscles trained</Text>
+
+        {/* Selected (Inferred + User Selected) */}
+        <Text style={{ color: "#4CAF50", fontSize: 12, marginBottom: 6 }}>
+          Selected
+        </Text>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+          {selectedLabels.map(label => (
+            <Pressable
+              key={`selected-${label}`}
+              onPress={() =>
+                setSelectedLabels(prev =>
+                  prev.filter(l => l !== label)
+                )
+              }
+              style={{
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "#4CAF50",
+                backgroundColor: "rgba(76,175,80,0.12)",
+                marginRight: 8,
+                marginBottom: 8,
+              }}
+            >
+              <Text style={{ color: "#4CAF50", fontSize: 13 }}>
+                {label}
+                {inferredLabels.includes(label) ? " • ⚡" : ""}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Unselected Muscle Groups */}
+        <Text style={{ color: "#aaa", fontSize: 12, marginTop: 12, marginBottom: 6 }}>
+          Other muscle groups
+        </Text>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+          {Array.from(
+            new Set(exerciseLibrary.map(e => e.primaryMuscle))
+          )
+            .filter(label => !selectedLabels.includes(label))
+            .map(label => (
+              <Pressable
+                key={`unselected-${label}`}
+                onPress={() =>
+                  setSelectedLabels(prev => [...prev, label])
+                }
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "#333",
+                  backgroundColor: "transparent",
+                  marginRight: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ color: "#aaa", fontSize: 13 }}>
+                  {label}
+                  {inferredLabels.includes(label) ? " • ⚡" : ""}
+                </Text>
+              </Pressable>
+            ))}
+        </View>
+
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginTop: 16,
+          }}
+        >
+          <Pressable
+            onPress={() => setShowLabelConfirm(false)}
+            style={{
+              flex: 0.35,
+              paddingVertical: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: "#444",
+              backgroundColor: "#cf3a0d",
+              marginRight: 8,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#ddd", fontSize: 15 }}>
+              Back
+            </Text>
+          </Pressable>
+
+          <Pressable
+            disabled={selectedLabels.length === 0}
+            onPress={() => {
+              if (selectedLabels.length === 0) return;
+
+              endSession(
+                activeSession.id,
+                new Date(),
+                sessionNote,
+                selectedLabels
+              );
+              setSessionNote("");
+              setShowLabelConfirm(false);
+              onEnd();
+            }}
+            style={{
+              flex: 0.65,
+              paddingVertical: 12,
+              borderRadius: 8,
+              backgroundColor: selectedLabels.length === 0 ? "#1e1e1e" : "#4CAF50",
+              marginLeft: 8,
+              alignItems: "center",
+              opacity: selectedLabels.length === 0 ? 0.6 : 1,
+            }}
+          >
+            <Text
+              style={{
+                color: selectedLabels.length === 0 ? "#666" : "#fff",
+                fontSize: 15,
+                fontWeight: "600",
+              }}
+            >
+              Confirm & Save
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -390,9 +556,10 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
 
       <Pressable
         onPress={() => {
-          endSession(activeSession.id, new Date(), sessionNote, activeSession.sessionLabels ?? []);
-          setSessionNote("");
-          onEnd();
+          const inferred = inferLabels();
+          setSelectedLabels(inferred);
+          setInferredLabels(inferred);
+          setShowLabelConfirm(true);
         }}
         style={{
           backgroundColor: "#e91616",
