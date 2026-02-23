@@ -1,3 +1,4 @@
+// is for logged session exercises, not library.
 import { db } from "@/db/database";
 import { Exercise } from "@/domain/exercise";
 
@@ -42,6 +43,7 @@ export function insertExercise(exercise: Exercise) {
   );
 }
 
+//todo: change the functio nn name to reflect that this is for all exercises, not just for a session
 export function getAllExercises(): StoredExercise[] {
   const rows = db.getAllSync(
     `
