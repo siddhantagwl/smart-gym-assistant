@@ -231,7 +231,12 @@ export default function SessionDetailsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
           renderItem={({ item, index }) => {
-            const currentTime = new Date(item.createdAt);
+            const start = new Date(item.startTime);
+            const end = new Date(item.endTime);
+            const durationMs = end.getTime() - start.getTime();
+            const durationSec = Math.max(0, Math.floor(durationMs / 1000));
+            const minutes = Math.floor(durationSec / 60);
+            const seconds = durationSec % 60;
             const prKey = `${item.name}__${item.reps}`;
             const previousMax = prMap[prKey] ?? 0;
             const isPR = previousMax > 0 && item.weightKg > previousMax;
@@ -324,9 +329,66 @@ export default function SessionDetailsScreen() {
                         +{delta} kg over last best ({previousMax} kg)
                       </Text>
                     )}
-                    <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>
-                      Logged at {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
+                    <View style={{ flexDirection: "row", marginTop: 6 }}>
+                      <View
+                        style={{
+                          paddingVertical: 4,
+                          paddingHorizontal: 10,
+                          borderRadius: 999,
+                          backgroundColor: "#1a1a1a",
+                          borderWidth: 1,
+                          borderColor: "#333",
+                          marginRight: 8,
+                          flexDirection: "row",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: colors.muted,
+                            fontSize: 9,
+                            fontWeight: "700",
+                            marginRight: 4,
+                            letterSpacing: 0.5,
+                          }}
+                        >
+                          DUR
+                        </Text>
+                        <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700" }}>
+                          ⏱ {minutes}:{seconds.toString().padStart(2, "0")}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={{
+                          paddingVertical: 4,
+                          paddingHorizontal: 10,
+                          borderRadius: 999,
+                          backgroundColor: "#0f1622",
+                          borderWidth: 1,
+                          borderColor: "#2a4a7a",
+                          flexDirection: "row",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: colors.muted,
+                            fontSize: 9,
+                            fontWeight: "700",
+                            marginRight: 4,
+                            letterSpacing: 0.5,
+                          }}
+                        >
+                          REST
+                        </Text>
+                        <Text style={{ color: "#6CB4FF", fontSize: 11, fontWeight: "600" }}>
+                          💤 {Math.floor(item.restSeconds / 60)}:{(item.restSeconds % 60)
+                            .toString()
+                            .padStart(2, "0")}
+                        </Text>
+                      </View>
+                    </View>
 
                     {item.note ? (
                       <Text style={{ color: colors.muted, marginTop: 6 }} numberOfLines={3}>
