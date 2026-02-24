@@ -174,9 +174,33 @@ export default function HistoryScreen() {
                     marginBottom: 6,
                   }}
                 >
-                  <Text style={{ color: colors.text, fontSize: 16 }}>
-                    {formatDate(start)}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Text style={{ color: colors.text, fontSize: 16, marginRight: 8 }}>
+                      {formatDate(start)}
+                    </Text>
+                    {end ? (
+                      <View
+                        style={{
+                          paddingVertical: 3,
+                          paddingHorizontal: 12,
+                          borderRadius: 999,
+                          backgroundColor: "#1a1a1a",
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#FFFFFF",
+                            fontSize: 11,
+                            fontWeight: "700",
+                          }}
+                        >
+                          DUR  ⏱  {durationMinutes(start, end)}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
 
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     {item.source === "manual" && (
@@ -206,7 +230,6 @@ export default function HistoryScreen() {
                           backgroundColor: "rgba(229,57,53,0.15)",
                           borderWidth: 1,
                           borderColor: "#e53935",
-                          marginRight: 8,
                         }}
                       >
                         <Text style={{ color: "#e53935", fontSize: 12 }}>
@@ -214,50 +237,11 @@ export default function HistoryScreen() {
                         </Text>
                       </View>
                     )}
-
-                    {Array.isArray(item.sessionLabels) && item.sessionLabels.length > 0 ? (
-                      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                        {item.sessionLabels.map((label) => (
-                          <View
-                            key={label}
-                            style={{
-                              paddingVertical: 4,
-                              paddingHorizontal: 12,
-                              borderRadius: 999,
-                              backgroundColor: "#0b1f14",
-                              borderWidth: 1.5,
-                              borderColor: "#39FF14",
-                              marginRight: 6,
-                              marginBottom: 6,
-                            }}
-                          >
-                            <Text style={{ color: "#39FF14", fontSize: 10, fontWeight: "800", letterSpacing: 0.2 }}>
-                              {label}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <View
-                        style={{
-                          paddingVertical: 3,
-                          paddingHorizontal: 10,
-                          borderRadius: 999,
-                          backgroundColor: "#0f0f0f",
-                          borderWidth: 1,
-                          borderColor: colors.border,
-                        }}
-                      >
-                        <Text style={{ color: colors.muted, fontSize: 12 }}>
-                          No labels
-                        </Text>
-                      </View>
-                    )}
                   </View>
                 </View>
 
                 <Text style={{ color: colors.muted, marginBottom: item.note ? 6 : 10 }}>
-                  {formatTime(start)}{end ? ` to ${formatTime(end)}` : ""}{end ? `  ·  ${durationMinutes(start, end)}` : ""}
+                  {formatTime(start)}{end ? ` to ${formatTime(end)}` : ""}
                 </Text>
 
                 {item.note && !isDiscarded ? (
@@ -274,6 +258,60 @@ export default function HistoryScreen() {
                     →
                   </Text>
                 </View>
+
+                {Array.isArray(item.sessionLabels) && item.sessionLabels.length > 0 ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      marginTop: 8,
+                    }}
+                  >
+                    {item.sessionLabels.map((label) => (
+                      <View
+                        key={label}
+                        style={{
+                          paddingVertical: 4,
+                          paddingHorizontal: 12,
+                          borderRadius: 999,
+                          backgroundColor: "rgba(46,125,90,0.12)",
+                          borderWidth: 1,
+                          borderColor: "#2E7D5A",
+                          marginRight: 6,
+                          marginBottom: 6,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#2E7D5A",
+                            fontSize: 10,
+                            fontWeight: "800",
+                            letterSpacing: 0.2,
+                          }}
+                        >
+                          {label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View
+                    style={{
+                      paddingVertical: 3,
+                      paddingHorizontal: 10,
+                      borderRadius: 999,
+                      backgroundColor: "#0f0f0f",
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      alignSelf: "flex-start",
+                    }}
+                  >
+                    <Text style={{ color: colors.muted, fontSize: 12 }}>
+                      No labels
+                    </Text>
+                  </View>
+                )}
+
               </Pressable>
             );
           }}
