@@ -4,6 +4,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { getAllSessions } from "@/db/sessions";
 import { getExercisesForSession, getAllExercises, StoredExercise } from "@/db/exercise";
+import Svg, { Polyline } from "react-native-svg";
+
 
 const colors = {
   background: "#0F0F0F",
@@ -211,6 +213,36 @@ export default function SessionDetailsScreen() {
             const isPR = previousMax > 0 && item.weightKg > previousMax;
             const delta = isPR ? (item.weightKg - previousMax).toFixed(1) : null;
 
+            // Build sparkline data (historical weights for same exercise + reps)
+            const historyWeights = getAllExercises()
+              .filter(
+                (ex) =>
+                  ex.name === item.name &&
+                  ex.reps === item.reps &&
+                  ex.sessionId !== sessionId
+              )
+              .map((ex) => ex.weightKg)
+              .concat(item.weightKg); // include current
+
+            let sparkPoints: string | null = null;
+
+            if (historyWeights.length > 1) {
+              const max = Math.max(...historyWeights);
+              const min = Math.min(...historyWeights);
+              const range = max - min || 1;
+
+              const width = 70;
+              const height = 30;
+
+              sparkPoints = historyWeights
+                .map((w, i) => {
+                  const x = (i / (historyWeights.length - 1)) * width;
+                  const y = height - ((w - min) / range) * height;
+                  return `${x},${y}`;
+                })
+                .join(" ");
+            }
+
             return (
               <View
                 style={{
@@ -218,64 +250,96 @@ export default function SessionDetailsScreen() {
                   borderRadius: 10,
                   borderWidth: 1,
                   borderColor: colors.border,
-                  padding: 14,
+                  paddingVertical: 18,
+                  paddingHorizontal: 14,
                   marginBottom: 12,
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-                  <Text style={{ color: colors.text, fontSize: 16 }}>
-                    {index + 1}. {item.name}
-                  </Text>
+                <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                      <Text style={{ color: colors.text, fontSize: 16 }}>
+                        {index + 1}. {item.name}
+                      </Text>
 
-                  {isPR && (
-                    <View
-                      style={{
-                        marginLeft: 8,
-                        alignItems: "flex-start",
-                      }}
-                    >
-                      <View
-                        style={{
-                          paddingVertical: 2,
-                          paddingHorizontal: 8,
-                          borderRadius: 999,
-                          backgroundColor: "#1a1400",
-                          borderWidth: 1,
-                          borderColor: "#FFD700",
-                        }}
-                      >
-                        <Text style={{ color: "#FFD700", fontSize: 10, fontWeight: "800" }}>
-                          PR 🔥
-                        </Text>
-                      </View>
-
-                      {delta !== null && (
-                        <Text
+                      {isPR && (
+                        <View
                           style={{
-                            color: "#FFD700",
-                            fontSize: 10,
-                            marginTop: 2,
-                            opacity: 0.9,
+                            marginLeft: 8,
                           }}
                         >
-                          +{delta} kg over last best ({previousMax} kg)
-                        </Text>
+                          <View
+                            style={{
+                              paddingVertical: 2,
+                              paddingHorizontal: 8,
+                              borderRadius: 999,
+                              backgroundColor: "#1a1400",
+                              borderWidth: 1,
+                              borderColor: "#FFD700",
+                            }}
+                          >
+                            <Text style={{ color: "#FFD700", fontSize: 10, fontWeight: "800" }}>
+                              PR 🔥
+                            </Text>
+                          </View>
+                        </View>
                       )}
                     </View>
+                    <Text style={{ color: colors.muted }}>
+                      {item.sets} sets  ·  {item.reps} reps  ·  {item.weightKg} kg
+                    </Text>
+                    {isPR && delta !== null && (
+                      <Text
+                        style={{
+                          color: "#FFD700",
+                          fontSize: 11,
+                          marginTop: 4,
+                          fontWeight: "600",
+                        }}
+                      >
+                        +{delta} kg over last best ({previousMax} kg)
+                      </Text>
+                    )}
+                    <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>
+                      Logged at {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+
+                    {item.note ? (
+                      <Text style={{ color: colors.muted, marginTop: 6 }} numberOfLines={3}>
+                        Note: {item.note}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  {sparkPoints && (
+                    <>
+                      <View
+                        style={{
+                          width: 2,
+                          backgroundColor: colors.border,
+                          marginHorizontal: 6,
+                          alignSelf: "stretch",
+                          opacity: 0.9,
+                        }}
+                      />
+                      <View
+                        style={{
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Svg width={70} height={30}>
+                          <Polyline
+                            points={sparkPoints}
+                            fill="none"
+                            stroke={isPR ? "#39FF14" : "#888"}
+                            strokeWidth="1.5"
+                          />
+                        </Svg>
+                      </View>
+                    </>
                   )}
                 </View>
-                <Text style={{ color: colors.muted }}>
-                  {item.sets} sets  ·  {item.reps} reps  ·  {item.weightKg} kg
-                </Text>
-                <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>
-                  Logged at {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-
-                {item.note ? (
-                  <Text style={{ color: colors.muted, marginTop: 6 }} numberOfLines={3}>
-                    Note: {item.note}
-                  </Text>
-                ) : null}
               </View>
             );
           }}
