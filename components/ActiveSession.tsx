@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { View, Text, Pressable, TextInput, Animated } from "react-native";
 
 import AddExercise from "@/components/AddExercise";
@@ -170,6 +170,83 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   const [now, setNow] = useState(new Date());
   const pulse = useState(new Animated.Value(0))[0];
 
+  // ----- Rest Timer State -----
+  const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const restOpacity = useRef(new Animated.Value(1)).current;
+  const restPulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (restSeconds !== null && restSeconds <= 5 && restSeconds > 0) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(restPulse, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(restPulse, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      restPulse.setValue(0);
+    }
+  }, [restSeconds]);
+
+  function startRestTimer(duration: number = 90) {
+    // clear existing timer if any
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    setRestSeconds(duration);
+    restOpacity.setValue(1);
+
+    intervalRef.current = setInterval(() => {
+      setRestSeconds(prev => {
+        if (prev === null) return null;
+
+        if (prev <= 1) {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+
+          Animated.timing(restOpacity, {
+            toValue: 0,
+            duration: 800,
+            useNativeDriver: true,
+          }).start(() => {
+            setRestSeconds(null);
+          });
+
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
+  function stopRestTimer() {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setRestSeconds(null);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const id = setInterval(() => {
       setNow(new Date());
@@ -193,10 +270,8 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     ]).start();
   }, [now]);
 
-  const totalSessionMinutes = minutesBetween(
-    now,
-    activeSession.startTime
-  );
+  // includes -> excerise time, rest time, thiking time, walking time, phone scroll time, water break time, socializing time, etc
+  const totalSessionMinutes = minutesBetween(now, activeSession.startTime);
 
   function inferLabels(): string[] {
     const labelSet = new Set<string>();
@@ -439,6 +514,77 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
         </Text>
       </Animated.View>
 
+      {restSeconds !== null ? (
+        <Animated.View
+          style={{
+            opacity: restOpacity,
+            transform: [
+              {
+                scale:
+                  restSeconds !== null && restSeconds <= 5
+                    ? restPulse.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.05],
+                      })
+                    : 1,
+              },
+            ],
+            marginBottom: 10,
+            paddingVertical: 6,
+            paddingHorizontal: 16,
+            borderRadius: 18,
+            backgroundColor:
+              restSeconds !== null && restSeconds <= 5
+                ? "rgba(255,193,7,0.28)"
+                : "rgba(255,193,7,0.12)",
+            borderWidth: 1,
+            borderColor:
+              restSeconds !== null && restSeconds <= 5
+                ? "#FFC107"
+                : "rgba(255,193,7,0.7)",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text
+            style={{
+              color: "#FFC107",
+              fontSize: 18,
+              fontWeight: "600",
+            }}
+          >
+            🧘 Rest · {Math.floor(restSeconds / 60)}:
+            {(restSeconds % 60).toString().padStart(2, "0")}
+          </Text>
+
+          <Pressable
+            onPress={stopRestTimer}
+            style={{
+              marginLeft: 16,
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: "#e53935",
+              backgroundColor: "rgba(229,57,53,0.15)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text
+              style={{
+                color: "#e53935",
+                fontSize: 12,
+                fontWeight: "700",
+              }}
+            >
+              ✕
+            </Text>
+          </Pressable>
+        </Animated.View>
+      ) : null}
+
       <View style={{ height: 4 }} />
 
       <View
@@ -497,6 +643,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
 
             setSavedFlash(true);
             setTimeout(() => setSavedFlash(false), 1500);
+            startRestTimer(30);
           }}
           onWeightCommit={(v) => setWeightKg(v)}
           onSetsCommit={(v) => setSets(v)}
@@ -521,6 +668,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
         </Text>
       ) : null}
 
+
       <View style={{ width: "100%" }}>
         {sessionExercises.length > 0 ? (
           <Pressable
@@ -534,7 +682,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
             }}
           >
             <Text style={{ color: "#aaa", fontSize: 13 }}>
-              Exercises this session ({sessionExercises.length})
+              🏋 Exercises this session ({sessionExercises.length})
             </Text>
             <Text style={{ color: "#777", fontSize: 19 }}>
               {showExercises ? "▾" : "▸"}
@@ -593,6 +741,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
 
       <Pressable
         onPress={() => {
+          stopRestTimer();
           const inferred = inferLabels();
           setSelectedLabels(inferred);
           setInferredLabels(inferred);
