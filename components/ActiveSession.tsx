@@ -36,6 +36,11 @@ function SessionExerciseList({
   textColor: string;
 }) {
 
+  function secondsBetween(a: Date, b: Date) {
+    const ms = a.getTime() - b.getTime();
+    return Math.max(0, Math.floor(ms / 1000));
+  }
+
   function minutesBetween(a: Date, b: Date) {
     const ms = a.getTime() - b.getTime();
     return Math.max(0, Math.round(ms / 60000));
@@ -159,12 +164,18 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     return Math.max(0, Math.round(ms / 60000));
   }
 
-  function formatDurationMinutes(totalMinutes: number) {
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
+  function formatDuration(totalSeconds: number) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
 
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, "0")}:${s
+        .toString()
+        .padStart(2, "0")}`;
+    }
+
+    return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
   const [now, setNow] = useState(new Date());
@@ -250,28 +261,34 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   useEffect(() => {
     const id = setInterval(() => {
       setNow(new Date());
-    }, 60000); // 60 seconds
+    }, 1000);
 
     return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.timing(pulse, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-      Animated.timing(pulse, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [now]);
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+      ])
+    ).start();
+  }, []);
 
   // includes -> excerise time, rest time, thiking time, walking time, phone scroll time, water break time, socializing time, etc
-  const totalSessionMinutes = minutesBetween(now, activeSession.startTime);
+  function secondsBetween(a: Date, b: Date) {
+    const ms = a.getTime() - b.getTime();
+    return Math.max(0, Math.floor(ms / 1000));
+  }
+  const totalSessionSeconds = secondsBetween(now, activeSession.startTime);
 
   function inferLabels(): string[] {
     const labelSet = new Set<string>();
@@ -510,7 +527,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
             letterSpacing: 0.3,
           }}
         >
-          ⏱ Total time · {formatDurationMinutes(totalSessionMinutes)}
+          ⏱ Total time · {formatDuration(totalSessionSeconds)}
         </Text>
       </Animated.View>
 
