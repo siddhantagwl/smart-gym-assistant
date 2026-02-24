@@ -544,6 +544,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     setSessionExercises(rows);
 
     resetExerciseState();
+    startRestTimer(90);
   }
 
   // 🔄 Reset Exercise State (after finishing or canceling)
