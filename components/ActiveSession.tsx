@@ -221,7 +221,34 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
           borderRadius: 14,
         }}
       >
-        <Text style={{ color: colors.text, fontSize: 16, marginBottom: 12 }}>Confirm muscles trained</Text>
+        <View style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}>
+          <Text style={{ color: colors.text, fontSize: 16 }}>
+            Confirm muscles trained
+          </Text>
+
+          <Pressable
+            onPress={() => setShowLabelConfirm(false)}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "#333",
+              backgroundColor: "#141414",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ color: "#de0f0f", fontSize: 16, fontWeight: "600" }}>
+              ✕
+            </Text>
+          </Pressable>
+        </View>
 
         {/* Selected (Inferred + User Selected) */}
         <Text style={{ color: "#4CAF50", fontSize: 12, marginBottom: 6 }}>
@@ -299,20 +326,30 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
           }}
         >
           <Pressable
-            onPress={() => setShowLabelConfirm(false)}
+            onPress={() => {
+              endSession(
+                activeSession.id,
+                new Date(),
+                "__DISCARDED__",
+                []
+              );
+              setSessionNote("");
+              setShowLabelConfirm(false);
+              onEnd();
+            }}
             style={{
-              flex: 0.35,
+              flex: 0.3,
               paddingVertical: 12,
               borderRadius: 8,
               borderWidth: 1,
-              borderColor: "#444",
-              backgroundColor: "#cf3a0d",
+              borderColor: "#e53935",
+              backgroundColor: "transparent",
               marginRight: 8,
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#ddd", fontSize: 15 }}>
-              Back
+            <Text style={{ color: "#e53935", fontSize: 14 }}>
+              Discard
             </Text>
           </Pressable>
 
@@ -332,7 +369,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
               onEnd();
             }}
             style={{
-              flex: 0.65,
+              flex: 0.7,
               paddingVertical: 12,
               borderRadius: 8,
               backgroundColor: selectedLabels.length === 0 ? "#1e1e1e" : "#4CAF50",
