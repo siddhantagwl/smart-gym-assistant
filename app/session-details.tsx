@@ -1,8 +1,8 @@
-import { View, Text, Pressable, FlatList } from "react-native";
+import { View, Text, Pressable, FlatList, Alert } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
-import { getAllSessions } from "@/db/sessions";
+import { getAllSessions, deleteSession } from "@/db/sessions";
 import { getExercisesForSession, getAllExercises, StoredExercise } from "@/db/exercise";
 import Svg, { Polyline } from "react-native-svg";
 
@@ -30,6 +30,30 @@ export default function SessionDetailsScreen() {
   const [sessionLabels, setSessionLabels] = useState<string[]>([]);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
+
+  function handleDeleteSession() {
+    if (!sessionId) return;
+
+    const exerciseCount = exercises.length;
+
+    const performDelete = () => {
+      deleteSession(sessionId);
+      router.back();
+    };
+
+    if (exerciseCount > 0) {
+      Alert.alert(
+        "Delete session?",
+        `This session contains ${exerciseCount} exercise(s). This cannot be undone.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: performDelete },
+        ]
+      );
+    } else {
+      performDelete();
+    }
+  }
 
   useEffect(() => {
     const sessions = getAllSessions();
@@ -345,6 +369,31 @@ export default function SessionDetailsScreen() {
           }}
         />
       )}
+      <View style={{ paddingHorizontal: 16, paddingBottom: 24 }}>
+        <Pressable
+          onPress={handleDeleteSession}
+          style={{
+            marginTop: 8,
+            marginBottom: 36,
+            paddingVertical: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: "#ff3b30",
+            alignItems: "center",
+            backgroundColor: "#140d0d",
+          }}
+        >
+          <Text
+            style={{
+              color: "#ff3b30",
+              fontSize: 15,
+              fontWeight: "700",
+            }}
+          >
+            Delete Session
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

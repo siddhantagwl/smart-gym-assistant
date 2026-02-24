@@ -159,3 +159,31 @@ export function getRecentSessions(limit: number = 3): RecentSession[] {
     source: (r.source as "live" | "manual") || "live",
   }));
 }
+
+export function deleteSession(sessionId: string) {
+  db.execSync("BEGIN TRANSACTION;");
+  try {
+    // Delete exercises first to avoid orphan rows
+    db.runSync(
+      `
+      DELETE FROM exercises
+      WHERE session_id = ?;
+      `,
+      [sessionId]
+    );
+
+    // Delete the session itself
+    db.runSync(
+      `
+      DELETE FROM sessions
+      WHERE id = ?;
+      `,
+      [sessionId]
+    );
+
+    db.execSync("COMMIT;");
+  } catch (err) {
+    db.execSync("ROLLBACK;");
+    throw err;
+  }
+}
