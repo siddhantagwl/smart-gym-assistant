@@ -29,22 +29,15 @@ function SessionExerciseList({
     sets: number;
     reps: number;
     weightKg: number;
+    restSeconds: number;
+    startTime: string;
+    endTime: string;
     note: string | null;
-    createdAt: string;
   }[];
   sessionStart: Date;
   textColor: string;
 }) {
 
-  function secondsBetween(a: Date, b: Date) {
-    const ms = a.getTime() - b.getTime();
-    return Math.max(0, Math.floor(ms / 1000));
-  }
-
-  function minutesBetween(a: Date, b: Date) {
-    const ms = a.getTime() - b.getTime();
-    return Math.max(0, Math.round(ms / 60000));
-  }
 
   if (exercises.length === 0) return null;
 
@@ -52,17 +45,12 @@ function SessionExerciseList({
     <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 1 }}>
 
       {[...exercises].reverse().map((e, reversedIndex) => {
-        const index = exercises.findIndex(x => x.id === e.id);
-
         const serialNumber = exercises.length - reversedIndex;
 
-        const currentTime = new Date(e.createdAt);
-        const baseTime =
-          index === 0
-            ? sessionStart
-            : new Date(exercises[index - 1].createdAt);
-
-        const minutes = minutesBetween(currentTime, baseTime);
+        const start = new Date(e.startTime);
+        const end = new Date(e.endTime);
+        const totalSeconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
+        const totalMinutes = Math.round(totalSeconds / 60);
 
         return (
           <View
@@ -86,7 +74,7 @@ function SessionExerciseList({
             </Text>
 
             <Text style={{ color: "#777", fontSize: 11, marginTop: 2 }}>
-              ⏱ {minutes} min
+              ⏱ {totalMinutes} min
             </Text>
 
             {e.note ? (
@@ -103,7 +91,7 @@ function SessionExerciseList({
 
 export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   const [exerciseName, setExerciseName] = useState("");
-  const [sets, setSets] = useState(3);
+  const [sets, setSets] = useState(0);
   const [reps, setReps] = useState(10);
   const [weightKg, setWeightKg] = useState(10);
 
@@ -112,7 +100,10 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   const [sessionNote, setSessionNote] = useState("");
   const [latest, setLatest] = useState<LatestExercise | null>(null);
 
-  const [savedFlash, setSavedFlash] = useState(false);
+
+  const [isExerciseActive, setIsExerciseActive] = useState(false);
+  const [currentExerciseStart, setCurrentExerciseStart] = useState<Date | null>(null);
+  const [accumulatedRest, setAccumulatedRest] = useState(0);
 
   const [sessionExercises, setSessionExercises] = useState<
     {
@@ -121,8 +112,10 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
       sets: number;
       reps: number;
       weightKg: number;
+      restSeconds: number;
+      startTime: string;
+      endTime: string;
       note: string | null;
-      createdAt: string;
     }[]
   >([]);
 
@@ -159,11 +152,6 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     setExerciseLibraryNames(allLibExercises.map(e => e.name));
   }, []);
 
-  function minutesBetween(a: Date, b: Date) {
-    const ms = a.getTime() - b.getTime();
-    return Math.max(0, Math.round(ms / 60000));
-  }
-
   function formatDuration(totalSeconds: number) {
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
@@ -186,6 +174,23 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   const intervalRef = useRef<number | null>(null);
   const restOpacity = useRef(new Animated.Value(1)).current;
   const restPulse = useRef(new Animated.Value(0)).current;
+  const restPlannedRef = useRef<number>(0);
+  function finalizeRestIfRunning(remainingSeconds: number | null) {
+    // If no rest is active, nothing to finalize
+    if (restSeconds === null) return;
+
+    const planned = restPlannedRef.current || 0;
+    const remaining = remainingSeconds ?? 0;
+
+    // actual elapsed rest = planned - remaining (clamped)
+    const elapsed = Math.max(0, Math.min(planned, planned - remaining));
+
+    if (elapsed > 0) {
+      setAccumulatedRest((prev) => prev + elapsed);
+    }
+
+    restPlannedRef.current = 0;
+  }
   useEffect(() => {
     if (restSeconds !== null && restSeconds <= 5 && restSeconds > 0) {
       Animated.loop(
@@ -208,12 +213,15 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   }, [restSeconds]);
 
   function startRestTimer(duration: number = 90) {
+    finalizeRestIfRunning(restSeconds);
+
     // clear existing timer if any
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
     setRestSeconds(duration);
+    restPlannedRef.current = duration;
     restOpacity.setValue(1);
 
     intervalRef.current = setInterval(() => {
@@ -225,6 +233,9 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
           }
+
+          // finalize the remaining rest as 0 seconds left (full planned duration elapsed)
+          finalizeRestIfRunning(0);
 
           Animated.timing(restOpacity, {
             toValue: 0,
@@ -243,10 +254,15 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   }
 
   function stopRestTimer() {
+    // finalize using the CURRENT remaining seconds
+    finalizeRestIfRunning(restSeconds);
+
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+
+    restPlannedRef.current = 0;
     setRestSeconds(null);
   }
 
@@ -485,6 +501,61 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     );
   }
 
+  //▶ Start Exercise
+  function startExercise() {
+    if (!exerciseName.trim()) return;
+
+    setIsExerciseActive(true);
+    setCurrentExerciseStart(new Date());
+    setSets(0);
+    setAccumulatedRest(0);
+  }
+
+  // 💪 Save Set
+  function saveSet() {
+    if (!isExerciseActive) return;
+    setSets(prev => prev + 1);
+    startRestTimer(90);
+  }
+
+  // ✅ Finish Exercise
+  function finishExercise() {
+    if (!isExerciseActive || !currentExerciseStart) return;
+    if (sets === 0) return;
+
+    stopRestTimer();
+
+    const endTime = new Date();
+
+    insertExercise({
+      id: Date.now().toString(),
+      sessionId: activeSession.id,
+      name: exerciseName,
+      sets,
+      reps,
+      weightKg,
+      note: exerciseNote,
+      restSeconds: accumulatedRest,
+      startTime: currentExerciseStart.toISOString(),
+      endTime: endTime.toISOString(),
+    });
+
+    const rows = getExercisesForSession(activeSession.id);
+    setSessionExercises(rows);
+
+    resetExerciseState();
+  }
+
+  // 🔄 Reset Exercise State (after finishing or canceling)
+  function resetExerciseState() {
+    setIsExerciseActive(false);
+    setCurrentExerciseStart(null);
+    setSets(0);
+    setExerciseName("");
+    setExerciseNote("");
+    setAccumulatedRest(0);
+  }
+
   return (
     <View
       style={{
@@ -626,8 +697,6 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
             setExerciseName(name);
             setExerciseNote("");
           }}
-          onSetsMinus={() => setSets((s) => Math.max(1, s - 1))}
-          onSetsPlus={() => setSets((s) => s + 1)}
           onRepsMinus={() => setReps((r) => Math.max(1, r - 1))}
           onRepsPlus={() => setReps((r) => r + 1)}
           onWeightMinus={() =>
@@ -636,35 +705,16 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
           onWeightPlus={() => setWeightKg((w) => Math.round((w + 0.5) * 10) / 10)}
           onNoteChange={(text) => setExerciseNote(text)}
           onSave={() => {
-            if (!exerciseName) return;
-
-            insertExercise({
-              id: Date.now().toString(),
-              sessionId: activeSession.id,
-              name: exerciseName,
-              sets,
-              reps,
-              weightKg,
-              note: exerciseNote,
-            });
-
-            const rows = getExercisesForSession(activeSession.id);
-            setSessionExercises(rows);
-
-            setExerciseName("");
-            setExerciseNote("");
-
-            setSets(3);
-            setReps(10);
-            setWeightKg(10);
-
-            setSavedFlash(true);
-            setTimeout(() => setSavedFlash(false), 1500);
-            startRestTimer(30);
+            if (!isExerciseActive) {
+              startExercise();
+            } else {
+              finishExercise();
+            }
           }}
           onWeightCommit={(v) => setWeightKg(v)}
-          onSetsCommit={(v) => setSets(v)}
           onRepsCommit={(v) => setReps(v)}
+          onSaveSet={saveSet}
+          isExerciseActive={isExerciseActive}
           lastTime={
             latest
               ? {
@@ -679,11 +729,6 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
         />
       </View>
 
-      {savedFlash ? (
-        <Text style={{ color: "#4CAF50", marginBottom: 6 }}>
-          ✓ Exercise saved
-        </Text>
-      ) : null}
 
 
       <View style={{ width: "100%" }}>
@@ -759,6 +804,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
       <Pressable
         onPress={() => {
           stopRestTimer();
+          setRestSeconds(null);
           const inferred = inferLabels();
           setSelectedLabels(inferred);
           setInferredLabels(inferred);

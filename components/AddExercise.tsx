@@ -16,9 +16,6 @@ type AddExerciseProps = {
   onNoteChange: (text: string) => void;
   onSelectExercise: (name: string) => void;
 
-  onSetsMinus: () => void;
-  onSetsPlus: () => void;
-
   onRepsMinus: () => void;
   onRepsPlus: () => void;
 
@@ -27,7 +24,9 @@ type AddExerciseProps = {
 
   onSave: () => void;
 
-  onSetsCommit: (v: number) => void;
+  onSaveSet: () => void;
+  isExerciseActive: boolean;
+
   onRepsCommit: (v: number) => void;
   onWeightCommit: (v: number) => void;
 
@@ -157,21 +156,18 @@ export default function AddExercise({
   note,
   onNoteChange,
   onSelectExercise,
-  onSetsMinus,
-  onSetsPlus,
   onRepsMinus,
   onRepsPlus,
   onWeightMinus,
   onWeightPlus,
   onSave,
-  onSetsCommit,
+  onSaveSet,
+  isExerciseActive,
   onRepsCommit,
   onWeightCommit,
   lastTime,
 }: AddExerciseProps) {
   const [showNote, setShowNote] = useState(false);
-
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const filteredSuggestions = useMemo(() => {
     const query = exerciseName.trim().toLowerCase();
@@ -181,6 +177,16 @@ export default function AddExercise({
       .filter((name) => name.toLowerCase().includes(query))
       .filter((name) => name.toLowerCase() !== query); // remove exact match
   }, [exerciseName, suggestions]);
+
+  const isExactMatch = useMemo(() => {
+    const q = exerciseName.trim().toLowerCase();
+    if (!q) return false;
+    return suggestions.some((name) => name.trim().toLowerCase() === q);
+  }, [exerciseName, suggestions]);
+
+  const canStart = exerciseName.trim().length > 0;
+  const canFinish = sets > 0;
+  const mainDisabled = isExerciseActive ? !canFinish : !canStart;
 
   return (
     <View style={{ width: "100%" }}>
@@ -204,7 +210,6 @@ export default function AddExercise({
               value={exerciseName}
               onChangeText={(text) => {
                 onSelectExercise(text);
-                setShowSuggestions(true);
               }}
               placeholder="Type exercise name"
               placeholderTextColor="#666"
@@ -220,11 +225,10 @@ export default function AddExercise({
               }}
             />
 
-            {exerciseName.length > 0 && (
+            {exerciseName.trim().length > 0 && !isExactMatch && (
               <Pressable
                 onPress={() => {
                   onSelectExercise("");
-                  setShowSuggestions(false);
                   Keyboard.dismiss();
                 }}
                 style={{
@@ -239,7 +243,7 @@ export default function AddExercise({
           </View>
 
           {/* Chips */}
-          {exerciseName.trim() && filteredSuggestions.length > 0 ? (
+          {exerciseName.trim() && !isExactMatch && filteredSuggestions.length > 0 ? (
             <View
               style={{
                 flexDirection: "row",
@@ -253,7 +257,6 @@ export default function AddExercise({
                   key={name}
                   onPress={() => {
                     onSelectExercise(name);
-                    setShowSuggestions(false);
                     Keyboard.dismiss();
                   }}
                   style={{
@@ -297,21 +300,13 @@ export default function AddExercise({
         )}
 
 
-        <View style={{ height: 8 }} />
-
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 16 }}>
-          <View style={{ flex: 1 }}>
-            <Stepper
-              label="Sets"
-              value={sets}
-              onMinus={onSetsMinus}
-              onPlus={onSetsPlus}
-              onCommit={(v) => {
-                if (v > 0) onSetsCommit(v);
-              }}
-            />
-          </View>
-
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 12,
+            width: "100%",
+          }}
+        >
           <View style={{ flex: 1 }}>
             <Stepper
               label="Reps"
@@ -323,20 +318,18 @@ export default function AddExercise({
               }}
             />
           </View>
-        </View>
 
-        <View style={{ height: 8 }} />
-
-        <View style={{ width: "100%" }}>
-          <Stepper
-            label="Kg"
-            value={weightKg}
-            onMinus={onWeightMinus}
-            onPlus={onWeightPlus}
-            onCommit={(v) => {
-              if (v >= 0) onWeightCommit(v);
-            }}
-          />
+          <View style={{ flex: 1 }}>
+            <Stepper
+              label="Kg"
+              value={weightKg}
+              onMinus={onWeightMinus}
+              onPlus={onWeightPlus}
+              onCommit={(v) => {
+                if (v >= 0) onWeightCommit(v);
+              }}
+            />
+          </View>
         </View>
 
         <View style={{ height: 12 }} />
@@ -379,17 +372,44 @@ export default function AddExercise({
         ) : null}
 
         <View style={{ height: 4 }} />
+
+        {isExerciseActive ? (
+          <Pressable
+            onPress={onSaveSet}
+            style={{
+              backgroundColor: "#222",
+              paddingVertical: 10,
+              borderRadius: 10,
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>
+              Save Set {sets + 1}
+            </Text>
+          </Pressable>
+        ) : null}
+
         <Pressable
           onPress={onSave}
+          disabled={mainDisabled}
           style={{
-            backgroundColor: accentColor,
+            backgroundColor: mainDisabled ? "#333" : accentColor,
             paddingVertical: 10,
             borderRadius: 10,
             alignItems: "center",
+            opacity: mainDisabled ? 0.6 : 1,
           }}
         >
-          <Text style={{ color: "#000", fontSize: 14, fontWeight: "600", letterSpacing: 0.3 }}>
-            Save exercise
+          <Text
+            style={{
+              color: mainDisabled ? "#bbb" : "#000",
+              fontSize: 14,
+              fontWeight: "600",
+              letterSpacing: 0.3,
+            }}
+          >
+            {isExerciseActive ? "Finish Exercise" : "Start Exercise"}
           </Text>
         </Pressable>
       </View>
