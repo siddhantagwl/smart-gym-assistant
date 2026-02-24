@@ -7,5 +7,8 @@ export type Exercise = {
   sets: number;
   reps: number;
   weightKg: number;
+  restSeconds: number;
+  startTime: string;
+  endTime: string;
   note?: string;
 };

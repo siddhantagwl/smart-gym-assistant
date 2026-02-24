@@ -22,8 +22,10 @@ export function initDb() {
             sets INTEGER NOT NULL,
             reps INTEGER NOT NULL,
             weight_kg REAL NOT NULL,
+            rest_seconds INTEGER NOT NULL DEFAULT 0,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
             note TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         );
     `);

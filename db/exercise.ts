@@ -10,7 +10,9 @@ export type StoredExercise = {
   reps: number;
   weightKg: number;
   note: string;
-  createdAt: string;
+  restSeconds: number;
+  startTime: string;
+  endTime: string;
 };
 
 // not a domain model as its exercise + session for UI layer
@@ -27,8 +29,8 @@ export type LatestExercise = {
 export function insertExercise(exercise: Exercise) {
   db.runSync(
     `
-    INSERT INTO exercises (id, session_id, name, sets, reps, weight_kg, note, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+    INSERT INTO exercises (id, session_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `,
     [
       exercise.id,
@@ -37,8 +39,10 @@ export function insertExercise(exercise: Exercise) {
       exercise.sets,
       exercise.reps,
       exercise.weightKg,
+      exercise.restSeconds ?? 0,
+      exercise.startTime,
+      exercise.endTime,
       exercise.note ?? "",
-      new Date().toISOString(),
     ]
   );
 }
@@ -47,9 +51,9 @@ export function insertExercise(exercise: Exercise) {
 export function getAllExercises(): StoredExercise[] {
   const rows = db.getAllSync(
     `
-    SELECT id, session_id, name, sets, reps, weight_kg, note, created_at
+    SELECT id, session_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note
     FROM exercises
-    ORDER BY created_at ASC;
+    ORDER BY start_time ASC;
     `
   ) as any[];
 
@@ -60,17 +64,19 @@ export function getAllExercises(): StoredExercise[] {
     sets: Number(r.sets),
     reps: Number(r.reps),
     weightKg: Number(r.weight_kg),
+    restSeconds: Number(r.rest_seconds),
+    startTime: String(r.start_time),
+    endTime: String(r.end_time),
     note: r.note ? String(r.note) : "",
-    createdAt: String(r.created_at),
   }));
 }
 
 export function getExercisesForSession(sessionId: string): StoredExercise[] {
   const rows = db.getAllSync(
-    `SELECT id, session_id, name, sets, reps, weight_kg, note, created_at
+    `SELECT id, session_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note
      FROM exercises
      WHERE session_id = ?
-     ORDER BY created_at ASC;`,
+     ORDER BY start_time ASC;`,
     [sessionId]
   ) as any[];
 
@@ -81,8 +87,10 @@ export function getExercisesForSession(sessionId: string): StoredExercise[] {
     sets: Number(r.sets),
     reps: Number(r.reps),
     weightKg: Number(r.weight_kg),
+    restSeconds: Number(r.rest_seconds),
+    startTime: String(r.start_time),
+    endTime: String(r.end_time),
     note: r.note ? String(r.note) : "",
-    createdAt: String(r.created_at),
   }));
 }
 
