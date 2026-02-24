@@ -152,7 +152,7 @@ export default function HistoryScreen() {
               <Pressable
                 onPress={() =>
                   router.push({
-                    pathname: "/modal",
+                    pathname: "/session-details",
                     params: { sessionId: item.id },
                   })
                 }
