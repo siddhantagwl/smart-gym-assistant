@@ -14,7 +14,7 @@ const colors = {
   accent: "#4CAF50",
 };
 
-export default function ModalScreen() {
+export default function SessionDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
@@ -25,13 +25,14 @@ export default function ModalScreen() {
 
   const [exercises, setExercises] = useState<StoredExercise[]>([]);
   const [sessionNote, setSessionNote] = useState<string>("");
-  const [sessionLabel, setSessionLabel] = useState<string | null>(null);
+  const [sessionLabels, setSessionLabels] = useState<string[]>([]);
 
   useEffect(() => {
     const sessions = getAllSessions();
     const s = sessions.find((x) => x.id === sessionId);
-    setSessionNote(s?.note || "");
-    setSessionLabel(s?.sessionLabel || null);
+
+    setSessionNote(s?.note && s.note !== "__DISCARDED__" ? s.note : "");
+    setSessionLabels(Array.isArray(s?.sessionLabels) ? s!.sessionLabels : []);
 
     if (!sessionId) {
       setExercises([]);
@@ -55,9 +56,38 @@ export default function ModalScreen() {
       >
         <View>
           <Text style={{ color: colors.text, fontSize: 18 }}>Session details</Text>
-          <Text style={{ color: colors.muted, marginTop: 4 }}>
-            {sessionLabel?.trim() || "Session"}
-          </Text>
+          {Array.isArray(sessionLabels) && sessionLabels.length > 0 ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}>
+              {sessionLabels.map((label) => (
+                <View
+                  key={label}
+                  style={{
+                    paddingVertical: 2,
+                    paddingHorizontal: 10,
+                    borderRadius: 999,
+                    backgroundColor: "#0b1f14",
+                    borderWidth: 1,
+                    borderColor: "#39FF14",
+                    marginRight: 6,
+                    marginBottom: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#39FF14",
+                      fontSize: 11,
+                      fontWeight: "700",
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    {label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={{ color: colors.muted, marginTop: 4 }}>Session</Text>
+          )}
           {sessionNote ? (
             <Text style={{ color: colors.muted, marginTop: 4 }} numberOfLines={3}>
               Note: {sessionNote}
