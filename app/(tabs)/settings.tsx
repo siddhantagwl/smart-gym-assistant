@@ -14,10 +14,16 @@ import { useEffect, useState } from "react";
 import * as Sharing from "expo-sharing";
 import { exportAllDataToFile } from "@/db/export";
 import { syncToGoogleSheets, getLastGoogleSheetsSync } from "@/services/googleSheetsSync";
+import { ScrollView } from "react-native";
+import { getAllSessions } from "@/db/sessions";
+import { getAllExercises } from "@/db/exercise";
 
 export default function SettingsScreen() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [showSessions, setShowSessions] = useState(false);
+  const [showExercises, setShowExercises] = useState(false);
 
   useEffect(() => {
     getLastGoogleSheetsSync().then(setLastSync);
@@ -126,6 +132,73 @@ export default function SettingsScreen() {
         >
           Last synced at: {formatDateTime(lastSync)}
         </Text>
+      )}
+
+      <View style={{ height: 16 }} />
+
+      <Pressable
+        onPress={() => setShowDebug((v) => !v)}
+        style={{
+          backgroundColor: "#222",
+          paddingVertical: 12,
+          borderRadius: 8,
+          alignItems: "center",
+          borderWidth: 1,
+          borderColor: "#333",
+        }}
+      >
+        <Text style={{ color: "#fff", fontSize: 14 }}>
+          {showDebug ? "Hide Debug JSON" : "Show Debug JSON"}
+        </Text>
+      </Pressable>
+
+      {showDebug && (
+        <ScrollView
+          style={{
+            marginTop: 24,
+            borderTopWidth: 1,
+            borderTopColor: "#222",
+            paddingTop: 16,
+          }}
+        >
+          <Text style={{ color: "#ff4d4d", fontSize: 14, marginBottom: 12 }}>
+            DEV DEBUG PANEL
+          </Text>
+
+          <Pressable
+            onPress={() => setShowSessions((v) => !v)}
+            style={{ marginBottom: 6 }}
+          >
+            <Text style={{ color: "#fff", fontSize: 12 }}>
+              {showSessions ? "▼ Sessions" : "▶ Sessions"}
+            </Text>
+          </Pressable>
+
+          {showSessions && (
+            <Text style={{ color: "#aaa", fontSize: 11 }}>
+              {JSON.stringify(getAllSessions(), null, 2)}
+            </Text>
+          )}
+
+          <View style={{ height: 20 }} />
+
+          <Pressable
+            onPress={() => setShowExercises((v) => !v)}
+            style={{ marginTop: 16, marginBottom: 6 }}
+          >
+            <Text style={{ color: "#fff", fontSize: 12 }}>
+              {showExercises ? "▼ Exercises" : "▶ Exercises"}
+            </Text>
+          </Pressable>
+
+          {showExercises && (
+            <Text style={{ color: "#aaa", fontSize: 11 }}>
+              {JSON.stringify(getAllExercises(), null, 2)}
+            </Text>
+          )}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
       )}
     </View>
   );
