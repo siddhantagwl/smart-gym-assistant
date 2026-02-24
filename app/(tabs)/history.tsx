@@ -146,6 +146,7 @@ export default function HistoryScreen() {
           renderItem={({ item }) => {
             const start = new Date(item.startTime);
             const end = item.endTime ? new Date(item.endTime) : null;
+            const isDiscarded = item.note === "__DISCARDED__";
 
             return (
               <Pressable
@@ -159,9 +160,10 @@ export default function HistoryScreen() {
                   backgroundColor: colors.card,
                   borderRadius: 10,
                   borderWidth: 1,
-                  borderColor: colors.border,
+                  borderColor: isDiscarded ? "#3a1f1f" : colors.border,
                   padding: 14,
                   marginBottom: 12,
+                  opacity: isDiscarded ? 0.55 : 1,
                 }}
               >
                 <View
@@ -195,20 +197,62 @@ export default function HistoryScreen() {
                       </View>
                     )}
 
-                    <View
-                      style={{
-                        paddingVertical: 3,
-                        paddingHorizontal: 10,
-                        borderRadius: 999,
-                        backgroundColor: "#0f0f0f",
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                      }}
-                    >
-                      <Text style={{ color: colors.text, fontSize: 13 }}>
-                        {item.sessionLabel?.trim() || "Session"}
-                      </Text>
-                    </View>
+                    {isDiscarded && (
+                      <View
+                        style={{
+                          paddingVertical: 2,
+                          paddingHorizontal: 8,
+                          borderRadius: 999,
+                          backgroundColor: "rgba(229,57,53,0.15)",
+                          borderWidth: 1,
+                          borderColor: "#e53935",
+                          marginRight: 8,
+                        }}
+                      >
+                        <Text style={{ color: "#e53935", fontSize: 12 }}>
+                          Discarded
+                        </Text>
+                      </View>
+                    )}
+
+                    {Array.isArray(item.sessionLabels) && item.sessionLabels.length > 0 ? (
+                      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                        {item.sessionLabels.map((label) => (
+                          <View
+                            key={label}
+                            style={{
+                              paddingVertical: 4,
+                              paddingHorizontal: 12,
+                              borderRadius: 999,
+                              backgroundColor: "#0b1f14",
+                              borderWidth: 1.5,
+                              borderColor: "#39FF14",
+                              marginRight: 6,
+                              marginBottom: 6,
+                            }}
+                          >
+                            <Text style={{ color: "#39FF14", fontSize: 10, fontWeight: "800", letterSpacing: 0.2 }}>
+                              {label}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <View
+                        style={{
+                          paddingVertical: 3,
+                          paddingHorizontal: 10,
+                          borderRadius: 999,
+                          backgroundColor: "#0f0f0f",
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                        }}
+                      >
+                        <Text style={{ color: colors.muted, fontSize: 12 }}>
+                          No labels
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
@@ -216,7 +260,7 @@ export default function HistoryScreen() {
                   {formatTime(start)}{end ? ` to ${formatTime(end)}` : ""}{end ? `  ·  ${durationMinutes(start, end)}` : ""}
                 </Text>
 
-                {item.note ? (
+                {item.note && !isDiscarded ? (
                   <Text style={{ color: colors.muted, marginBottom: 10 }} numberOfLines={2}>
                     Note: {item.note}
                   </Text>
@@ -227,7 +271,7 @@ export default function HistoryScreen() {
                     {item.exerciseCount} exercises
                   </Text>
                   <Text style={{ color: colors.accent }}>
-                    View
+                    →
                   </Text>
                 </View>
               </Pressable>
