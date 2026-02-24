@@ -58,6 +58,19 @@ export default function SettingsScreen() {
     }
   }
 
+  function showAllSessions() {
+    const allSessions = JSON.stringify(getAllSessions(), null, 2);
+    console.debug(allSessions);
+    return allSessions
+  }
+  
+  function showAllExercises() {
+    const allExercises = JSON.stringify(getAllExercises(), null, 2);
+    console.debug(allExercises);
+    return allExercises
+  }
+
+
   return (
     <View style={{ flex: 1, padding: 24, marginTop: 24, backgroundColor: "#000" }}>
       <Text style={{ color: "#fff", fontSize: 18, marginBottom: 16 }}>
@@ -176,7 +189,7 @@ export default function SettingsScreen() {
 
           {showSessions && (
             <Text style={{ color: "#aaa", fontSize: 11 }}>
-              {JSON.stringify(getAllSessions(), null, 2)}
+              {showAllSessions()}
             </Text>
           )}
 
@@ -193,7 +206,7 @@ export default function SettingsScreen() {
 
           {showExercises && (
             <Text style={{ color: "#aaa", fontSize: 11 }}>
-              {JSON.stringify(getAllExercises(), null, 2)}
+              {showAllExercises()}
             </Text>
           )}
 
