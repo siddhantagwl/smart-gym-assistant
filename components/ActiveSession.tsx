@@ -171,6 +171,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
 
   // ----- Rest Timer State -----
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [restType, setRestType] = useState<"set" | "transition" | null>(null);
   const intervalRef = useRef<number | null>(null);
   const restOpacity = useRef(new Animated.Value(1)).current;
   const restPulse = useRef(new Animated.Value(0)).current;
@@ -515,6 +516,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   function saveSet() {
     if (!isExerciseActive) return;
     setSets(prev => prev + 1);
+    setRestType("set");
     startRestTimer(90);
   }
 
@@ -544,6 +546,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     setSessionExercises(rows);
 
     resetExerciseState();
+    setRestType("transition");
     startRestTimer(90);
   }
 
@@ -623,12 +626,16 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
             paddingHorizontal: 16,
             borderRadius: 18,
             backgroundColor:
-              restSeconds !== null && restSeconds <= 5
+              restType === "transition"
+                ? "rgba(33,150,243,0.15)"
+                : restSeconds !== null && restSeconds <= 5
                 ? "rgba(255,193,7,0.28)"
                 : "rgba(255,193,7,0.12)",
             borderWidth: 1,
             borderColor:
-              restSeconds !== null && restSeconds <= 5
+              restType === "transition"
+                ? "#2196F3"
+                : restSeconds !== null && restSeconds <= 5
                 ? "#FFC107"
                 : "rgba(255,193,7,0.7)",
             flexDirection: "row",
@@ -643,7 +650,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
               fontWeight: "600",
             }}
           >
-            🧘 Rest · {Math.floor(restSeconds / 60)}:
+            {restType === "transition" ? "🔄" : "🧘"} Rest · {Math.floor(restSeconds / 60)}:
             {(restSeconds % 60).toString().padStart(2, "0")}
           </Text>
 
