@@ -169,6 +169,7 @@ export default function AddExercise({
 }: AddExerciseProps) {
   const [showNote, setShowNote] = useState(false);
   const [confirmFinish, setConfirmFinish] = useState(false);
+  const [isNameFocused, setIsNameFocused] = useState(false);
 
   const filteredSuggestions = useMemo(() => {
     const query = exerciseName.trim().toLowerCase();
@@ -214,6 +215,8 @@ export default function AddExercise({
               }}
               placeholder="Type exercise name"
               placeholderTextColor="#666"
+              onFocus={() => setIsNameFocused(true)}
+              onBlur={() => setIsNameFocused(false)}
               style={{
                 borderWidth: 1,
                 borderColor: "#222",
@@ -226,7 +229,7 @@ export default function AddExercise({
               }}
             />
 
-            {exerciseName.trim().length > 0 && !isExactMatch && (
+            {exerciseName.trim().length > 0 && isNameFocused && (
               <Pressable
                 onPress={() => {
                   onSelectExercise("");
