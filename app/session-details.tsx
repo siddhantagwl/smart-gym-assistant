@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { getAllSessions } from "@/db/sessions";
-import { getExercisesForSession, StoredExercise } from "@/db/exercise";
+import { getExercisesForSession, getAllExercises, StoredExercise } from "@/db/exercise";
 
 const colors = {
   background: "#0F0F0F",
@@ -26,6 +26,8 @@ export default function SessionDetailsScreen() {
   const [exercises, setExercises] = useState<StoredExercise[]>([]);
   const [sessionNote, setSessionNote] = useState<string>("");
   const [sessionLabels, setSessionLabels] = useState<string[]>([]);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [endTime, setEndTime] = useState<string | null>(null);
 
   useEffect(() => {
     const sessions = getAllSessions();
@@ -33,6 +35,8 @@ export default function SessionDetailsScreen() {
 
     setSessionNote(s?.note && s.note !== "__DISCARDED__" ? s.note : "");
     setSessionLabels(Array.isArray(s?.sessionLabels) ? s!.sessionLabels : []);
+    setStartTime(s?.startTime ?? null);
+    setEndTime(s?.endTime ?? null);
 
     if (!sessionId) {
       setExercises([]);
@@ -41,6 +45,31 @@ export default function SessionDetailsScreen() {
     }
 
     setExercises(getExercisesForSession(sessionId));
+  }, [sessionId]);
+
+  const durationMinutes = useMemo(() => {
+    if (!startTime || !endTime) return null;
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const diffMs = end.getTime() - start.getTime();
+    return Math.max(0, Math.round(diffMs / 60000));
+  }, [startTime, endTime]);
+
+  // Compute PR map per (exerciseName + reps) -> max historical weight excluding current session
+  const prMap = useMemo(() => {
+    const all = getAllExercises();
+    const map: Record<string, number> = {};
+
+    all.forEach((ex) => {
+      if (ex.sessionId === sessionId) return; // exclude current session
+
+      const key = `${ex.name}__${ex.reps}`; // PR is weight at same reps
+      if (!map[key] || ex.weightKg > map[key]) {
+        map[key] = ex.weightKg;
+      }
+    });
+
+    return map;
   }, [sessionId]);
 
   return (
@@ -55,7 +84,52 @@ export default function SessionDetailsScreen() {
         }}
       >
         <View>
-          <Text style={{ color: colors.text, fontSize: 18 }}>Session details</Text>
+          <Text style={{ color: colors.text, fontSize: 20 }}>Session details</Text>
+          {startTime && (
+            <>
+              <Text
+                style={{
+                  color: "#E0E0E0",
+                  fontSize: 15,
+                  fontWeight: "600",
+                  marginTop: 2,
+                }}
+              >
+                {new Date(startTime).toLocaleDateString([], {
+                  weekday: 'short',
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </Text>
+
+              {endTime && (
+                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                  {new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {" → "}
+                  {new Date(endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              )}
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  marginTop: 6,
+                  marginBottom: 6,
+                  alignItems: "center",
+                }}
+              >
+                {durationMinutes !== null && (
+                  <Text style={{ color: colors.muted, marginRight: 12 }}>
+                    ⏱ {durationMinutes} min
+                  </Text>
+                )}
+                <Text style={{ color: colors.muted }}>
+                  🏋 {exercises.length} exercises
+                </Text>
+              </View>
+            </>
+          )}
           {Array.isArray(sessionLabels) && sessionLabels.length > 0 ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}>
               {sessionLabels.map((label) => (
@@ -94,8 +168,28 @@ export default function SessionDetailsScreen() {
             </Text>
           ) : null}
         </View>
-        <Pressable onPress={() => router.back()}>
-          <Text style={{ color: colors.accent, fontSize: 16 }}>Close</Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: "#1a0f0f",
+            borderWidth: 1,
+            borderColor: "#ff3b30",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text
+            style={{
+              color: "#ff3b30",
+              fontSize: 24,
+              fontWeight: "700",
+            }}
+          >
+            ×
+          </Text>
         </Pressable>
       </View>
 
@@ -110,31 +204,81 @@ export default function SessionDetailsScreen() {
           data={exercises}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
-          renderItem={({ item }) => (
-            <View
-              style={{
-                backgroundColor: colors.card,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: colors.border,
-                padding: 14,
-                marginBottom: 12,
-              }}
-            >
-              <Text style={{ color: colors.text, fontSize: 16, marginBottom: 6 }}>
-                {item.name}
-              </Text>
-              <Text style={{ color: colors.muted }}>
-                {item.sets} sets  ·  {item.reps} reps  ·  {item.weightKg} kg
-              </Text>
+          renderItem={({ item, index }) => {
+            const currentTime = new Date(item.createdAt);
+            const prKey = `${item.name}__${item.reps}`;
+            const previousMax = prMap[prKey] ?? 0;
+            const isPR = previousMax > 0 && item.weightKg > previousMax;
+            const delta = isPR ? (item.weightKg - previousMax).toFixed(1) : null;
 
-              {item.note ? (
-                <Text style={{ color: colors.muted, marginTop: 6 }} numberOfLines={3}>
-                  Note: {item.note}
+            return (
+              <View
+                style={{
+                  backgroundColor: colors.card,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  padding: 14,
+                  marginBottom: 12,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                  <Text style={{ color: colors.text, fontSize: 16 }}>
+                    {index + 1}. {item.name}
+                  </Text>
+
+                  {isPR && (
+                    <View
+                      style={{
+                        marginLeft: 8,
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <View
+                        style={{
+                          paddingVertical: 2,
+                          paddingHorizontal: 8,
+                          borderRadius: 999,
+                          backgroundColor: "#1a1400",
+                          borderWidth: 1,
+                          borderColor: "#FFD700",
+                        }}
+                      >
+                        <Text style={{ color: "#FFD700", fontSize: 10, fontWeight: "800" }}>
+                          PR 🔥
+                        </Text>
+                      </View>
+
+                      {delta !== null && (
+                        <Text
+                          style={{
+                            color: "#FFD700",
+                            fontSize: 10,
+                            marginTop: 2,
+                            opacity: 0.9,
+                          }}
+                        >
+                          +{delta} kg over last best ({previousMax} kg)
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+                <Text style={{ color: colors.muted }}>
+                  {item.sets} sets  ·  {item.reps} reps  ·  {item.weightKg} kg
                 </Text>
-              ) : null}
-            </View>
-          )}
+                <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>
+                  Logged at {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+
+                {item.note ? (
+                  <Text style={{ color: colors.muted, marginTop: 6 }} numberOfLines={3}>
+                    Note: {item.note}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          }}
         />
       )}
     </View>
