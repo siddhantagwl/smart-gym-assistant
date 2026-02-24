@@ -168,6 +168,7 @@ export default function AddExercise({
   lastTime,
 }: AddExerciseProps) {
   const [showNote, setShowNote] = useState(false);
+  const [confirmFinish, setConfirmFinish] = useState(false);
 
   const filteredSuggestions = useMemo(() => {
     const query = exerciseName.trim().toLowerCase();
@@ -334,6 +335,23 @@ export default function AddExercise({
 
         <View style={{ height: 12 }} />
 
+        {isExerciseActive ? (
+          <Pressable
+            onPress={onSaveSet}
+            style={{
+              backgroundColor: accentColor,
+              paddingVertical: 10,
+              borderRadius: 12,
+              alignItems: "center",
+              marginBottom: 10,
+            }}
+          >
+            <Text style={{ color: "#000", fontSize: 15, fontWeight: "700" }}>
+              Finish Set {sets + 1}
+            </Text>
+          </Pressable>
+        ) : null}
+
         <Pressable
           onPress={() => setShowNote((v) => !v)}
           style={{
@@ -373,45 +391,100 @@ export default function AddExercise({
 
         <View style={{ height: 4 }} />
 
-        {isExerciseActive ? (
+
+        {!isExerciseActive ? (
           <Pressable
-            onPress={onSaveSet}
+            onPress={onSave}
+            disabled={!canStart}
             style={{
-              backgroundColor: "#222",
+              backgroundColor: !canStart ? "#333" : "#222",
               paddingVertical: 10,
               borderRadius: 10,
               alignItems: "center",
-              marginBottom: 8,
+              opacity: !canStart ? 0.6 : 1,
             }}
           >
-            <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>
-              Save Set {sets + 1}
+            <Text
+              style={{
+                color: !canStart ? "#bbb" : "#fff",
+                fontSize: 14,
+                fontWeight: "600",
+              }}
+            >
+              Start Exercise
             </Text>
           </Pressable>
-        ) : null}
-
-        <Pressable
-          onPress={onSave}
-          disabled={mainDisabled}
-          style={{
-            backgroundColor: mainDisabled ? "#333" : accentColor,
-            paddingVertical: 10,
-            borderRadius: 10,
-            alignItems: "center",
-            opacity: mainDisabled ? 0.6 : 1,
-          }}
-        >
-          <Text
+        ) : confirmFinish ? (
+          <View
             style={{
-              color: mainDisabled ? "#bbb" : "#000",
-              fontSize: 14,
-              fontWeight: "600",
-              letterSpacing: 0.3,
+              borderWidth: 1,
+              borderColor: "#2a2a2a",
+              borderRadius: 10,
+              padding: 12,
+              backgroundColor: "#0f0f0f",
             }}
           >
-            {isExerciseActive ? "Finish Exercise" : "Start Exercise"}
-          </Text>
-        </Pressable>
+            <Text style={{ color: "#fff", fontSize: 14, marginBottom: 8 }}>
+              Finish exercise with {sets} set{sets !== 1 ? "s" : ""}?
+            </Text>
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={() => setConfirmFinish(false)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: "#444",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#aaa" }}>Back</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setConfirmFinish(false);
+                  onSave();
+                }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  backgroundColor: accentColor,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#000", fontWeight: "700" }}>
+                  Confirm
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => setConfirmFinish(true)}
+            disabled={!canFinish}
+            style={{
+              backgroundColor: !canFinish ? "#333" : "#222",
+              paddingVertical: 10,
+              borderRadius: 10,
+              alignItems: "center",
+              opacity: !canFinish ? 0.6 : 1,
+            }}
+          >
+            <Text
+              style={{
+                color: !canFinish ? "#bbb" : "#fff",
+                fontSize: 14,
+                fontWeight: "600",
+              }}
+            >
+              Finish Exercise
+            </Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
