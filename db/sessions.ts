@@ -187,3 +187,21 @@ export function deleteSession(sessionId: string) {
     throw err;
   }
 }
+
+export function insertSessionRaw(row: any) {
+  db.runSync(
+    `
+    INSERT INTO sessions
+    (id, start_time, end_time, session_labels, note, source)
+    VALUES (?, ?, ?, ?, ?, ?)
+    `,
+    [
+      row.id,
+      row.start_time,
+      row.end_time,
+      row.session_labels,
+      row.note || "",
+      row.source || "live",
+    ]
+  );
+}

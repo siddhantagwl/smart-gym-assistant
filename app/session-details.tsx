@@ -1,11 +1,14 @@
-import { View, Text, Pressable, FlatList, Alert } from "react-native";
-import { useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import { Alert, FlatList, Pressable, Text, View } from "react-native";
 
-import { getAllSessions, deleteSession } from "@/db/sessions";
-import { getExercisesForSession, getAllExercises, StoredExercise } from "@/db/exercise";
+import {
+  getAllExercises,
+  getExercisesForSession,
+  StoredExercise,
+} from "@/db/exercises";
+import { deleteSession, getAllSessions } from "@/db/sessions";
 import Svg, { Polyline } from "react-native-svg";
-
 
 const colors = {
   background: "#0F0F0F",
@@ -48,7 +51,7 @@ export default function SessionDetailsScreen() {
         [
           { text: "Cancel", style: "cancel" },
           { text: "Delete", style: "destructive", onPress: performDelete },
-        ]
+        ],
       );
     } else {
       performDelete();
@@ -99,7 +102,14 @@ export default function SessionDetailsScreen() {
   }, [sessionId]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 16, marginTop: 56 }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+        paddingTop: 16,
+        marginTop: 56,
+      }}
+    >
       <View
         style={{
           paddingHorizontal: 16,
@@ -110,7 +120,9 @@ export default function SessionDetailsScreen() {
         }}
       >
         <View>
-          <Text style={{ color: colors.text, fontSize: 20 }}>Session details</Text>
+          <Text style={{ color: colors.text, fontSize: 20 }}>
+            Session details
+          </Text>
           {startTime && (
             <>
               <Text
@@ -122,18 +134,24 @@ export default function SessionDetailsScreen() {
                 }}
               >
                 {new Date(startTime).toLocaleDateString([], {
-                  weekday: 'short',
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
+                  weekday: "short",
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
                 })}
               </Text>
 
               {endTime && (
                 <Text style={{ color: colors.muted, fontSize: 12 }}>
-                  {new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(startTime).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                   {" → "}
-                  {new Date(endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(endTime).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </Text>
               )}
 
@@ -157,7 +175,9 @@ export default function SessionDetailsScreen() {
             </>
           )}
           {Array.isArray(sessionLabels) && sessionLabels.length > 0 ? (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}>
+            <View
+              style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}
+            >
               {sessionLabels.map((label) => (
                 <View
                   key={label}
@@ -189,7 +209,10 @@ export default function SessionDetailsScreen() {
             <Text style={{ color: colors.muted, marginTop: 4 }}>Session</Text>
           )}
           {sessionNote ? (
-            <Text style={{ color: colors.muted, marginTop: 4 }} numberOfLines={3}>
+            <Text
+              style={{ color: colors.muted, marginTop: 4 }}
+              numberOfLines={3}
+            >
               Note: {sessionNote}
             </Text>
           ) : null}
@@ -240,7 +263,9 @@ export default function SessionDetailsScreen() {
             const prKey = `${item.name}__${item.reps}`;
             const previousMax = prMap[prKey] ?? 0;
             const isPR = previousMax > 0 && item.weightKg > previousMax;
-            const delta = isPR ? (item.weightKg - previousMax).toFixed(1) : null;
+            const delta = isPR
+              ? (item.weightKg - previousMax).toFixed(1)
+              : null;
 
             // Build sparkline data (historical weights for same exercise + reps)
             const historyWeights = getAllExercises()
@@ -248,7 +273,7 @@ export default function SessionDetailsScreen() {
                 (ex) =>
                   ex.name === item.name &&
                   ex.reps === item.reps &&
-                  ex.sessionId !== sessionId
+                  ex.sessionId !== sessionId,
               )
               .map((ex) => ex.weightKg)
               .concat(item.weightKg); // include current
@@ -284,9 +309,17 @@ export default function SessionDetailsScreen() {
                   marginBottom: 12,
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "flex-start" }}
+                >
                   <View style={{ flex: 1, paddingRight: 8 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        marginBottom: 4,
+                      }}
+                    >
                       <Text style={{ color: colors.text, fontSize: 16 }}>
                         {index + 1}. {item.name}
                       </Text>
@@ -307,7 +340,13 @@ export default function SessionDetailsScreen() {
                               borderColor: "#FFD700",
                             }}
                           >
-                            <Text style={{ color: "#FFD700", fontSize: 10, fontWeight: "800" }}>
+                            <Text
+                              style={{
+                                color: "#FFD700",
+                                fontSize: 10,
+                                fontWeight: "800",
+                              }}
+                            >
                               PR 🔥
                             </Text>
                           </View>
@@ -315,7 +354,7 @@ export default function SessionDetailsScreen() {
                       )}
                     </View>
                     <Text style={{ color: colors.muted }}>
-                      {item.sets} sets  ·  {item.reps} reps  ·  {item.weightKg} kg
+                      {item.sets} sets · {item.reps} reps · {item.weightKg} kg
                     </Text>
                     {isPR && delta !== null && (
                       <Text
@@ -354,7 +393,13 @@ export default function SessionDetailsScreen() {
                         >
                           DUR
                         </Text>
-                        <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700" }}>
+                        <Text
+                          style={{
+                            color: "#FFFFFF",
+                            fontSize: 11,
+                            fontWeight: "700",
+                          }}
+                        >
                           ⏱ {minutes}:{seconds.toString().padStart(2, "0")}
                         </Text>
                       </View>
@@ -382,16 +427,24 @@ export default function SessionDetailsScreen() {
                         >
                           REST
                         </Text>
-                        <Text style={{ color: "#6CB4FF", fontSize: 11, fontWeight: "600" }}>
-                          💤 {Math.floor(item.restSeconds / 60)}:{(item.restSeconds % 60)
-                            .toString()
-                            .padStart(2, "0")}
+                        <Text
+                          style={{
+                            color: "#6CB4FF",
+                            fontSize: 11,
+                            fontWeight: "600",
+                          }}
+                        >
+                          💤 {Math.floor(item.restSeconds / 60)}:
+                          {(item.restSeconds % 60).toString().padStart(2, "0")}
                         </Text>
                       </View>
                     </View>
 
                     {item.note ? (
-                      <Text style={{ color: colors.muted, marginTop: 6 }} numberOfLines={3}>
+                      <Text
+                        style={{ color: colors.muted, marginTop: 6 }}
+                        numberOfLines={3}
+                      >
                         Note: {item.note}
                       </Text>
                     ) : null}

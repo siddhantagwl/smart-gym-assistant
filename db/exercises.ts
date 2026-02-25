@@ -138,3 +138,25 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
     sessionLabels: row.session_labels ? JSON.parse(row.session_labels) : [],
   };
 }
+
+export function insertExerciseRaw(row: any) {
+  db.runSync(
+    `
+    INSERT INTO exercises
+    (id, session_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    [
+      row.id,
+      row.session_id,
+      row.name,
+      Number(row.sets),
+      Number(row.reps),
+      Number(row.weight_kg),
+      Number(row.rest_seconds || 0),
+      row.start_time,
+      row.end_time,
+      row.note || "",
+    ]
+  );
+}
