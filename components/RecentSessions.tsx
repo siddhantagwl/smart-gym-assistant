@@ -81,10 +81,24 @@ export default function RecentSessions(props: { limit?: number }) {
               <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 14 }}>
                 {formatShortDate(s.startTime)} · {formatTime(s.startTime)}
               </Text>
+
               {s.endTime && (
-                <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>
-                  {formatDuration(s.startTime, s.endTime)}
-                </Text>
+                <View
+                  style={{
+                    marginTop: 4,
+                    alignSelf: "flex-start",
+                    paddingVertical: 2,
+                    paddingHorizontal: 8,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>
+                    {formatDuration(s.startTime, s.endTime)}
+                  </Text>
+                </View>
               )}
             </View>
 
@@ -107,19 +121,49 @@ export default function RecentSessions(props: { limit?: number }) {
                 </View>
               )}
 
-              <View
-                style={{
-                  paddingVertical: 3,
-                  paddingHorizontal: 10,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.12)",
-                  backgroundColor: "rgba(0,0,0,0.35)",
-                }}
-              >
-                <Text style={{ color: "#fff", fontSize: 13 }}>
-                  {s.sessionLabel?.trim() || "Session"}
-                </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                {Array.isArray(s.sessionLabels) && s.sessionLabels.length > 0 ? (
+                  s.sessionLabels.map((label) => (
+                    <View
+                      key={label}
+                      style={{
+                        paddingVertical: 2,
+                        paddingHorizontal: 8,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        marginRight: 6,
+                        marginBottom: 4,
+                        borderColor: "rgba(16,185,129,0.65)",
+                        backgroundColor: "rgba(16,185,129,0.12)",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "rgba(16,185,129,0.95)",
+                          fontSize: 12,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <View
+                    style={{
+                      paddingVertical: 2,
+                      paddingHorizontal: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.12)",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                    }}
+                  >
+                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>
+                      Session
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
