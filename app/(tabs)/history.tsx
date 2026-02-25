@@ -92,14 +92,50 @@ export default function HistoryScreen() {
         style={{
           paddingHorizontal: 16,
           marginBottom: 12,
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
         }}
       >
-        <Text style={{ color: colors.text, fontSize: 22 }}>History</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 10,
+          }}
+        >
+          <Text style={{ color: colors.text, fontSize: 22 }}>
+            History
+          </Text>
 
-        <View style={{ flexDirection: "row" }}>
+          <View
+            style={{
+              paddingVertical: 4,
+              paddingHorizontal: 14,
+              borderRadius: 999,
+              backgroundColor: "rgba(0,150,255,0.12)",
+              borderWidth: 1,
+              borderColor: "#00B3FF",
+            }}
+          >
+            <Text
+              style={{
+                color: "#00B3FF",
+                fontSize: 12,
+                fontWeight: "700",
+                letterSpacing: 0.4,
+              }}
+            >
+              {rows.length} SESSIONS
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            alignItems: "center",
+          }}
+        >
           <Pressable
             onPress={() => router.push("/manual-session")}
             style={{
@@ -173,7 +209,7 @@ export default function HistoryScreen() {
                     marginBottom: 6,
                   }}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
                     <Text
                       style={{
                         color: colors.text,
@@ -183,6 +219,7 @@ export default function HistoryScreen() {
                     >
                       {formatDate(start)}
                     </Text>
+
                     {end ? (
                       <View
                         style={{
@@ -192,22 +229,49 @@ export default function HistoryScreen() {
                           backgroundColor: "#1a1a1a",
                           borderWidth: 1,
                           borderColor: colors.border,
+                          marginRight: 6,
                         }}
                       >
                         <Text
                           style={{
                             color: "#FFFFFF",
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: "700",
                           }}
                         >
-                          DUR ⏱ {durationMinutes(start, end)}
+                          ⏱ {durationMinutes(start, end)}
                         </Text>
                       </View>
                     ) : null}
+
+                    <View
+                      style={{
+                        paddingVertical: 3,
+                        paddingHorizontal: 12,
+                        borderRadius: 999,
+                        backgroundColor: "#141414",
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: colors.muted,
+                          fontSize: 13,
+                          fontWeight: "700",
+                        }}
+                      >
+                        🏋 {item.exerciseCount}
+                      </Text>
+                    </View>
                   </View>
 
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                    }}
+                  >
                     {item.source === "manual" && (
                       <View
                         style={{
@@ -226,24 +290,44 @@ export default function HistoryScreen() {
                       </View>
                     )}
 
-                    {isDiscarded && (
-                      <View
-                        style={{
-                          paddingVertical: 2,
-                          paddingHorizontal: 8,
-                          borderRadius: 999,
-                          backgroundColor: "rgba(229,57,53,0.15)",
-                          borderWidth: 1,
-                          borderColor: "#e53935",
-                        }}
-                      >
-                        <Text style={{ color: "#e53935", fontSize: 12 }}>
-                          Discarded
-                        </Text>
-                      </View>
-                    )}
+                    <Text
+                      style={{
+                        color: colors.muted,
+                        fontSize: 18,
+                        fontWeight: "700",
+                        opacity: 0.6,
+                      }}
+                    >
+                      ›
+                    </Text>
                   </View>
                 </View>
+
+                {isDiscarded && (
+                  <View
+                    style={{
+                      paddingVertical: 4,
+                      paddingHorizontal: 10,
+                      borderRadius: 999,
+                      backgroundColor: "rgba(229,57,53,0.15)",
+                      borderWidth: 1,
+                      borderColor: "#e53935",
+                      alignSelf: "flex-start",
+                      marginBottom: 6,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#e53935",
+                        fontSize: 11,
+                        fontWeight: "700",
+                        letterSpacing: 0.3,
+                      }}
+                    >
+                      DISCARDED
+                    </Text>
+                  </View>
+                )}
 
                 <Text
                   style={{
@@ -264,18 +348,6 @@ export default function HistoryScreen() {
                   </Text>
                 ) : null}
 
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text style={{ color: colors.muted }}>
-                    {item.exerciseCount} exercises
-                  </Text>
-                  <Text style={{ color: colors.accent }}>→</Text>
-                </View>
 
                 {Array.isArray(item.sessionLabels) &&
                 item.sessionLabels.length > 0 ? (
@@ -293,16 +365,16 @@ export default function HistoryScreen() {
                           paddingVertical: 4,
                           paddingHorizontal: 12,
                           borderRadius: 999,
-                          backgroundColor: "rgba(46,125,90,0.12)",
+                          backgroundColor: "rgba(46,125,90,0.18)",
                           borderWidth: 1,
-                          borderColor: "#2E7D5A",
+                          borderColor: "#3BAF75",
                           marginRight: 6,
                           marginBottom: 6,
                         }}
                       >
                         <Text
                           style={{
-                            color: "#2E7D5A",
+                            color: "#3BAF75",
                             fontSize: 10,
                             fontWeight: "800",
                             letterSpacing: 0.2,
