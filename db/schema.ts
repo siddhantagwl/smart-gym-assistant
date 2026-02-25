@@ -43,3 +43,9 @@ export function initDb() {
     seedExerciseLibrary();
 
 }
+
+export function wipeDatabase() {
+  db.execSync("DELETE FROM exercises;");
+  db.execSync("DELETE FROM sessions;");
+  console.log("Database wiped completely.");
+}

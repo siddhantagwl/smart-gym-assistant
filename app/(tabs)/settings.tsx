@@ -1,3 +1,16 @@
+import { useEffect, useState } from "react";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import * as Sharing from "expo-sharing";
+
+import { getAllExercises } from "@/db/exercises";
+import { exportAllDataToFile } from "@/db/export";
+import { getAllSessions } from "@/db/sessions";
+import {
+  getLastGoogleSheetsSync,
+  syncToGoogleSheets,
+  restoreFromGoogleSheets,
+} from "@/services/googleSheetsSync";
+
 function formatDateTime(ts: string) {
   const d = new Date(ts);
 
@@ -9,18 +22,11 @@ function formatDateTime(ts: string) {
     minute: "2-digit",
   });
 }
-import { View, Text, Pressable, Alert } from "react-native";
-import { useEffect, useState } from "react";
-import * as Sharing from "expo-sharing";
-import { exportAllDataToFile } from "@/db/export";
-import { syncToGoogleSheets, getLastGoogleSheetsSync } from "@/services/googleSheetsSync";
-import { ScrollView } from "react-native";
-import { getAllSessions } from "@/db/sessions";
-import { getAllExercises } from "@/db/exercise";
 
 export default function SettingsScreen() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const [showExercises, setShowExercises] = useState(false);
@@ -58,18 +64,44 @@ export default function SettingsScreen() {
     }
   }
 
+  async function onRestore() {
+    if (restoring) return;
+
+    Alert.alert(
+      "Restore from Google Sheets",
+      "This will wipe all local data and restore from Google Sheets. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Restore",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setRestoring(true);
+              await restoreFromGoogleSheets();
+              Alert.alert("Restore complete", "Database restored successfully.");
+            } catch (e) {
+              Alert.alert("Restore failed", String(e));
+            } finally {
+              setRestoring(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
   function showAllSessions() {
     const allSessions = JSON.stringify(getAllSessions(), null, 2);
     console.debug(allSessions);
-    return allSessions
+    return allSessions;
   }
-  
+
   function showAllExercises() {
     const allExercises = JSON.stringify(getAllExercises(), null, 2);
     console.debug(allExercises);
-    return allExercises
+    return allExercises;
   }
-
 
   return (
     <View style={{ flex: 1, padding: 24, marginTop: 24, backgroundColor: "#000" }}>
@@ -86,9 +118,7 @@ export default function SettingsScreen() {
           alignItems: "center",
         }}
       >
-        <Text style={{ color: "#000", fontSize: 16 }}>
-          Export workout data
-        </Text>
+        <Text style={{ color: "#000", fontSize: 16 }}>Export workout data</Text>
       </Pressable>
       <View style={{ height: 12 }} />
 
@@ -101,9 +131,7 @@ export default function SettingsScreen() {
           alignItems: "center",
         }}
       >
-        <Text style={{ color: "#fff", fontSize: 16 }}>
-          Share backup
-        </Text>
+        <Text style={{ color: "#fff", fontSize: 16 }}>Share backup</Text>
       </Pressable>
       <View style={{ height: 12 }} />
 
@@ -147,6 +175,24 @@ export default function SettingsScreen() {
         </Text>
       )}
 
+      <View style={{ height: 12 }} />
+
+      <Pressable
+        onPress={onRestore}
+        disabled={restoring}
+        style={({ pressed }) => ({
+          backgroundColor: restoring ? "#4a1a1a" : "#8B1E1E",
+          paddingVertical: 14,
+          borderRadius: 8,
+          alignItems: "center",
+          opacity: restoring ? 0.6 : pressed ? 0.85 : 1,
+        })}
+      >
+        <Text style={{ color: "#fff", fontSize: 16 }}>
+          {restoring ? "Restoring…" : "Restore from Sheets"}
+        </Text>
+      </Pressable>
+
       <View style={{ height: 16 }} />
 
       <Pressable
@@ -183,7 +229,7 @@ export default function SettingsScreen() {
             style={{ marginBottom: 6 }}
           >
             <Text style={{ color: "#fff", fontSize: 12 }}>
-              {showSessions ? "▼ Sessions" : "▶ Sessions"}
+              {showSessions ? "▼ Sessions" : "▶ Sessions"} ({getAllSessions().length})
             </Text>
           </Pressable>
 
@@ -200,7 +246,7 @@ export default function SettingsScreen() {
             style={{ marginTop: 16, marginBottom: 6 }}
           >
             <Text style={{ color: "#fff", fontSize: 12 }}>
-              {showExercises ? "▼ Exercises" : "▶ Exercises"}
+              {showExercises ? "▼ Exercises" : "▶ Exercises"} ({getAllExercises().length})
             </Text>
           </Pressable>
 
