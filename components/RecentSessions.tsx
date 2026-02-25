@@ -67,50 +67,71 @@ export default function RecentSessions(props: { limit?: number }) {
       </Text>
 
       <View style={{ marginTop: 8 }}>
-        {items.map((s) => (
+        {items.map((s, idx) => (
           <View
             key={s.id}
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingVertical: 6,
+              paddingVertical: 4,
             }}
           >
-            <View>
-              <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 14 }}>
-                {formatShortDate(s.startTime)} · {formatTime(s.startTime)}
-              </Text>
-
-              {s.endTime && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <View style={{ flexShrink: 1 }}>
                 <View
                   style={{
-                    marginTop: 4,
-                    alignSelf: "flex-start",
-                    paddingVertical: 2,
-                    paddingHorizontal: 8,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.12)",
-                    backgroundColor: "rgba(255,255,255,0.05)",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    flexWrap: "wrap",
                   }}
                 >
-                  <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>
-                    {formatDuration(s.startTime, s.endTime)}
+                  <Text
+                    style={{
+                      color: "rgba(255,255,255,0.9)",
+                      fontSize: 14,
+                      marginRight: 8,
+                    }}
+                  >
+                    {formatShortDate(s.startTime)} · {formatTime(s.startTime)}
                   </Text>
-                </View>
-              )}
-            </View>
 
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              {s.source === "manual" && (
+                  {s.endTime ? (
+                    <View
+                      style={{
+                        alignSelf: "flex-start",
+                        paddingVertical: 2,
+                        paddingHorizontal: 8,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: "rgba(255,255,255,0.12)",
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "rgba(255,255,255,0.7)",
+                          fontSize: 11,
+                        }}
+                      >
+                        {formatDuration(s.startTime, s.endTime)}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+
+              {s.source === "manual" ? (
                 <View
                   style={{
                     paddingVertical: 2,
                     paddingHorizontal: 8,
                     borderRadius: 999,
                     borderWidth: 1,
-                    marginRight: 8,
                     borderColor: "rgba(34,197,94,0.55)",
                     backgroundColor: "rgba(34,197,94,0.12)",
                   }}
@@ -119,53 +140,64 @@ export default function RecentSessions(props: { limit?: number }) {
                     Manual
                   </Text>
                 </View>
+              ) : (
+                <View />
               )}
+            </View>
 
-              <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                {Array.isArray(s.sessionLabels) && s.sessionLabels.length > 0 ? (
-                  s.sessionLabels.map((label) => (
-                    <View
-                      key={label}
-                      style={{
-                        paddingVertical: 2,
-                        paddingHorizontal: 8,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        marginRight: 6,
-                        marginBottom: 4,
-                        borderColor: "rgba(16,185,129,0.65)",
-                        backgroundColor: "rgba(16,185,129,0.12)",
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: "rgba(16,185,129,0.95)",
-                          fontSize: 12,
-                          fontWeight: "600",
-                        }}
-                      >
-                        {label}
-                      </Text>
-                    </View>
-                  ))
-                ) : (
+            <View
+              style={{
+                marginTop: 6,
+                flexDirection: "row",
+                flexWrap: "wrap",
+              }}
+            >
+              {Array.isArray(s.sessionLabels) && s.sessionLabels.length > 0 ? (
+                s.sessionLabels.map((label) => (
                   <View
+                    key={label}
                     style={{
                       paddingVertical: 2,
                       paddingHorizontal: 8,
                       borderRadius: 999,
                       borderWidth: 1,
-                      borderColor: "rgba(255,255,255,0.12)",
-                      backgroundColor: "rgba(255,255,255,0.04)",
+                      marginRight: 6,
+                      marginBottom: 6,
+                      borderColor: "rgba(16,185,129,0.65)",
+                      backgroundColor: "rgba(16,185,129,0.12)",
                     }}
                   >
-                    <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>
-                      Session
+                    <Text
+                      style={{
+                        color: "rgba(16,185,129,0.95)",
+                        fontSize: 12,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {label}
                     </Text>
                   </View>
-                )}
-              </View>
+                ))
+              ) : (
+                <View
+                  style={{
+                    paddingVertical: 2,
+                    paddingHorizontal: 8,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                  }}
+                >
+                  <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>
+                    Session
+                  </Text>
+                </View>
+              )}
             </View>
+            {idx !== items.length - 1 ? (
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.06)", marginTop: 2 }} />
+            ) : null}
           </View>
         ))}
       </View>
