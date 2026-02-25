@@ -197,23 +197,8 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   const intervalRef = useRef<number | null>(null);
   const restOpacity = useRef(new Animated.Value(1)).current;
   const restPulse = useRef(new Animated.Value(0)).current;
-  const restPlannedRef = useRef<number>(0);
-  function finalizeRestIfRunning(remainingSeconds: number | null) {
-    // If no rest is active, nothing to finalize
-    if (restSeconds === null) return;
+  const restStartRef = useRef<Date | null>(null);
 
-    const planned = restPlannedRef.current || 0;
-    const remaining = remainingSeconds ?? 0;
-
-    // actual elapsed rest = planned - remaining (clamped)
-    const elapsed = Math.max(0, Math.min(planned, planned - remaining));
-
-    if (elapsed > 0) {
-      setAccumulatedRest((prev) => prev + elapsed);
-    }
-
-    restPlannedRef.current = 0;
-  }
   useEffect(() => {
     if (restSeconds !== null && restSeconds <= 5 && restSeconds > 0) {
       Animated.loop(
@@ -236,15 +221,12 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   }, [restSeconds]);
 
   function startRestTimer(duration: number = 90) {
-    finalizeRestIfRunning(restSeconds);
-
-    // clear existing timer if any
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
+    restStartRef.current = new Date();
     setRestSeconds(duration);
-    restPlannedRef.current = duration;
     restOpacity.setValue(1);
 
     intervalRef.current = setInterval(() => {
@@ -252,21 +234,20 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
         if (prev === null) return null;
 
         if (prev <= 1) {
+          // Stop countdown visual only
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
           }
 
-          // finalize the remaining rest as 0 seconds left (full planned duration elapsed)
-          finalizeRestIfRunning(0);
+          // Keep restStartRef running
+          // Do NOT finalize elapsed time here
 
           Animated.timing(restOpacity, {
-            toValue: 0,
-            duration: 800,
+            toValue: 0.6,
+            duration: 300,
             useNativeDriver: true,
-          }).start(() => {
-            setRestSeconds(null);
-          });
+          }).start();
 
           return 0;
         }
@@ -276,17 +257,23 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     }, 1000);
   }
 
-  function stopRestTimer() {
-    // finalize using the CURRENT remaining seconds
-    finalizeRestIfRunning(restSeconds);
+  function stopRestTimer(): number {
+    let elapsed = 0;
+
+    if (restStartRef.current) {
+      elapsed = secondsBetween(new Date(), restStartRef.current);
+      setAccumulatedRest((r) => r + elapsed);
+      restStartRef.current = null;
+    }
 
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
 
-    restPlannedRef.current = 0;
     setRestSeconds(null);
+
+    return elapsed;
   }
 
   useEffect(() => {
@@ -548,9 +535,11 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     if (sets === 0) return;
     if (!exerciseLibraryId) return;
 
-    stopRestTimer();
+    const finalRestFromTimer = stopRestTimer();
+    const totalRest = accumulatedRest + finalRestFromTimer;
 
     const endTime = new Date();
+    console.log("Final accumulated rest:", totalRest);
 
     insertExercise({
       id: Date.now().toString(),
@@ -561,7 +550,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       reps,
       weightKg,
       note: exerciseNote,
-      restSeconds: accumulatedRest,
+      restSeconds: totalRest,
       startTime: currentExerciseStart.toISOString(),
       endTime: endTime.toISOString(),
     });
@@ -571,7 +560,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
 
     resetExerciseState();
     setRestType("transition");
-    startRestTimer(90);
+    startRestTimer(120);
   }
 
   // 🔄 Reset Exercise State (after finishing or canceling)
