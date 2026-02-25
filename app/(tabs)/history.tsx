@@ -6,12 +6,12 @@
  * you tap history, which triggers useFocusEffect, which calls load again, refreshing the list with the new session included.
  */
 
-import { View, Text, Pressable, FlatList } from "react-native";
-import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { FlatList, Pressable, Text, View } from "react-native";
 
+import { getExerciseCountForSession } from "@/db/exercises";
 import { getAllSessions, StoredSession } from "@/db/sessions";
-import { getExerciseCountForSession } from "@/db/exercise";
 
 const colors = {
   background: "#0F0F0F",
@@ -50,7 +50,6 @@ export default function HistoryScreen() {
   // useCallback will ensure that the load function is stable across renders,
   // so that we can safely use it in useEffect and useFocusEffect without causing unnecessary re-renders or infinite loops.
   const load = useCallback(() => {
-
     const sessions = getAllSessions();
 
     const enriched = sessions
@@ -79,12 +78,16 @@ export default function HistoryScreen() {
 
   // Expo Router’s hook for navigation focus.
   // when the screen comes into focus (e.g., after navigating back from the modal), we call load to refresh the sessions list.
-  useFocusEffect(useCallback(() => {
-    load();
-  }, [load]));
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 56 }}>
+    <View
+      style={{ flex: 1, backgroundColor: colors.background, paddingTop: 56 }}
+    >
       <View
         style={{
           paddingHorizontal: 16,
@@ -94,9 +97,7 @@ export default function HistoryScreen() {
           alignItems: "center",
         }}
       >
-        <Text style={{ color: colors.text, fontSize: 22 }}>
-          History
-        </Text>
+        <Text style={{ color: colors.text, fontSize: 22 }}>History</Text>
 
         <View style={{ flexDirection: "row" }}>
           <Pressable
@@ -125,9 +126,7 @@ export default function HistoryScreen() {
               borderColor: colors.border,
             }}
           >
-            <Text style={{ color: colors.accent, fontSize: 14 }}>
-              Refresh
-            </Text>
+            <Text style={{ color: colors.accent, fontSize: 14 }}>Refresh</Text>
           </Pressable>
         </View>
       </View>
@@ -175,7 +174,13 @@ export default function HistoryScreen() {
                   }}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text style={{ color: colors.text, fontSize: 16, marginRight: 8 }}>
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontSize: 16,
+                        marginRight: 8,
+                      }}
+                    >
                       {formatDate(start)}
                     </Text>
                     {end ? (
@@ -196,7 +201,7 @@ export default function HistoryScreen() {
                             fontWeight: "700",
                           }}
                         >
-                          DUR  ⏱  {durationMinutes(start, end)}
+                          DUR ⏱ {durationMinutes(start, end)}
                         </Text>
                       </View>
                     ) : null}
@@ -240,26 +245,40 @@ export default function HistoryScreen() {
                   </View>
                 </View>
 
-                <Text style={{ color: colors.muted, marginBottom: item.note ? 6 : 10 }}>
-                  {formatTime(start)}{end ? ` to ${formatTime(end)}` : ""}
+                <Text
+                  style={{
+                    color: colors.muted,
+                    marginBottom: item.note ? 6 : 10,
+                  }}
+                >
+                  {formatTime(start)}
+                  {end ? ` to ${formatTime(end)}` : ""}
                 </Text>
 
                 {item.note && !isDiscarded ? (
-                  <Text style={{ color: colors.muted, marginBottom: 10 }} numberOfLines={2}>
+                  <Text
+                    style={{ color: colors.muted, marginBottom: 10 }}
+                    numberOfLines={2}
+                  >
                     Note: {item.note}
                   </Text>
                 ) : null}
 
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <Text style={{ color: colors.muted }}>
                     {item.exerciseCount} exercises
                   </Text>
-                  <Text style={{ color: colors.accent }}>
-                    →
-                  </Text>
+                  <Text style={{ color: colors.accent }}>→</Text>
                 </View>
 
-                {Array.isArray(item.sessionLabels) && item.sessionLabels.length > 0 ? (
+                {Array.isArray(item.sessionLabels) &&
+                item.sessionLabels.length > 0 ? (
                   <View
                     style={{
                       flexDirection: "row",
@@ -311,7 +330,6 @@ export default function HistoryScreen() {
                     </Text>
                   </View>
                 )}
-
               </Pressable>
             );
           }}

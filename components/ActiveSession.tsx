@@ -1,11 +1,16 @@
-import { useEffect, useState, useRef } from "react";
-import { View, Text, Pressable, TextInput, Animated } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Pressable, Text, TextInput, View } from "react-native";
 
 import AddExercise from "@/components/AddExercise";
-import { Session } from "@/domain/session";
-import { endSession } from "@/db/sessions";
-import { getLatestExerciseByName, insertExercise, getExercisesForSession, LatestExercise } from "@/db/exercise";
 import { getAllLibraryExercises } from "@/db/exerciseLibrary";
+import {
+  getExercisesForSession,
+  getLatestExerciseByName,
+  insertExercise,
+  LatestExercise,
+} from "@/db/exercises";
+import { endSession } from "@/db/sessions";
+import { Session } from "@/domain/session";
 
 type Colors = {
   text: string;
@@ -37,19 +42,19 @@ function SessionExerciseList({
   sessionStart: Date;
   textColor: string;
 }) {
-
-
   if (exercises.length === 0) return null;
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 1 }}>
-
       {[...exercises].reverse().map((e, reversedIndex) => {
         const serialNumber = exercises.length - reversedIndex;
 
         const start = new Date(e.startTime);
         const end = new Date(e.endTime);
-        const totalSeconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
+        const totalSeconds = Math.max(
+          0,
+          Math.floor((end.getTime() - start.getTime()) / 1000),
+        );
         const totalMinutes = Math.round(totalSeconds / 60);
 
         return (
@@ -78,7 +83,10 @@ function SessionExerciseList({
             </Text>
 
             {e.note ? (
-              <Text style={{ color: "#aaa", fontSize: 12, marginTop: 4 }} numberOfLines={2}>
+              <Text
+                style={{ color: "#aaa", fontSize: 12, marginTop: 4 }}
+                numberOfLines={2}
+              >
                 Note: {e.note}
               </Text>
             ) : null}
@@ -89,7 +97,7 @@ function SessionExerciseList({
   );
 }
 
-export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
+export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   const [exerciseName, setExerciseName] = useState("");
   const [sets, setSets] = useState(0);
   const [reps, setReps] = useState(10);
@@ -100,9 +108,10 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   const [sessionNote, setSessionNote] = useState("");
   const [latest, setLatest] = useState<LatestExercise | null>(null);
 
-
   const [isExerciseActive, setIsExerciseActive] = useState(false);
-  const [currentExerciseStart, setCurrentExerciseStart] = useState<Date | null>(null);
+  const [currentExerciseStart, setCurrentExerciseStart] = useState<Date | null>(
+    null,
+  );
   const [accumulatedRest, setAccumulatedRest] = useState(0);
 
   const [sessionExercises, setSessionExercises] = useState<
@@ -119,11 +128,19 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     }[]
   >([]);
 
-  const [exerciseLibraryNames, setExerciseLibraryNames] = useState<string[]>([]);
+  const [exerciseLibraryNames, setExerciseLibraryNames] = useState<string[]>(
+    [],
+  );
   const [showExercises, setShowExercises] = useState(true);
 
   const [exerciseLibrary, setExerciseLibrary] = useState<
-    { id: string; name: string; primaryMuscle: string; tags: string[]; videoUrl: string }[]
+    {
+      id: string;
+      name: string;
+      primaryMuscle: string;
+      tags: string[];
+      videoUrl: string;
+    }[]
   >([]);
 
   const [showLabelConfirm, setShowLabelConfirm] = useState(false);
@@ -149,7 +166,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   useEffect(() => {
     const allLibExercises = getAllLibraryExercises();
     setExerciseLibrary(allLibExercises);
-    setExerciseLibraryNames(allLibExercises.map(e => e.name));
+    setExerciseLibraryNames(allLibExercises.map((e) => e.name));
   }, []);
 
   function formatDuration(totalSeconds: number) {
@@ -206,7 +223,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
             duration: 400,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     } else {
       restPulse.setValue(0);
@@ -226,7 +243,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
     restOpacity.setValue(1);
 
     intervalRef.current = setInterval(() => {
-      setRestSeconds(prev => {
+      setRestSeconds((prev) => {
         if (prev === null) return null;
 
         if (prev <= 1) {
@@ -296,7 +313,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
           duration: 800,
           useNativeDriver: false,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
@@ -310,8 +327,8 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   function inferLabels(): string[] {
     const labelSet = new Set<string>();
 
-    sessionExercises.forEach(e => {
-      const lib = exerciseLibrary.find(l => l.name === e.name);
+    sessionExercises.forEach((e) => {
+      const lib = exerciseLibrary.find((l) => l.name === e.name);
       if (lib?.primaryMuscle) {
         labelSet.add(lib.primaryMuscle);
       }
@@ -330,12 +347,14 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
           borderRadius: 14,
         }}
       >
-        <View style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 12,
-        }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 12,
+          }}
+        >
           <Text style={{ color: colors.text, fontSize: 16 }}>
             Confirm muscles trained
           </Text>
@@ -365,13 +384,11 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
         </Text>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {selectedLabels.map(label => (
+          {selectedLabels.map((label) => (
             <Pressable
               key={`selected-${label}`}
               onPress={() =>
-                setSelectedLabels(prev =>
-                  prev.filter(l => l !== label)
-                )
+                setSelectedLabels((prev) => prev.filter((l) => l !== label))
               }
               style={{
                 paddingVertical: 6,
@@ -393,21 +410,24 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
         </View>
 
         {/* Unselected Muscle Groups */}
-        <Text style={{ color: "#aaa", fontSize: 12, marginTop: 12, marginBottom: 6 }}>
+        <Text
+          style={{
+            color: "#aaa",
+            fontSize: 12,
+            marginTop: 12,
+            marginBottom: 6,
+          }}
+        >
           Other muscle groups
         </Text>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {Array.from(
-            new Set(exerciseLibrary.map(e => e.primaryMuscle))
-          )
-            .filter(label => !selectedLabels.includes(label))
-            .map(label => (
+          {Array.from(new Set(exerciseLibrary.map((e) => e.primaryMuscle)))
+            .filter((label) => !selectedLabels.includes(label))
+            .map((label) => (
               <Pressable
                 key={`unselected-${label}`}
-                onPress={() =>
-                  setSelectedLabels(prev => [...prev, label])
-                }
+                onPress={() => setSelectedLabels((prev) => [...prev, label])}
                 style={{
                   paddingVertical: 6,
                   paddingHorizontal: 12,
@@ -436,12 +456,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
         >
           <Pressable
             onPress={() => {
-              endSession(
-                activeSession.id,
-                new Date(),
-                "__DISCARDED__",
-                []
-              );
+              endSession(activeSession.id, new Date(), "__DISCARDED__", []);
               setSessionNote("");
               setShowLabelConfirm(false);
               onEnd();
@@ -457,9 +472,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#e53935", fontSize: 14 }}>
-              Discard
-            </Text>
+            <Text style={{ color: "#e53935", fontSize: 14 }}>Discard</Text>
           </Pressable>
 
           <Pressable
@@ -471,7 +484,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
                 activeSession.id,
                 new Date(),
                 sessionNote,
-                selectedLabels
+                selectedLabels,
               );
               setSessionNote("");
               setShowLabelConfirm(false);
@@ -481,7 +494,8 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
               flex: 0.7,
               paddingVertical: 12,
               borderRadius: 8,
-              backgroundColor: selectedLabels.length === 0 ? "#1e1e1e" : "#4CAF50",
+              backgroundColor:
+                selectedLabels.length === 0 ? "#1e1e1e" : "#4CAF50",
               marginLeft: 8,
               alignItems: "center",
               opacity: selectedLabels.length === 0 ? 0.6 : 1,
@@ -515,7 +529,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
   // 💪 Save Set
   function saveSet() {
     if (!isExerciseActive) return;
-    setSets(prev => prev + 1);
+    setSets((prev) => prev + 1);
     setRestType("set");
     startRestTimer(90);
   }
@@ -590,7 +604,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
           borderWidth: 1,
           borderColor: pulse.interpolate({
             inputRange: [0, 1],
-            outputRange: ["rgba(76, 175, 80, 0.4)", "rgba(76, 175, 80, 0.9)"]
+            outputRange: ["rgba(76, 175, 80, 0.4)", "rgba(76, 175, 80, 0.9)"],
           }),
         }}
       >
@@ -629,15 +643,15 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
               restType === "transition"
                 ? "rgba(33,150,243,0.15)"
                 : restSeconds !== null && restSeconds <= 5
-                ? "rgba(255,193,7,0.28)"
-                : "rgba(255,193,7,0.12)",
+                  ? "rgba(255,193,7,0.28)"
+                  : "rgba(255,193,7,0.12)",
             borderWidth: 1,
             borderColor:
               restType === "transition"
                 ? "#2196F3"
                 : restSeconds !== null && restSeconds <= 5
-                ? "#FFC107"
-                : "rgba(255,193,7,0.7)",
+                  ? "#FFC107"
+                  : "rgba(255,193,7,0.7)",
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
@@ -650,7 +664,8 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
               fontWeight: "600",
             }}
           >
-            {restType === "transition" ? "🔄" : "🧘"} Rest · {Math.floor(restSeconds / 60)}:
+            {restType === "transition" ? "🔄" : "🧘"} Rest ·{" "}
+            {Math.floor(restSeconds / 60)}:
             {(restSeconds % 60).toString().padStart(2, "0")}
           </Text>
 
@@ -710,7 +725,9 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
           onWeightMinus={() =>
             setWeightKg((w) => Math.max(0, Math.round((w - 0.5) * 10) / 10))
           }
-          onWeightPlus={() => setWeightKg((w) => Math.round((w + 0.5) * 10) / 10)}
+          onWeightPlus={() =>
+            setWeightKg((w) => Math.round((w + 0.5) * 10) / 10)
+          }
           onNoteChange={(text) => setExerciseNote(text)}
           onSave={() => {
             if (!isExerciseActive) {
@@ -736,8 +753,6 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
           }
         />
       </View>
-
-
 
       <View style={{ width: "100%" }}>
         {sessionExercises.length > 0 ? (
@@ -772,7 +787,7 @@ export default function ActiveSession({activeSession, onEnd, colors,}: Props) {
       <View style={{ height: 14 }} />
 
       <Pressable
-        onPress={() => setShowSessionNote(v => !v)}
+        onPress={() => setShowSessionNote((v) => !v)}
         style={{
           alignSelf: "flex-start",
           paddingVertical: 6,
