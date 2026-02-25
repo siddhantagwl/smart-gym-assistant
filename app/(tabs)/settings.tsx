@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as Sharing from "expo-sharing";
 
 import { getAllExercises } from "@/db/exercises";
@@ -91,20 +92,12 @@ export default function SettingsScreen() {
     );
   }
 
-  function showAllSessions() {
-    const allSessions = JSON.stringify(getAllSessions(), null, 2);
-    console.debug(allSessions);
-    return allSessions;
-  }
-
-  function showAllExercises() {
-    const allExercises = JSON.stringify(getAllExercises(), null, 2);
-    console.debug(allExercises);
-    return allExercises;
-  }
+  const sessions = getAllSessions();
+  const exercises = getAllExercises();
 
   return (
-    <View style={{ flex: 1, padding: 24, marginTop: 24, backgroundColor: "#000" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+      <View style={{ flex: 1, padding: 24 }}>
       <Text style={{ color: "#fff", fontSize: 18, marginBottom: 16 }}>
         Settings
       </Text>
@@ -229,13 +222,13 @@ export default function SettingsScreen() {
             style={{ marginBottom: 6 }}
           >
             <Text style={{ color: "#fff", fontSize: 12 }}>
-              {showSessions ? "▼ Sessions" : "▶ Sessions"} ({getAllSessions().length})
+              {showSessions ? "▼ Sessions" : "▶ Sessions"} ({sessions.length})
             </Text>
           </Pressable>
 
           {showSessions && (
             <Text style={{ color: "#aaa", fontSize: 11 }}>
-              {showAllSessions()}
+              {JSON.stringify(sessions, null, 2)}
             </Text>
           )}
 
@@ -246,19 +239,20 @@ export default function SettingsScreen() {
             style={{ marginTop: 16, marginBottom: 6 }}
           >
             <Text style={{ color: "#fff", fontSize: 12 }}>
-              {showExercises ? "▼ Exercises" : "▶ Exercises"} ({getAllExercises().length})
+              {showExercises ? "▼ Exercises" : "▶ Exercises"} ({exercises.length})
             </Text>
           </Pressable>
 
           {showExercises && (
             <Text style={{ color: "#aaa", fontSize: 11 }}>
-              {showAllExercises()}
+              {JSON.stringify(exercises, null, 2)}
             </Text>
           )}
 
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }

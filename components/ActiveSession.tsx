@@ -30,6 +30,8 @@ function SessionExerciseList({
 }: {
   exercises: {
     id: string;
+    sessionId: string;
+    exerciseLibraryId: string;
     name: string;
     sets: number;
     reps: number;
@@ -99,6 +101,7 @@ function SessionExerciseList({
 
 export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   const [exerciseName, setExerciseName] = useState("");
+  const [exerciseLibraryId, setExerciseLibraryId] = useState<string | null>(null);
   const [sets, setSets] = useState(0);
   const [reps, setReps] = useState(10);
   const [weightKg, setWeightKg] = useState(10);
@@ -117,6 +120,8 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   const [sessionExercises, setSessionExercises] = useState<
     {
       id: string;
+      sessionId: string;
+      exerciseLibraryId: string;
       name: string;
       sets: number;
       reps: number;
@@ -328,7 +333,8 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     const labelSet = new Set<string>();
 
     sessionExercises.forEach((e) => {
-      const lib = exerciseLibrary.find((l) => l.name === e.name);
+      const lib = exerciseLibrary.find((l) => l.id === e.exerciseLibraryId) ||
+        exerciseLibrary.find((l) => l.name === e.name);
       if (lib?.primaryMuscle) {
         labelSet.add(lib.primaryMuscle);
       }
@@ -519,6 +525,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   //▶ Start Exercise
   function startExercise() {
     if (!exerciseName.trim()) return;
+    if (!exerciseLibraryId) return;
 
     setIsExerciseActive(true);
     setCurrentExerciseStart(new Date());
@@ -529,6 +536,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   // 💪 Save Set
   function saveSet() {
     if (!isExerciseActive) return;
+    if (!exerciseLibraryId) return;
     setSets((prev) => prev + 1);
     setRestType("set");
     startRestTimer(90);
@@ -538,6 +546,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   function finishExercise() {
     if (!isExerciseActive || !currentExerciseStart) return;
     if (sets === 0) return;
+    if (!exerciseLibraryId) return;
 
     stopRestTimer();
 
@@ -546,6 +555,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     insertExercise({
       id: Date.now().toString(),
       sessionId: activeSession.id,
+      exerciseLibraryId: exerciseLibraryId!,
       name: exerciseName,
       sets,
       reps,
@@ -570,6 +580,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     setCurrentExerciseStart(null);
     setSets(0);
     setExerciseName("");
+    setExerciseLibraryId(null);
     setExerciseNote("");
     setAccumulatedRest(0);
   }
@@ -718,7 +729,13 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
           note={exerciseNote}
           onSelectExercise={(name) => {
             setExerciseName(name);
+            const match = exerciseLibrary.find((e) => e.name === name);
+            setExerciseLibraryId(match ? match.id : null);
             setExerciseNote("");
+          }}
+          onExerciseNameChange={(text) => {
+            setExerciseName(text);
+            setExerciseLibraryId(null);
           }}
           onRepsMinus={() => setReps((r) => Math.max(1, r - 1))}
           onRepsPlus={() => setReps((r) => r + 1)}

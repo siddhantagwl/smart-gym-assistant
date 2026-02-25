@@ -86,6 +86,7 @@ export function insertManualSession(params: {
   sessionLabel: string | null;
   note: string;
   exercises: {
+    exerciseLibraryId?: string;
     name: string;
     sets: number;
     reps: number;
@@ -113,18 +114,25 @@ export function insertManualSession(params: {
     // 2) Insert exercises
     params.exercises.forEach((ex, idx) => {
       const exerciseId = `${sessionId}-ex-${idx}`;
-      const createdAt = new Date(
-        params.date.getTime() + idx * 60 * 1000
-      ).toISOString();
 
       db.runSync(
         `
         INSERT INTO exercises
-          (id, session_id, name, sets, reps, weight_kg, note, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+          (id, session_id, exercise_library_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
         [
-          exerciseId, sessionId, ex.name, ex.sets, ex.reps, ex.weightKg, ex.note || "", createdAt,
+          exerciseId,
+          sessionId,
+          ex.exerciseLibraryId ?? ex.name, // fallback for manual import
+          ex.name,
+          ex.sets,
+          ex.reps,
+          ex.weightKg,
+          0,
+          startTime,
+          endTime,
+          ex.note || "",
         ]
       );
     });

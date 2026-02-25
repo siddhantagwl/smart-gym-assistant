@@ -18,6 +18,7 @@ export function initDb() {
         CREATE TABLE IF NOT EXISTS exercises (
             id TEXT PRIMARY KEY NOT NULL,
             session_id TEXT NOT NULL,
+            exercise_library_id TEXT NOT NULL,
             name TEXT NOT NULL,
             sets INTEGER NOT NULL,
             reps INTEGER NOT NULL,
@@ -26,7 +27,8 @@ export function initDb() {
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
             note TEXT NOT NULL DEFAULT '',
-            FOREIGN KEY (session_id) REFERENCES sessions(id)
+            FOREIGN KEY (session_id) REFERENCES sessions(id),
+            FOREIGN KEY (exercise_library_id) REFERENCES exercise_library(id)
         );
     `);
 

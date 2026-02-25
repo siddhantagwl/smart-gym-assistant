@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, Pressable, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, Text, View, Animated } from "react-native";
 
 import {
   getAllExercises,
@@ -110,6 +110,31 @@ export default function SessionDetailsScreen() {
         marginTop: 56,
       }}
     >
+      <Pressable
+        onPress={() => router.back()}
+        style={{
+          position: "absolute",
+          top: 60,
+          right: 16,
+          width: 34,
+          height: 34,
+          borderRadius: 17,
+          backgroundColor: "#1a1a1a",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10,
+        }}
+      >
+        <Text
+          style={{
+            color: "#ff4d4d",
+            fontSize: 16,
+            fontWeight: "600",
+          }}
+        >
+          ✕
+        </Text>
+      </Pressable>
       <View
         style={{
           paddingHorizontal: 16,
@@ -217,29 +242,6 @@ export default function SessionDetailsScreen() {
             </Text>
           ) : null}
         </View>
-        <Pressable
-          onPress={() => router.back()}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: "#1a0f0f",
-            borderWidth: 1,
-            borderColor: "#ff3b30",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Text
-            style={{
-              color: "#ff3b30",
-              fontSize: 24,
-              fontWeight: "700",
-            }}
-          >
-            ×
-          </Text>
-        </Pressable>
       </View>
 
       {exercises.length === 0 ? (
@@ -254,6 +256,7 @@ export default function SessionDetailsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
           renderItem={({ item, index }) => {
+            const scale = new Animated.Value(1);
             const start = new Date(item.startTime);
             const end = new Date(item.endTime);
             const durationMs = end.getTime() - start.getTime();
@@ -298,17 +301,43 @@ export default function SessionDetailsScreen() {
             }
 
             return (
-              <View
+              <Animated.View
                 style={{
-                  backgroundColor: colors.card,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  paddingVertical: 18,
-                  paddingHorizontal: 14,
+                  transform: [{ scale }],
                   marginBottom: 12,
                 }}
               >
+                <Pressable
+                  onPressIn={() => {
+                    Animated.spring(scale, {
+                      toValue: 0.97,
+                      useNativeDriver: true,
+                    }).start();
+                  }}
+                  onPressOut={() => {
+                    Animated.spring(scale, {
+                      toValue: 1,
+                      useNativeDriver: true,
+                    }).start();
+                  }}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/exercise-details",
+                      params: {
+                        exerciseLibraryId: item.exerciseLibraryId,
+                        name: item.name,
+                      },
+                    })
+                  }
+                  style={({ pressed }) => ({
+                    backgroundColor: colors.card,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: pressed ? "#2e2e2e" : colors.border,
+                    paddingVertical: 18,
+                    paddingHorizontal: 14,
+                  })}
+                >
                 <View
                   style={{ flexDirection: "row", alignItems: "flex-start" }}
                 >
@@ -450,6 +479,10 @@ export default function SessionDetailsScreen() {
                     ) : null}
                   </View>
 
+                  <View style={{ position: "absolute", right: 10, top: 18 }}>
+                    <Text style={{ color: "#555", fontSize: 16 }}>›</Text>
+                  </View>
+
                   {sparkPoints && (
                     <>
                       <View
@@ -479,7 +512,8 @@ export default function SessionDetailsScreen() {
                     </>
                   )}
                 </View>
-              </View>
+                </Pressable>
+              </Animated.View>
             );
           }}
         />

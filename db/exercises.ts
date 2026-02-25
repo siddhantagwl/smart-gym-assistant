@@ -5,6 +5,7 @@ import { Exercise } from "@/domain/exercise";
 export type StoredExercise = {
   id: string;
   sessionId: string;
+  exerciseLibraryId: string;
   name: string;
   sets: number;
   reps: number;
@@ -29,12 +30,13 @@ export type LatestExercise = {
 export function insertExercise(exercise: Exercise) {
   db.runSync(
     `
-    INSERT INTO exercises (id, session_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    INSERT INTO exercises (id, session_id, exercise_library_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `,
     [
       exercise.id,
       exercise.sessionId,
+      exercise.exerciseLibraryId,
       exercise.name,
       exercise.sets,
       exercise.reps,
@@ -51,7 +53,7 @@ export function insertExercise(exercise: Exercise) {
 export function getAllExercises(): StoredExercise[] {
   const rows = db.getAllSync(
     `
-    SELECT id, session_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note
+    SELECT id, session_id, exercise_library_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note
     FROM exercises
     ORDER BY start_time ASC;
     `
@@ -60,6 +62,7 @@ export function getAllExercises(): StoredExercise[] {
   return rows.map((r) => ({
     id: String(r.id),
     sessionId: String(r.session_id),
+    exerciseLibraryId: String(r.exercise_library_id),
     name: String(r.name),
     sets: Number(r.sets),
     reps: Number(r.reps),
@@ -73,7 +76,7 @@ export function getAllExercises(): StoredExercise[] {
 
 export function getExercisesForSession(sessionId: string): StoredExercise[] {
   const rows = db.getAllSync(
-    `SELECT id, session_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note
+    `SELECT id, session_id, exercise_library_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note
      FROM exercises
      WHERE session_id = ?
      ORDER BY start_time ASC;`,
@@ -83,6 +86,7 @@ export function getExercisesForSession(sessionId: string): StoredExercise[] {
   return rows.map((r) => ({
     id: String(r.id),
     sessionId: String(r.session_id),
+    exerciseLibraryId: String(r.exercise_library_id),
     name: String(r.name),
     sets: Number(r.sets),
     reps: Number(r.reps),
@@ -143,12 +147,13 @@ export function insertExerciseRaw(row: any) {
   db.runSync(
     `
     INSERT INTO exercises
-    (id, session_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, session_id, exercise_library_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       row.id,
       row.session_id,
+      row.exercise_library_id ?? row.name,
       row.name,
       Number(row.sets),
       Number(row.reps),
@@ -159,4 +164,30 @@ export function insertExerciseRaw(row: any) {
       row.note || "",
     ]
   );
+}
+
+export function getExercisesByLibraryId(exerciseLibraryId: string): StoredExercise[] {
+  const rows = db.getAllSync(
+    `
+    SELECT id, session_id, exercise_library_id, name, sets, reps, weight_kg, rest_seconds, start_time, end_time, note
+    FROM exercises
+    WHERE exercise_library_id = ?
+    ORDER BY start_time DESC;
+    `,
+    [exerciseLibraryId]
+  ) as any[];
+
+  return rows.map((r) => ({
+    id: String(r.id),
+    sessionId: String(r.session_id),
+    exerciseLibraryId: String(r.exercise_library_id),
+    name: String(r.name),
+    sets: Number(r.sets),
+    reps: Number(r.reps),
+    weightKg: Number(r.weight_kg),
+    restSeconds: Number(r.rest_seconds),
+    startTime: String(r.start_time),
+    endTime: String(r.end_time),
+    note: r.note ? String(r.note) : "",
+  }));
 }

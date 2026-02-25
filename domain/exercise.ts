@@ -3,7 +3,8 @@
 export type Exercise = {
   id: string;
   sessionId: string;
-  name: string;
+  exerciseLibraryId: string; // stable reference to exercise library
+  name: string; // snapshot display name
   sets: number;
   reps: number;
   weightKg: number;

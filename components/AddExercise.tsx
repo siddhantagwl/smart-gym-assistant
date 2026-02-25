@@ -15,6 +15,7 @@ type AddExerciseProps = {
 
   onNoteChange: (text: string) => void;
   onSelectExercise: (name: string) => void;
+  onExerciseNameChange: (text: string) => void;
 
   onRepsMinus: () => void;
   onRepsPlus: () => void;
@@ -156,6 +157,7 @@ export default function AddExercise({
   note,
   onNoteChange,
   onSelectExercise,
+  onExerciseNameChange,
   onRepsMinus,
   onRepsPlus,
   onWeightMinus,
@@ -211,7 +213,7 @@ export default function AddExercise({
             <TextInput
               value={exerciseName}
               onChangeText={(text) => {
-                onSelectExercise(text);
+                onExerciseNameChange(text);
               }}
               placeholder="Type exercise name"
               placeholderTextColor="#666"
@@ -232,7 +234,7 @@ export default function AddExercise({
             {exerciseName.trim().length > 0 && isNameFocused && (
               <Pressable
                 onPress={() => {
-                  onSelectExercise("");
+                  onExerciseNameChange("");
                   Keyboard.dismiss();
                 }}
                 style={{
