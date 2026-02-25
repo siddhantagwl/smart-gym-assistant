@@ -198,7 +198,7 @@ export const EXERCISE_LIBRARY = [
     {
         id: "cable_rope_triceps_pushdown",
         name: "Cable Rope Triceps Pushdown",
-        video_url: "https://www.youtube.com/watch?v=2-LAMcpzODU", // Kept previous triceps pushdown URL
+        video_url: "https://www.youtube.com/watch?v=2-LAMcpzODU",
         primary_muscle: "Triceps",
         tags: ["push", "triceps", "isolation", "cable"]
     },
@@ -278,5 +278,26 @@ export const EXERCISE_LIBRARY = [
         video_url: "",
         primary_muscle: "Cardio",
         tags: ["cardio", "legs", "machine"]
+    },
+    {
+        id: "iso_lateral_incline_chest_press_machine",
+        name: "Iso-Lateral Incline Chest Press Machine",
+        video_url: "",
+        primary_muscle: "Chest",
+        tags: ["push", "chest", "compound", "machine", "iso-lateral"]
+    },
+    {
+        id: "iso_lateral_bench_press_machine",
+        name: "Iso-Lateral Bench Press Machine",
+        video_url: "",
+        primary_muscle: "Chest",
+        tags: ["push", "chest", "compound", "machine", "iso-lateral"]
+    },
+    {
+        id: "dumbbell_bicep_curl",
+        name: "Dumbbell Bicep Curl",
+        video_url: "",
+        primary_muscle: "Biceps",
+        tags: ["pull", "biceps", "isolation", "dumbbell"]
     }
 ];

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, SectionList, Pressable, Linking, Animated } from "react-native";
-import { getAllLibraryExercises, ExerciseLibraryItem } from "../../db/exerciseLibrary";
+import { ExerciseLibraryItem, getAllLibraryExercises } from "@/db/exerciseLibrary";
 
 const colors = {
   bg: "#000",
@@ -13,8 +13,24 @@ const colors = {
 export default function ExercisesScreen() {
   console.debug("Rendering ExercisesScreen");
   const [query, setQuery] = useState("");
+  const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [exercises, setExercises] = useState<ExerciseLibraryItem[]>([]);
   const clearAnim = useState(new Animated.Value(0))[0];
+
+  const muscles = useMemo(() => {
+    const map: Record<string, number> = {};
+
+    exercises.forEach((e) => {
+      map[e.primaryMuscle] = (map[e.primaryMuscle] || 0) + 1;
+    });
+
+    return Object.keys(map)
+      .sort()
+      .map((muscle) => ({
+        name: muscle,
+        count: map[muscle],
+      }));
+  }, [exercises]);
 
   useEffect(() => {
     const data = getAllLibraryExercises();
@@ -33,13 +49,19 @@ export default function ExercisesScreen() {
   const sections = useMemo(() => {
     const q = query.trim().toLowerCase();
 
-    const filtered = q
-      ? exercises.filter((e) =>
-          e.name.toLowerCase().includes(q) ||
-          e.primaryMuscle.toLowerCase().includes(q) ||
-          e.tags.some(tag => tag.toLowerCase().includes(q))
-        )
-      : exercises;
+    let filtered = exercises;
+
+    if (selectedMuscle) {
+      filtered = filtered.filter(e => e.primaryMuscle === selectedMuscle);
+    }
+
+    if (q) {
+      filtered = filtered.filter((e) =>
+        e.name.toLowerCase().includes(q) ||
+        e.primaryMuscle.toLowerCase().includes(q) ||
+        e.tags.some(tag => tag.toLowerCase().includes(q))
+      );
+    }
 
     const sorted = [...filtered].sort((a, b) =>
       a.name.localeCompare(b.name)
@@ -48,18 +70,18 @@ export default function ExercisesScreen() {
     const map: Record<string, ExerciseLibraryItem[]> = {};
 
     sorted.forEach((ex) => {
-      const letter = ex.name[0].toUpperCase();
-      if (!map[letter]) map[letter] = [];
-      map[letter].push(ex);
+      const muscle = ex.primaryMuscle;
+      if (!map[muscle]) map[muscle] = [];
+      map[muscle].push(ex);
     });
 
     return Object.keys(map)
       .sort()
-      .map((letter) => ({
-        title: letter,
-        data: map[letter],
+      .map((muscle) => ({
+        title: muscle,
+        data: map[muscle],
       }));
-  }, [query, exercises]);
+  }, [query, exercises, selectedMuscle]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, padding: 16, marginTop: 32 }}>
@@ -115,23 +137,68 @@ export default function ExercisesScreen() {
         </Animated.View>
       </View>
 
+      <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 12 }}>
+        {muscles.map((muscleObj) => {
+          const active = selectedMuscle === muscleObj.name;
+          return (
+            <Pressable
+              key={muscleObj.name}
+              onPress={() =>
+                setSelectedMuscle(active ? null : muscleObj.name)
+              }
+              style={{ marginRight: 8, marginBottom: 8 }}
+            >
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: active ? "#2E7D5A" : "#333",
+                  backgroundColor: active
+                    ? "rgba(46,125,90,0.15)"
+                    : "rgba(255,255,255,0.04)",
+                  borderRadius: 16,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    color: active ? "#2E7D5A" : "#aaa",
+                    fontSize: 12,
+                    fontWeight: active ? "600" : "500",
+                  }}
+                >
+                  {`${muscleObj.name} (${muscleObj.count})`}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <SectionList
         sections={sections}
         stickySectionHeadersEnabled
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
         renderSectionHeader={({ section }) => (
-          <Text
+          <View
             style={{
-              color: "#aaa",
-              fontSize: 14,
-              fontWeight: "600",
+              flexDirection: "row",
+              alignItems: "center",
               marginTop: 16,
               marginBottom: 6,
             }}
           >
-            {section.title}
-          </Text>
+            <Text
+              style={{
+                color: "#aaa",
+                fontSize: 14,
+                fontWeight: "600",
+              }}
+            >
+              {section.title}
+            </Text>
+          </View>
         )}
         renderItem={({ item }) => (
           <View
