@@ -18,18 +18,13 @@ export async function syncToGoogleSheets() {
 
   const payload = {
     secret: SHARED_SECRET,
+    debug: false,
 
     sessions: sessions.map((s) => ({
       id: s.id,
       start_time: s.startTime,
       end_time: s.endTime,
-      duration_min: s.endTime
-        ? Math.round(
-            (new Date(s.endTime).getTime() - new Date(s.startTime).getTime()) /
-              60000,
-          )
-        : "",
-      sessionLabels: s.sessionLabels,
+      session_labels: s.sessionLabels ?? [],
       source: s.source,
       note: s.note,
     })),
@@ -37,6 +32,7 @@ export async function syncToGoogleSheets() {
     exercises: exercises.map((e) => ({
       id: e.id,
       session_id: e.sessionId,
+      exercise_library_id: (e as any).exerciseLibraryId ?? "",
       name: e.name,
       sets: e.sets,
       reps: e.reps,
@@ -55,6 +51,7 @@ export async function syncToGoogleSheets() {
   });
 
   const json = await res.json();
+  // console.log("GSHEETS RESPONSE:", JSON.stringify(json, null, 2));
   if (!json.ok) {
     throw new Error(json.msg || "Sync failed");
   }
