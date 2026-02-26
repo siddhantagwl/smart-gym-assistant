@@ -233,23 +233,9 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       setRestSeconds((prev) => {
         if (prev === null) return null;
 
-        if (prev <= 1) {
-          // Stop countdown visual only
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-
-          // Keep restStartRef running
-          // Do NOT finalize elapsed time here
-
-          Animated.timing(restOpacity, {
-            toValue: 0.6,
-            duration: 300,
-            useNativeDriver: true,
-          }).start();
-
-          return 0;
+        if (prev <= 0) {
+          // After hitting 0, continue counting upward
+          return prev - 1;
         }
 
         return prev - 1;
@@ -518,12 +504,32 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     setCurrentExerciseStart(new Date());
     setSets(0);
     setAccumulatedRest(0);
+
+    // Ensure no rest timer is visible when exercise starts
+    stopRestTimer();
+    setRestType(null);
+    setRestSeconds(null);
+  }
+
+  // ▶ Start Set (stops any running rest immediately)
+  function handleStartSet() {
+    if (restSeconds !== null) {
+      stopRestTimer();
+      setRestType(null);
+      setRestSeconds(null);
+    }
   }
 
   // 💪 Save Set
   function saveSet() {
     if (!isExerciseActive) return;
     if (!exerciseLibraryId) return;
+    // Stop any running rest immediately when starting a new set
+    if (restSeconds !== null) {
+      stopRestTimer();
+      setRestType(null);
+      setRestSeconds(null);
+    }
     setSets((prev) => prev + 1);
     setRestType("set");
     startRestTimer(90);
@@ -558,9 +564,12 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     const rows = getExercisesForSession(activeSession.id);
     setSessionExercises(rows);
 
-    resetExerciseState();
+    // Start transition rest after finishing exercise
     setRestType("transition");
     startRestTimer(120);
+
+    resetExerciseState();
+    // Removed transition rest timer after finishing exercise
   }
 
   // 🔄 Reset Exercise State (after finishing or canceling)
@@ -640,18 +649,14 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
             paddingHorizontal: 16,
             borderRadius: 18,
             backgroundColor:
-              restType === "transition"
-                ? "rgba(33,150,243,0.15)"
-                : restSeconds !== null && restSeconds <= 5
-                  ? "rgba(255,193,7,0.28)"
-                  : "rgba(255,193,7,0.12)",
+              restSeconds !== null && restSeconds <= 5
+                ? "rgba(255,193,7,0.28)"
+                : "rgba(255,193,7,0.12)",
             borderWidth: 1,
             borderColor:
-              restType === "transition"
-                ? "#2196F3"
-                : restSeconds !== null && restSeconds <= 5
-                  ? "#FFC107"
-                  : "rgba(255,193,7,0.7)",
+              restSeconds !== null && restSeconds <= 5
+                ? "#FFC107"
+                : "rgba(255,193,7,0.7)",
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
@@ -664,9 +669,18 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
               fontWeight: "600",
             }}
           >
-            {restType === "transition" ? "🔄" : "🧘"} Rest ·{" "}
-            {Math.floor(restSeconds / 60)}:
-            {(restSeconds % 60).toString().padStart(2, "0")}
+            {restType === "transition" ? "🔄 Transition · " : "🧘 Rest · "}
+            {restSeconds >= 0 ? (
+              <>
+                {Math.floor(restSeconds / 60)}:
+                {(restSeconds % 60).toString().padStart(2, "0")}
+              </>
+            ) : (
+              <>
+                +{Math.floor(Math.abs(restSeconds) / 60)}:
+                {(Math.abs(restSeconds) % 60).toString().padStart(2, "0")}
+              </>
+            )}
           </Text>
 
           <Pressable
@@ -745,6 +759,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
           onWeightCommit={(v) => setWeightKg(v)}
           onRepsCommit={(v) => setReps(v)}
           onSaveSet={saveSet}
+          onStartSet={handleStartSet}
           isExerciseActive={isExerciseActive}
           lastTime={
             latest

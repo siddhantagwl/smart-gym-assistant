@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { Animated } from "react-native";
 import { View, Text, Pressable, TextInput, Keyboard } from "react-native";
 
 type AddExerciseProps = {
@@ -26,6 +27,7 @@ type AddExerciseProps = {
   onSave: () => void;
 
   onSaveSet: () => void;
+  onStartSet: () => void;
   isExerciseActive: boolean;
 
   onRepsCommit: (v: number) => void;
@@ -164,14 +166,34 @@ export default function AddExercise({
   onWeightPlus,
   onSave,
   onSaveSet,
+  onStartSet,
   isExerciseActive,
   onRepsCommit,
   onWeightCommit,
   lastTime,
 }: AddExerciseProps) {
   const [showNote, setShowNote] = useState(false);
-  const [confirmFinish, setConfirmFinish] = useState(false);
   const [isNameFocused, setIsNameFocused] = useState(false);
+
+  const [isSetInProgress, setIsSetInProgress] = useState(false);
+
+  const lastChipScale = useRef(new Animated.Value(1)).current;
+  const prevSetCount = useRef(sets);
+
+  useEffect(() => {
+    if (sets > prevSetCount.current) {
+      lastChipScale.setValue(0.8);
+
+      Animated.spring(lastChipScale, {
+        toValue: 1,
+        friction: 6,
+        tension: 120,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    prevSetCount.current = sets;
+  }, [sets]);
 
   const filteredSuggestions = useMemo(() => {
     const query = exerciseName.trim().toLowerCase();
@@ -295,10 +317,7 @@ export default function AddExercise({
             }}
           >
             <Text style={{ color: "#FFC107", fontSize: 12, fontWeight: "500" }}>
-              Previously logged · {lastTime.sets}×{lastTime.reps} · {lastTime.weightKg}kg
-              {lastTime.sessionLabels && lastTime.sessionLabels.length > 0
-                ? ` · ${lastTime.sessionLabels.join(", ")}`
-                : ""}
+              Prev logged · {lastTime.sets}×{lastTime.reps} · {lastTime.weightKg}kg
             </Text>
           </View>
         ) : (
@@ -341,20 +360,117 @@ export default function AddExercise({
         <View style={{ height: 12 }} />
 
         {isExerciseActive ? (
-          <Pressable
-            onPress={onSaveSet}
+          <View
             style={{
-              backgroundColor: accentColor,
-              paddingVertical: 10,
-              borderRadius: 12,
-              alignItems: "center",
-              marginBottom: 10,
+              flexDirection: "row",
+              gap: 10,
+              marginBottom: 12,
             }}
           >
-            <Text style={{ color: "#000", fontSize: 15, fontWeight: "700" }}>
-              Finish Set {sets + 1}
-            </Text>
-          </Pressable>
+            <Pressable
+              onPress={() => {
+                if (!isSetInProgress) {
+                  onStartSet(); // 🔥 stop any running rest in parent
+                  setIsSetInProgress(true);
+                }
+              }}
+              disabled={isSetInProgress}
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                borderRadius: 10,
+                alignItems: "center",
+                backgroundColor: isSetInProgress ? "#2a2a2a" : "#0f2e1f",
+                borderWidth: 1,
+                borderColor: isSetInProgress ? "#2a2a2a" : "#1f7a4d",
+                opacity: isSetInProgress ? 0.6 : 1,
+              }}
+            >
+              <Text
+                style={{
+                  color: isSetInProgress ? "#aaa" : "#00ff99",
+                  fontSize: 14,
+                  fontWeight: "600",
+                }}
+              >
+                Start Set {sets + 1}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                if (isSetInProgress) {
+                  onSaveSet();
+                  setIsSetInProgress(false);
+                }
+              }}
+              disabled={!isSetInProgress}
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                borderRadius: 10,
+                alignItems: "center",
+                backgroundColor: isSetInProgress ? "#5a1a1a" : "#2a2a2a",
+                opacity: isSetInProgress ? 1 : 0.6,
+              }}
+            >
+              <Text
+                style={{
+                  color: isSetInProgress ? "#ff4d4f" : "#666",
+                  fontSize: 14,
+                  fontWeight: "700",
+                }}
+              >
+                Finish Set
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {isExerciseActive && sets > 0 ? (
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 8,
+              marginBottom: 12,
+            }}
+          >
+            {Array.from({ length: sets }).map((_, i) => {
+              const isLast = i === sets - 1;
+
+              const ChipWrapper = isLast ? Animated.View : View;
+
+              return (
+                <ChipWrapper
+                  key={i}
+                  style={[
+                    {
+                      paddingVertical: 4,
+                      paddingHorizontal: 10,
+                      borderRadius: 999,
+                      backgroundColor: "rgba(0, 150, 255, 0.12)",
+                      borderWidth: 1,
+                      borderColor: "rgba(0, 150, 255, 0.5)",
+                    },
+                    isLast && {
+                      transform: [{ scale: lastChipScale }],
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: "#4da6ff",
+                      fontSize: 12,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Set {i + 1}
+                  </Text>
+                </ChipWrapper>
+              );
+            })}
+          </View>
         ) : null}
 
         <Pressable
@@ -419,57 +535,9 @@ export default function AddExercise({
               Start Exercise
             </Text>
           </Pressable>
-        ) : confirmFinish ? (
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: "#2a2a2a",
-              borderRadius: 10,
-              padding: 12,
-              backgroundColor: "#0f0f0f",
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 14, marginBottom: 8 }}>
-              Finish exercise with {sets} set{sets !== 1 ? "s" : ""}?
-            </Text>
-
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <Pressable
-                onPress={() => setConfirmFinish(false)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: "#444",
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ color: "#aaa" }}>Back</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  setConfirmFinish(false);
-                  onSave();
-                }}
-                style={{
-                  flex: 1,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  backgroundColor: accentColor,
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ color: "#000", fontWeight: "700" }}>
-                  Confirm
-                </Text>
-              </Pressable>
-            </View>
-          </View>
         ) : (
           <Pressable
-            onPress={() => setConfirmFinish(true)}
+            onPress={onSave}
             disabled={!canFinish}
             style={{
               backgroundColor: !canFinish ? "#333" : "#222",
