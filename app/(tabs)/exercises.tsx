@@ -93,7 +93,7 @@ export default function ExercisesScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search exercises"
+          placeholder={`Search from ${exercises.length} exercises`}
           placeholderTextColor="#666"
           style={{
             backgroundColor: colors.card,
