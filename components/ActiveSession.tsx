@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, Text, TextInput, View } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 
 import AddExercise from "@/components/AddExercise";
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+const REST_RING_SIZE = 110;
+const REST_RING_STROKE = 8;
+const REST_RING_RADIUS = (REST_RING_SIZE - REST_RING_STROKE) / 2;
+const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
 import { getAllLibraryExercises } from "@/db/exerciseLibrary";
 import {
   getExercisesForSession,
@@ -197,6 +205,9 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   const intervalRef = useRef<number | null>(null);
   const restOpacity = useRef(new Animated.Value(1)).current;
   const restPulse = useRef(new Animated.Value(0)).current;
+  const restBreath = useRef(new Animated.Value(0)).current;
+  const restRingProgress = useRef(new Animated.Value(0)).current;
+  const [restTotalSeconds, setRestTotalSeconds] = useState<number | null>(null);
   const restStartRef = useRef<Date | null>(null);
 
   useEffect(() => {
@@ -220,6 +231,30 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     }
   }, [restSeconds]);
 
+  // Slow continuous breathing animation for the whole rest period.
+  // Only re-triggers when entering/leaving rest, not on every second tick.
+  const isResting = restSeconds !== null;
+  useEffect(() => {
+    if (isResting) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(restBreath, {
+            toValue: 1,
+            duration: 1400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(restBreath, {
+            toValue: 0,
+            duration: 1400,
+            useNativeDriver: true,
+          }),
+        ]),
+      ).start();
+    } else {
+      restBreath.setValue(0);
+    }
+  }, [isResting]);
+
   function startRestTimer(duration: number = 90) {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -227,7 +262,15 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
 
     restStartRef.current = new Date();
     setRestSeconds(duration);
+    setRestTotalSeconds(duration);
     restOpacity.setValue(1);
+
+    restRingProgress.setValue(0);
+    Animated.timing(restRingProgress, {
+      toValue: 1,
+      duration: duration * 1000,
+      useNativeDriver: false,
+    }).start();
 
     intervalRef.current = setInterval(() => {
       setRestSeconds((prev) => {
@@ -257,7 +300,9 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       intervalRef.current = null;
     }
 
+    restRingProgress.stopAnimation();
     setRestSeconds(null);
+    setRestTotalSeconds(null);
 
     return elapsed;
   }
@@ -633,78 +678,128 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
         <Animated.View
           style={{
             opacity: restOpacity,
-            transform: [
-              {
-                scale:
-                  restSeconds !== null && restSeconds <= 5
-                    ? restPulse.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [1, 1.05],
-                      })
-                    : 1,
-              },
-            ],
-            marginBottom: 10,
-            paddingVertical: 6,
-            paddingHorizontal: 16,
-            borderRadius: 18,
-            backgroundColor:
-              restSeconds !== null && restSeconds <= 5
-                ? "rgba(255,193,7,0.28)"
-                : "rgba(255,193,7,0.12)",
-            borderWidth: 1,
-            borderColor:
-              restSeconds !== null && restSeconds <= 5
-                ? "#FFC107"
-                : "rgba(255,193,7,0.7)",
-            flexDirection: "row",
             alignItems: "center",
-            justifyContent: "space-between",
+            marginBottom: 12,
           }}
         >
           <Text
             style={{
-              color: "#FFC107",
-              fontSize: 18,
+              color: restType === "transition" ? "#9ca3af" : "#FFC107",
+              fontSize: 12,
               fontWeight: "600",
+              marginBottom: 6,
+              letterSpacing: 0.5,
             }}
           >
-            {restType === "transition" ? "🔄 Transition · " : "🧘 Rest · "}
-            {restSeconds >= 0 ? (
-              <>
-                {Math.floor(restSeconds / 60)}:
-                {(restSeconds % 60).toString().padStart(2, "0")}
-              </>
-            ) : (
-              <>
-                +{Math.floor(Math.abs(restSeconds) / 60)}:
-                {(Math.abs(restSeconds) % 60).toString().padStart(2, "0")}
-              </>
-            )}
+            {restType === "transition" ? "🔄 TRANSITION" : "🧘 REST"}
+          </Text>
+
+          <Animated.View
+            style={{
+              width: REST_RING_SIZE,
+              height: REST_RING_SIZE,
+              alignItems: "center",
+              justifyContent: "center",
+              transform: [
+                {
+                  scale:
+                    restSeconds <= 5 && restSeconds > 0
+                      ? restPulse.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 1.05],
+                        })
+                      : restBreath.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 1.02],
+                        }),
+                },
+              ],
+            }}
+          >
+            <Svg width={REST_RING_SIZE} height={REST_RING_SIZE}>
+              <Circle
+                cx={REST_RING_SIZE / 2}
+                cy={REST_RING_SIZE / 2}
+                r={REST_RING_RADIUS}
+                stroke="rgba(255,193,7,0.15)"
+                strokeWidth={REST_RING_STROKE}
+                fill="none"
+              />
+              <AnimatedCircle
+                cx={REST_RING_SIZE / 2}
+                cy={REST_RING_SIZE / 2}
+                r={REST_RING_RADIUS}
+                stroke={restSeconds < 0 ? "#e53935" : "#FFC107"}
+                strokeWidth={REST_RING_STROKE}
+                fill="none"
+                strokeDasharray={`${REST_RING_CIRCUMFERENCE} ${REST_RING_CIRCUMFERENCE}`}
+                strokeDashoffset={restRingProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, REST_RING_CIRCUMFERENCE],
+                })}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${REST_RING_SIZE / 2} ${REST_RING_SIZE / 2})`}
+              />
+            </Svg>
+
+            <Animated.Text
+              style={{
+                position: "absolute",
+                fontSize: 44,
+                transform: [
+                  {
+                    translateY: restBreath.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, -3],
+                    }),
+                  },
+                ],
+              }}
+            >
+              🐈
+            </Animated.Text>
+          </Animated.View>
+
+          <Text
+            style={{
+              color: restSeconds < 0 ? "#e53935" : "#FFC107",
+              fontSize: 18,
+              fontWeight: "600",
+              fontVariant: ["tabular-nums"],
+              marginTop: 8,
+            }}
+          >
+            {restSeconds >= 0
+              ? `${Math.floor(restSeconds / 60)}:${(restSeconds % 60)
+                  .toString()
+                  .padStart(2, "0")}`
+              : `+${Math.floor(Math.abs(restSeconds) / 60)}:${(
+                  Math.abs(restSeconds) % 60
+                )
+                  .toString()
+                  .padStart(2, "0")}`}
           </Text>
 
           <Pressable
             onPress={stopRestTimer}
             style={{
-              marginLeft: 16,
-              width: 24,
-              height: 24,
-              borderRadius: 12,
+              marginTop: 6,
+              paddingVertical: 4,
+              paddingHorizontal: 12,
+              borderRadius: 999,
               borderWidth: 1,
               borderColor: "#e53935",
-              backgroundColor: "rgba(229,57,53,0.15)",
-              alignItems: "center",
-              justifyContent: "center",
+              backgroundColor: "rgba(229,57,53,0.12)",
             }}
           >
             <Text
               style={{
                 color: "#e53935",
                 fontSize: 12,
-                fontWeight: "700",
+                fontWeight: "600",
               }}
             >
-              ✕
+              Skip rest
             </Text>
           </Pressable>
         </Animated.View>
