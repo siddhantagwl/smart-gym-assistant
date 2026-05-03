@@ -179,6 +179,7 @@ export default function AddExercise({
 
   const lastChipScale = useRef(new Animated.Value(1)).current;
   const prevSetCount = useRef(sets);
+  const prevExerciseActive = useRef(isExerciseActive);
 
   useEffect(() => {
     if (sets > prevSetCount.current) {
@@ -194,6 +195,15 @@ export default function AddExercise({
 
     prevSetCount.current = sets;
   }, [sets]);
+
+  // Auto-start set 1 when the exercise becomes active, so the user lands
+  // directly on "Finish Set" instead of needing to press "Start Set 1".
+  useEffect(() => {
+    if (!prevExerciseActive.current && isExerciseActive) {
+      setIsSetInProgress(true);
+    }
+    prevExerciseActive.current = isExerciseActive;
+  }, [isExerciseActive]);
 
   const filteredSuggestions = useMemo(() => {
     const query = exerciseName.trim().toLowerCase();
