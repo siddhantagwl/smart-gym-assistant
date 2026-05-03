@@ -27,6 +27,7 @@ export default function IdleMode(props: {
             id: Date.now().toString(),
             startTime: new Date(),
             endTime: null,
+            sessionLabels: [],
           };
           onStart(session);
         }}
