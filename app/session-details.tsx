@@ -84,6 +84,13 @@ export default function SessionDetailsScreen() {
     return Math.max(0, Math.round(diffMs / 60000));
   }, [startTime, endTime]);
 
+  const totalVolume = useMemo(() => {
+    return exercises.reduce(
+      (sum, e) => sum + e.sets * e.reps * e.weightKg,
+      0,
+    );
+  }, [exercises]);
+
   // Compute PR map per (exerciseName + reps) -> max historical weight excluding current session
   const prMap = useMemo(() => {
     const all = getAllExercises();
@@ -193,9 +200,14 @@ export default function SessionDetailsScreen() {
                     ⏱ {durationMinutes} min
                   </Text>
                 )}
-                <Text style={{ color: colors.muted }}>
+                <Text style={{ color: colors.muted, marginRight: 12 }}>
                   🏋 {exercises.length} exercises
                 </Text>
+                {totalVolume > 0 && (
+                  <Text style={{ color: colors.muted }}>
+                    💪 {Math.round(totalVolume).toLocaleString()} kg
+                  </Text>
+                )}
               </View>
             </>
           )}
