@@ -143,6 +143,23 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
   };
 }
 
+export function getMaxWeightForExercise(exerciseName: string): number {
+  const trimmed = exerciseName.trim();
+  if (!trimmed) return 0;
+
+  const row = db.getFirstSync(
+    `
+    SELECT MAX(e.weight_kg) as max_w
+    FROM exercises e
+    JOIN sessions s ON s.id = e.session_id
+    WHERE LOWER(e.name) = LOWER(?) AND s.note != '__DISCARDED__';
+    `,
+    [trimmed]
+  ) as { max_w: number | null } | undefined;
+
+  return row?.max_w ?? 0;
+}
+
 export function insertExerciseRaw(row: any) {
   db.runSync(
     `

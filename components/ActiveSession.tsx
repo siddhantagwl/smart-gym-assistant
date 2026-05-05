@@ -14,6 +14,7 @@ import { getAllLibraryExercises } from "@/db/exerciseLibrary";
 import {
   getExercisesForSession,
   getLatestExerciseByName,
+  getMaxWeightForExercise,
   insertExercise,
   LatestExercise,
 } from "@/db/exercises";
@@ -164,6 +165,41 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   const celebOpacity = useRef(new Animated.Value(0)).current;
   const celebSparkle = useRef(new Animated.Value(0)).current;
 
+  const [prBadge, setPrBadge] = useState<{ weight: number } | null>(null);
+  const prFiredRef = useRef(false);
+  const prBadgeScale = useRef(new Animated.Value(0)).current;
+  const prBadgeOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!prBadge) return;
+
+    prBadgeScale.setValue(0);
+    prBadgeOpacity.setValue(0);
+
+    Animated.parallel([
+      Animated.spring(prBadgeScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(prBadgeOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const hide = setTimeout(() => {
+      Animated.timing(prBadgeOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setPrBadge(null));
+    }, 3500);
+    return () => clearTimeout(hide);
+  }, [prBadge]);
+
   useEffect(() => {
     if (!showCelebration) return;
 
@@ -209,7 +245,14 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
 
     const rec = getLatestExerciseByName(exerciseNameTrimmed);
     setLatest(rec);
-  }, [exerciseName]);
+
+    // Auto-fill reps/weight from previous session, but only before the
+    // user starts the exercise — never overwrite mid-workout adjustments.
+    if (rec && !isExerciseActive) {
+      setReps(rec.reps);
+      setWeightKg(rec.weightKg);
+    }
+  }, [exerciseName, isExerciseActive]);
 
   useEffect(() => {
     const rows = getExercisesForSession(activeSession.id);
@@ -752,6 +795,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     setCurrentExerciseStart(new Date());
     setSets(0);
     setAccumulatedRest(0);
+    prFiredRef.current = false;
 
     // Ensure no rest timer is visible when exercise starts
     stopRestTimer();
@@ -781,6 +825,16 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     setSets((prev) => prev + 1);
     setRestType("set");
     startRestTimer(90);
+
+    // PR check: fire once per exercise instance, when this set's weight
+    // beats the historical max for this exercise name.
+    if (!prFiredRef.current && weightKg > 0) {
+      const dbMax = getMaxWeightForExercise(exerciseName);
+      if (weightKg > dbMax) {
+        prFiredRef.current = true;
+        setPrBadge({ weight: weightKg });
+      }
+    }
   }
 
   // ✅ Finish Exercise
@@ -843,6 +897,37 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
         borderRadius: 14,
       }}
     >
+      {prBadge ? (
+        <Animated.View
+          style={{
+            position: "absolute",
+            top: -18,
+            zIndex: 50,
+            paddingVertical: 8,
+            paddingHorizontal: 16,
+            borderRadius: 999,
+            backgroundColor: "#FFC107",
+            borderWidth: 2,
+            borderColor: "#fff",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            opacity: prBadgeOpacity,
+            transform: [{ scale: prBadgeScale }],
+            shadowColor: "#FFC107",
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.6,
+            shadowRadius: 12,
+            elevation: 8,
+          }}
+        >
+          <Text style={{ fontSize: 18 }}>🏆</Text>
+          <Text style={{ color: "#000", fontSize: 14, fontWeight: "800", letterSpacing: 0.4 }}>
+            NEW PR · {prBadge.weight}kg
+          </Text>
+        </Animated.View>
+      ) : null}
+
       <Text style={{ color: colors.text, fontSize: 16, marginBottom: 9 }}>
         Session started at{" "}
         {activeSession.startTime.toLocaleTimeString("en-GB", {
