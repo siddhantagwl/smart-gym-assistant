@@ -114,7 +114,6 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   const [reps, setReps] = useState(10);
   const [weightKg, setWeightKg] = useState(10);
 
-  const [showSessionNote, setShowSessionNote] = useState(false);
   const [exerciseNote, setExerciseNote] = useState("");
   const [sessionNote, setSessionNote] = useState("");
   const [latest, setLatest] = useState<LatestExercise | null>(null);
@@ -470,6 +469,33 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
               </Pressable>
             ))}
         </View>
+
+        <Text
+          style={{
+            color: "#aaa",
+            fontSize: 12,
+            marginTop: 14,
+            marginBottom: 6,
+          }}
+        >
+          Session note
+        </Text>
+        <TextInput
+          value={sessionNote}
+          onChangeText={setSessionNote}
+          placeholder="Sleep, energy, pain, PR"
+          placeholderTextColor="#666"
+          style={{
+            width: "100%",
+            borderWidth: 1,
+            borderColor: "#222",
+            borderRadius: 6,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            backgroundColor: "#111",
+            color: "#fff",
+          }}
+        />
 
         <View
           style={{
@@ -901,44 +927,6 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       </View>
 
       <View style={{ height: 14 }} />
-
-      <Pressable
-        onPress={() => setShowSessionNote((v) => !v)}
-        style={{
-          alignSelf: "flex-start",
-          paddingVertical: 6,
-          paddingHorizontal: 12,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: "#222",
-          backgroundColor: "#0f0f0f",
-          marginBottom: showSessionNote ? 8 : 14,
-        }}
-      >
-        <Text style={{ color: "#aaa", fontSize: 12 }}>
-          {showSessionNote ? "Hide session note" : "Add session note"}
-        </Text>
-      </Pressable>
-
-      {showSessionNote ? (
-        <TextInput
-          value={sessionNote}
-          onChangeText={setSessionNote}
-          placeholder="Sleep, energy, pain, PR"
-          placeholderTextColor="#666"
-          style={{
-            width: "100%",
-            borderWidth: 1,
-            borderColor: "#222",
-            borderRadius: 6,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            backgroundColor: "#111",
-            color: "#fff",
-            marginBottom: 12,
-          }}
-        />
-      ) : null}
 
       <Pressable
         onPress={() => {
