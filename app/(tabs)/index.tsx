@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from "react-native";
 import { useState, useEffect } from "react";
 
 import { Session } from "@/domain/session";
-import { StoredSession, getActiveSession, insertSession, endSession } from "@/db/sessions";
+import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats } from "@/db/sessions";
 
 import IdleMode from "@/components/home/IdleMode";
 import ActiveMode from "@/components/home/ActiveMode";
@@ -27,6 +27,10 @@ export default function HomeScreen() {
     : pendingSession
     ? "pending"
     : "idle";
+
+  // Re-derive stats whenever the active session ends (by depending on activeSession),
+  // so finishing a workout updates the chips immediately.
+  const stats = mode === "active" ? null : getWorkoutStats();
 
   useEffect(() => {
     const s = getActiveSession();
@@ -53,6 +57,50 @@ export default function HomeScreen() {
         <Text style={{ color: colors.text, fontSize: 28, marginBottom: 20, marginTop: 40 }}>
           Train. Log. Progress.
         </Text>
+
+        {stats && (stats.currentStreak > 0 || stats.thisWeek > 0) ? (
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 8,
+              marginBottom: 20,
+            }}
+          >
+            {stats.currentStreak > 0 ? (
+              <View
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  borderRadius: 999,
+                  backgroundColor: "rgba(255,107,53,0.15)",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,107,53,0.5)",
+                }}
+              >
+                <Text style={{ color: "#FF6B35", fontSize: 13, fontWeight: "600" }}>
+                  🔥 {stats.currentStreak} day{stats.currentStreak === 1 ? "" : "s"} streak
+                </Text>
+              </View>
+            ) : null}
+
+            {stats.thisWeek > 0 ? (
+              <View
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  borderRadius: 999,
+                  backgroundColor: "rgba(76,175,80,0.12)",
+                  borderWidth: 1,
+                  borderColor: "rgba(76,175,80,0.5)",
+                }}
+              >
+                <Text style={{ color: "#4CAF50", fontSize: 13, fontWeight: "600" }}>
+                  📅 {stats.thisWeek} this week
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         {mode === "active" && activeSession && (
           <ActiveMode

@@ -213,3 +213,48 @@ export function insertSessionRaw(row: any) {
     ]
   );
 }
+
+export function getWorkoutStats(): { thisWeek: number; currentStreak: number } {
+  const rows = db.getAllSync(
+    `SELECT start_time FROM sessions WHERE note != '__DISCARDED__';`
+  ) as { start_time: string }[];
+
+  if (rows.length === 0) return { thisWeek: 0, currentStreak: 0 };
+
+  // Group by local-day (not UTC) so a 10pm workout doesn't count as the next day.
+  function localDayKey(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  const daySet = new Set(rows.map((r) => localDayKey(new Date(r.start_time))));
+
+  // thisWeek: distinct workout days in the rolling 7-day window ending today.
+  const today = new Date();
+  let thisWeek = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    if (daySet.has(localDayKey(d))) thisWeek++;
+  }
+
+  // currentStreak: consecutive workout days back from today (or yesterday, as
+  // grace if user hasn't worked out yet today). 0 if last workout was 2+ days ago.
+  const todayKey = localDayKey(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = localDayKey(yesterday);
+
+  let currentStreak = 0;
+  let cursor: Date | null = null;
+  if (daySet.has(todayKey)) cursor = new Date(today);
+  else if (daySet.has(yesterdayKey)) cursor = new Date(yesterday);
+
+  if (cursor) {
+    while (daySet.has(localDayKey(cursor))) {
+      currentStreak++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+
+  return { thisWeek, currentStreak };
+}
