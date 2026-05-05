@@ -159,6 +159,47 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [inferredLabels, setInferredLabels] = useState<string[]>([]);
 
+  const [showCelebration, setShowCelebration] = useState(false);
+  const celebScale = useRef(new Animated.Value(0)).current;
+  const celebOpacity = useRef(new Animated.Value(0)).current;
+  const celebSparkle = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!showCelebration) return;
+
+    celebScale.setValue(0);
+    celebOpacity.setValue(0);
+    celebSparkle.setValue(0);
+
+    Animated.parallel([
+      Animated.spring(celebScale, {
+        toValue: 1,
+        friction: 4,
+        tension: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(celebOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.loop(
+      Animated.timing(celebSparkle, {
+        toValue: 1,
+        duration: 1800,
+        useNativeDriver: true,
+      }),
+    ).start();
+
+    const timer = setTimeout(() => {
+      setShowCelebration(false);
+      onEnd();
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [showCelebration]);
+
   useEffect(() => {
     const exerciseNameTrimmed = exerciseName.trim();
     if (!exerciseNameTrimmed) {
@@ -360,6 +401,142 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     return Array.from(labelSet);
   }
 
+  if (showCelebration) {
+    return (
+      <Pressable
+        onPress={() => {
+          setShowCelebration(false);
+          onEnd();
+        }}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "#000",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+        }}
+      >
+        <Animated.Text
+          style={{
+            position: "absolute",
+            fontSize: 28,
+            opacity: celebOpacity,
+            transform: [
+              {
+                rotate: celebSparkle.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0deg", "360deg"],
+                }),
+              },
+              { translateX: -90 },
+              { translateY: -60 },
+            ],
+          }}
+        >
+          ✨
+        </Animated.Text>
+
+        <Animated.Text
+          style={{
+            position: "absolute",
+            fontSize: 24,
+            opacity: celebOpacity,
+            transform: [
+              {
+                rotate: celebSparkle.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["360deg", "0deg"],
+                }),
+              },
+              { translateX: 90 },
+              { translateY: -50 },
+            ],
+          }}
+        >
+          ⚡
+        </Animated.Text>
+
+        <Animated.Text
+          style={{
+            position: "absolute",
+            fontSize: 22,
+            opacity: celebOpacity,
+            transform: [
+              {
+                rotate: celebSparkle.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0deg", "-360deg"],
+                }),
+              },
+              { translateX: 80 },
+              { translateY: 80 },
+            ],
+          }}
+        >
+          🔥
+        </Animated.Text>
+
+        <Animated.Text
+          style={{
+            position: "absolute",
+            fontSize: 26,
+            opacity: celebOpacity,
+            transform: [
+              {
+                rotate: celebSparkle.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0deg", "360deg"],
+                }),
+              },
+              { translateX: -85 },
+              { translateY: 90 },
+            ],
+          }}
+        >
+          ✨
+        </Animated.Text>
+
+        <Animated.Text
+          style={{
+            fontSize: 110,
+            opacity: celebOpacity,
+            transform: [{ scale: celebScale }],
+          }}
+        >
+          💪
+        </Animated.Text>
+
+        <Animated.Text
+          style={{
+            color: "#4CAF50",
+            fontSize: 22,
+            fontWeight: "700",
+            marginTop: 28,
+            opacity: celebOpacity,
+            letterSpacing: 0.5,
+          }}
+        >
+          Session saved!
+        </Animated.Text>
+
+        <Animated.Text
+          style={{
+            color: "rgba(255,255,255,0.4)",
+            fontSize: 12,
+            marginTop: 12,
+            opacity: celebOpacity,
+          }}
+        >
+          Tap anywhere to continue
+        </Animated.Text>
+      </Pressable>
+    );
+  }
+
   if (showLabelConfirm) {
     return (
       <View
@@ -538,7 +715,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
               );
               setSessionNote("");
               setShowLabelConfirm(false);
-              onEnd();
+              setShowCelebration(true);
             }}
             style={{
               flex: 0.7,
