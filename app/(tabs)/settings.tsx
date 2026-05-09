@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Sharing from "expo-sharing";
+import Constants from "expo-constants";
 
 import { getAllExercises } from "@/db/exercises";
 import { exportAllDataToFile } from "@/db/export";
@@ -98,9 +99,19 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
       <View style={{ flex: 1, padding: 24 }}>
-      <Text style={{ color: "#fff", fontSize: 18, marginBottom: 16 }}>
-        Settings
-      </Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          marginBottom: 16,
+        }}
+      >
+        <Text style={{ color: "#fff", fontSize: 18 }}>Settings</Text>
+        <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 15 }}>
+          v{Constants.expoConfig?.version ?? "—"}
+        </Text>
+      </View>
 
       <Pressable
         onPress={onExport}

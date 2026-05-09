@@ -1,6 +1,5 @@
 import { View, Text, ScrollView } from "react-native";
 import { useState, useEffect } from "react";
-import Constants from "expo-constants";
 
 import { Session } from "@/domain/session";
 import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats } from "@/db/sessions";
@@ -164,19 +163,6 @@ export default function HomeScreen() {
 
         <View style={{ height: 24 }} />
       </ScrollView>
-
-      <Text
-        pointerEvents="none"
-        style={{
-          position: "absolute",
-          bottom: 8,
-          alignSelf: "center",
-          color: "rgba(255,255,255,0.3)",
-          fontSize: 15,
-        }}
-      >
-        v{Constants.expoConfig?.version ?? "—"}
-      </Text>
     </View>
   );
 }
