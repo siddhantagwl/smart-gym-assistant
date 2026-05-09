@@ -789,7 +789,6 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   //▶ Start Exercise
   function startExercise() {
     if (!exerciseName.trim()) return;
-    if (!exerciseLibraryId) return;
 
     setIsExerciseActive(true);
     setCurrentExerciseStart(new Date());
@@ -815,7 +814,6 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   // 💪 Save Set
   function saveSet() {
     if (!isExerciseActive) return;
-    if (!exerciseLibraryId) return;
     // Stop any running rest immediately when starting a new set
     if (restSeconds !== null) {
       stopRestTimer();
@@ -841,7 +839,6 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   function finishExercise() {
     if (!isExerciseActive || !currentExerciseStart) return;
     if (sets === 0) return;
-    if (!exerciseLibraryId) return;
 
     const finalRestFromTimer = stopRestTimer();
     const totalRest = accumulatedRest + finalRestFromTimer;
@@ -849,10 +846,11 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     const endTime = new Date();
     console.log("Final accumulated rest:", totalRest);
 
+    // Unknown exercise: name doubles as synthetic library ID (matches db/sessions.ts manual-import pattern) so getExercisesByLibraryId still groups history.
     insertExercise({
       id: Date.now().toString(),
       sessionId: activeSession.id,
-      exerciseLibraryId: exerciseLibraryId!,
+      exerciseLibraryId: exerciseLibraryId ?? exerciseName,
       name: exerciseName,
       sets,
       reps,

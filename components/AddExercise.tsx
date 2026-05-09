@@ -359,6 +359,19 @@ export default function AddExercise({
               ))}
             </View>
           ) : null}
+
+          {exerciseName.trim() && !isExactMatch && filteredSuggestions.length === 0 ? (
+            <Text
+              style={{
+                color: "#888",
+                fontSize: 11,
+                marginTop: 8,
+                fontStyle: "italic",
+              }}
+            >
+              New exercise — will be saved as typed
+            </Text>
+          ) : null}
         </View>
 
         {mode === "live" && exerciseName.trim() && lastTime ? (
