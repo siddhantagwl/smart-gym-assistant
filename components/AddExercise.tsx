@@ -177,6 +177,12 @@ export default function AddExercise({
 
   const [isSetInProgress, setIsSetInProgress] = useState(false);
 
+  // Timestamp-based set timer: visible counter is cosmetic; elapsed is
+  // derived from wall-clock so background throttling can't drift it.
+  const setStartRef = useRef<Date | null>(null);
+  const [setNow, setSetNow] = useState<Date | null>(null);
+  const setPulse = useRef(new Animated.Value(0)).current;
+
   const lastChipScale = useRef(new Animated.Value(1)).current;
   const prevSetCount = useRef(sets);
   const prevExerciseActive = useRef(isExerciseActive);
@@ -201,9 +207,51 @@ export default function AddExercise({
   useEffect(() => {
     if (!prevExerciseActive.current && isExerciseActive) {
       setIsSetInProgress(true);
+      setStartRef.current = new Date();
+      setSetNow(new Date());
+    }
+    if (prevExerciseActive.current && !isExerciseActive) {
+      setStartRef.current = null;
+      setSetNow(null);
     }
     prevExerciseActive.current = isExerciseActive;
   }, [isExerciseActive]);
+
+  useEffect(() => {
+    if (!isSetInProgress) return;
+
+    const id = setInterval(() => setSetNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, [isSetInProgress]);
+
+  useEffect(() => {
+    if (!isSetInProgress) {
+      setPulse.setValue(0);
+      return;
+    }
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(setPulse, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+        Animated.timing(setPulse, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+      ]),
+    ).start();
+  }, [isSetInProgress]);
+
+  const setElapsedSeconds =
+    isSetInProgress && setStartRef.current && setNow
+      ? Math.max(
+          0,
+          Math.floor((setNow.getTime() - setStartRef.current.getTime()) / 1000),
+        )
+      : 0;
 
   const filteredSuggestions = useMemo(() => {
     const query = exerciseName.trim().toLowerCase();
@@ -382,6 +430,8 @@ export default function AddExercise({
                 if (!isSetInProgress) {
                   onStartSet(); // 🔥 stop any running rest in parent
                   setIsSetInProgress(true);
+                  setStartRef.current = new Date();
+                  setSetNow(new Date());
                 }
               }}
               disabled={isSetInProgress}
@@ -412,6 +462,8 @@ export default function AddExercise({
                 if (isSetInProgress) {
                   onSaveSet();
                   setIsSetInProgress(false);
+                  setStartRef.current = null;
+                  setSetNow(null);
                 }
               }}
               disabled={!isSetInProgress}
@@ -437,11 +489,12 @@ export default function AddExercise({
           </View>
         ) : null}
 
-        {isExerciseActive && sets > 0 ? (
+        {isExerciseActive && (sets > 0 || isSetInProgress) ? (
           <View
             style={{
               flexDirection: "row",
               flexWrap: "wrap",
+              alignItems: "center",
               gap: 8,
               marginBottom: 12,
             }}
@@ -480,6 +533,52 @@ export default function AddExercise({
                 </ChipWrapper>
               );
             })}
+
+            {isSetInProgress ? (
+              <Animated.View
+                style={{
+                  paddingVertical: 4,
+                  paddingHorizontal: 10,
+                  borderRadius: 999,
+                  backgroundColor: "rgba(0, 255, 153, 0.10)",
+                  borderWidth: 1,
+                  borderColor: setPulse.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [
+                      "rgba(0, 255, 153, 0.4)",
+                      "rgba(0, 255, 153, 0.95)",
+                    ],
+                  }),
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <Animated.View
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: 4,
+                    backgroundColor: "#00ff99",
+                    opacity: setPulse.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.4, 1],
+                    }),
+                  }}
+                />
+                <Text
+                  style={{
+                    color: "#00ff99",
+                    fontSize: 12,
+                    fontWeight: "600",
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  Set {sets + 1} · {Math.floor(setElapsedSeconds / 60)}:
+                  {(setElapsedSeconds % 60).toString().padStart(2, "0")}
+                </Text>
+              </Animated.View>
+            ) : null}
           </View>
         ) : null}
 
