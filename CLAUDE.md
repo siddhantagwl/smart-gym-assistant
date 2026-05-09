@@ -19,6 +19,20 @@ There is no test runner configured. Type-check via `npx tsc --noEmit` (strict mo
 
 The `reset-project` script in `package.json` references `./scripts/reset-project.js`, which does not exist — ignore it.
 
+### Target platform
+
+**This app is developed and tested on Android.** iOS scripts exist in `package.json` but are not the primary target. When reasoning about platform-specific behavior (background execution, notifications, permissions, OS lifecycle), default to Android specifics — Doze mode, battery optimization, foreground services, notification channels — not iOS app suspension semantics.
+
+### Versioning
+
+The Home screen shows `app.json` → `expo.version` at the bottom so the user can tell which build is on their device. **Bump this version on every meaningful change** before reporting work as done — don't wait to be asked. Follow semver:
+
+- **patch** (`1.0.0` → `1.0.1`): bug fixes, copy tweaks, small UI adjustments
+- **minor** (`1.0.1` → `1.1.0`): new features, new screens, schema additions
+- **major** (`1.1.0` → `2.0.0`): breaking changes (DB wipe required, sync contract change, etc.)
+
+Edit `app.json` `expo.version` as part of the same change. The user rebuilds the APK against this version, so an un-bumped version means they can't tell whether their device has the new code.
+
 ### Environment
 
 `.env` is gitignored and holds the two `EXPO_PUBLIC_*` vars consumed by the sync services:
@@ -93,6 +107,8 @@ Both rely on `EXPO_PUBLIC_GSHEETS_WEBHOOK_URL` + `EXPO_PUBLIC_GSHEETS_SECRET`.
 ### Rest timer (non-obvious)
 
 The rest timer in `components/ActiveSession.tsx` is **timestamp-based**, not countdown-based. The visible 90s countdown is cosmetic; actual rest is `now - restStartRef` accumulated into `accumulatedRest` and only finalized on Start Set / Finish Exercise / manual close. The previous countdown-based implementation lost data and produced 0-second rests under race conditions — see ARCHITECTURE.md §3.2 before "fixing" anything that looks like overcomplication here.
+
+**Background behavior (Android):** when the app is backgrounded, the JS thread is suspended/throttled, so the visible countdown freezes and `setInterval` stops firing. The *saved* rest value remains correct because it's derived from wall-clock timestamps when the user taps Start Set / Finish Exercise. There is currently **no** local notification, foreground service, or `AppState` handling — the user gets no alert when rest is up if the app is not in the foreground. `expo-notifications` is not installed.
 
 ### Path alias
 

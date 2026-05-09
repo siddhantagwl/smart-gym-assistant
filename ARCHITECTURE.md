@@ -97,6 +97,20 @@ A mobile-first gym logging application focused on:
 - No data loss
 - Works even with long rests
 
+#### Background behavior (Android, current state)
+
+Target platform is Android. When the app is backgrounded (user switches apps, locks screen), Android suspends/throttles the JS thread — `setInterval` stops, `Animated` driven by JS pauses. Consequence:
+
+- **Visible countdown freezes** while backgrounded. On return it resumes from where it stopped (does not self-correct), because the displayed seconds are tracked in component state, not derived from `restStartRef`.
+- **Saved rest value is still correct.** `stopRestTimer()` computes `secondsBetween(new Date(), restStartRef.current)`, which is wall-clock math and independent of whether JS was running.
+- **No alert when rest finishes.** There is no `expo-notifications`, no foreground service, no `AppState` listener anywhere in the repo. The user gets no buzz/banner if the app is not in the foreground at the 90s mark.
+
+Known limitations to fix when this becomes a real problem:
+
+1. Self-correcting visible timer — derive displayed seconds from `restStartRef + now` so the UI snaps to the correct value on resume.
+2. Local notification scheduled at `restStartRef + duration` via `expo-notifications` — Android fires it even with the app killed / screen off. Cancel on Start Set / Finish Exercise / manual stop.
+3. (Heavier) Foreground service with persistent progress notification, if a live lockscreen ticker is desired.
+
 ---
 
 ### 3.3 Set Tracking UX
