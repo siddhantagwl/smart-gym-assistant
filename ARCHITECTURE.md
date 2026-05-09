@@ -129,45 +129,32 @@ Known limitations to fix when this becomes a real problem:
 
 ### 3.4 Exercise Library System
 
-#### Previous State
+#### Source of truth
 
-- Hardcoded TypeScript list
+The library is **local-only**. It comes from a hardcoded TypeScript list in `db/seedExercises.ts` and is loaded into SQLite via `seedExerciseLibrary()` on every `initDb()` call. The seeder uses `INSERT OR IGNORE`, so it is idempotent — existing rows are never overwritten, new rows in the seed file get added on next boot.
 
-#### Current Architecture
-
-**Google Sheets → SQLite Sync**
-
-- Sheet is source of truth
-- App fetches library
-- Stores locally in `exercise_library` table
+There is **no Google Sheets → library sync**. Earlier drafts of this document described one (`services/exerciseLibrarySync.ts`, `ensureExerciseLibrary()`, full-replace transaction); that code never landed. Do not reason from those mentions.
 
 #### Schema
 
 ```
 exercise_library
 - id (TEXT PK)
-- name
-- video_url
-- primary_muscle
-- tags (JSON)
-- updated_at
+- name (TEXT)
+- video_url (TEXT, nullable)
+- primary_muscle (TEXT)
+- tags (TEXT, JSON-stringified)
 ```
 
-#### Sync Strategy
+#### Adding new exercises today
 
-- Full replace (safe and simple)
-- Wrapped in DB transaction (`BEGIN` / `COMMIT` / `ROLLBACK`)
+- Edit `db/seedExercises.ts` and rebuild. New rows get inserted on next app boot.
+- Or (post Pass 1, May 2026): log a workout with an unrecognised name. The session row carries the typed name as both `name` and synthetic `exercise_library_id`, but the **library table itself is not updated** by this path. A "promote to library" UI in Settings (Pass 2) is the planned reconciliation.
 
-#### Fallback
+#### Entry points
 
-- Local hardcoded seed used only if:
-  - DB empty
-  - Network fails
-
-#### Entry Points
-
-- Auto sync on app boot (if empty)
-- Manual sync via Settings
+- App boot: `seedExerciseLibrary()` runs as part of `initDb()`.
+- No manual library-sync button exists in Settings.
 
 ---
 
@@ -206,16 +193,10 @@ Used to validate correctness.
 
 - Export JSON backup
 - Share backup
-- Sync to Google Sheets
+- Sync to Google Sheets (sessions + exercises)
 - Restore from Sheets
-- Sync exercise library (NEW)
 
-#### Exercise Library Sync Button
-
-- Calls `syncExerciseLibrary()`
-- Shows loading state
-- Stores last sync timestamp
-- Displays count of exercises
+There is no "Sync exercise library" button. Past drafts mentioned one — it does not exist.
 
 ---
 
@@ -235,15 +216,14 @@ Used to validate correctness.
 | DB       | Storage          |
 | Services | Network + sync   |
 
-### 4.3 Google Sheets as CMS
+### 4.3 Google Sheets as session archive
 
-- Exercise library managed outside app
-- No redeploy needed for updates
+Google Sheets stores a copy of every session and exercise the user logs, via the Apps Script POST endpoint. It is a one-way archive + restore mechanism, not a CMS — the library is **not** managed in Sheets.
 
 ### 4.4 Fail-Safe Sync
 
-- Library sync uses transaction
-- Prevents partial data state
+- Sheets sync is a single POST; failure leaves local DB untouched.
+- Restore wipes local sessions/exercises before re-inserting (`wipeDatabase()` then `insertSessionRaw` / `insertExerciseRaw` per row). The `exercise_library` table is left intact during restore.
 
 ---
 
@@ -253,10 +233,9 @@ Used to validate correctness.
 
 - Rest timer (correct, production-safe)
 - Set tracking UX
-- Exercise logging
-- Google Sheets sync (stable)
-- Strict dedupe logic
-- Exercise library sync (Sheets → DB)
+- Exercise logging (including unknown names — Pass 1, May 2026)
+- Google Sheets sync for sessions + exercises (stable, with strict dedupe)
+- Restore-from-Sheets flow
 - Settings integration
 - Debugging system (used and removed)
 
@@ -290,8 +269,8 @@ Used to validate correctness.
 
 ### Data Layer
 
-- Delta sync (based on timestamps)
-- Upsert instead of full replace for library
+- Delta sync for sessions/exercises (based on timestamps) instead of full snapshot
+- "Promote to library" flow (Pass 2): surface logged exercise names that aren't in `exercise_library` and let the user add them with a muscle group, so they show up as suggestion chips next time
 
 ### UX
 
@@ -301,7 +280,6 @@ Used to validate correctness.
 
 ### Settings
 
-- Show "Last library sync"
 - Manual refresh on Exercises screen
 
 ### Performance
@@ -325,8 +303,7 @@ Used to validate correctness.
 
 ### Services
 
-- `services/googleSheetsSync.ts`
-- `services/exerciseLibrarySync.ts`
+- `services/googleSheetsSync.ts` — only sync service; covers sessions + exercises POST and the GET-based restore. No library sync.
 
 ### UI
 
