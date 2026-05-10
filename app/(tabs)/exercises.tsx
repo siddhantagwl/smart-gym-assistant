@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, SectionList, Pressable, Linking, Animated } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { ExerciseLibraryItem, getAllLibraryExercises } from "@/db/exerciseLibrary";
 
 const colors = {
@@ -32,10 +33,12 @@ export default function ExercisesScreen() {
       }));
   }, [exercises]);
 
-  useEffect(() => {
-    const data = getAllLibraryExercises();
-    setExercises(data);
-  }, []);
+  // Re-read library on focus so post-sync changes appear without app reload.
+  useFocusEffect(
+    useCallback(() => {
+      setExercises(getAllLibraryExercises());
+    }, [])
+  );
 
   useEffect(() => {
     Animated.timing(clearAnim, {
