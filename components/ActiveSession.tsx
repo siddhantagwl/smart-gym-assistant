@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
+import {
+  scheduleRestDoneNotification,
+  cancelRestNotification,
+} from "@/services/notifications";
 import { Animated, Pressable, Text, TextInput, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
@@ -343,10 +347,20 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     }
   }, [isResting]);
 
-  function startRestTimer(duration: number = 90) {
+  // Holds the OS-scheduled "rest done" notification ID so we can cancel it
+  // when rest is stopped early (Start Set, Finish Exercise, manual close).
+  const restNotificationIdRef = useRef<string | null>(null);
+
+  function startRestTimer(duration: number = 90, kind: "set" | "transition" = "set") {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
+
+    cancelRestNotification(restNotificationIdRef.current);
+    restNotificationIdRef.current = null;
+    scheduleRestDoneNotification(duration, kind).then((id) => {
+      restNotificationIdRef.current = id;
+    });
 
     restStartRef.current = new Date();
     setRestSeconds(duration);
@@ -360,17 +374,14 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       useNativeDriver: false,
     }).start();
 
+    // Recompute from wall-clock each tick rather than decrementing — so when
+    // Android backgrounds and JS pauses, returning to the foreground snaps the
+    // displayed number to the correct elapsed value instead of resuming from
+    // wherever the interval froze.
     intervalRef.current = setInterval(() => {
-      setRestSeconds((prev) => {
-        if (prev === null) return null;
-
-        if (prev <= 0) {
-          // After hitting 0, continue counting upward
-          return prev - 1;
-        }
-
-        return prev - 1;
-      });
+      if (restStartRef.current === null) return;
+      const elapsed = secondsBetween(new Date(), restStartRef.current);
+      setRestSeconds(duration - elapsed);
     }, 1000);
   }
 
@@ -387,6 +398,9 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+
+    cancelRestNotification(restNotificationIdRef.current);
+    restNotificationIdRef.current = null;
 
     restRingProgress.stopAnimation();
     setRestSeconds(null);
@@ -827,7 +841,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     }
     setSets((prev) => prev + 1);
     setRestType("set");
-    startRestTimer(90);
+    startRestTimer(90, "set");
 
     // PR check: fire once per exercise instance, when this set's weight
     // beats the historical max for this exercise name.
@@ -871,7 +885,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
 
     // Start transition rest after finishing exercise
     setRestType("transition");
-    startRestTimer(120);
+    startRestTimer(120, "transition");
 
     resetExerciseState();
     // Removed transition rest timer after finishing exercise

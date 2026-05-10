@@ -6,6 +6,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEffect, useState } from "react";
 import { initDb } from "@/db/schema";
+import { setupNotifications } from "@/services/notifications";
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -18,6 +19,7 @@ export default function RootLayout() {
   useEffect(() => {
     initDb();
     setDbReady(true);
+    setupNotifications();
   }, []);
 
   if (!dbReady) {
