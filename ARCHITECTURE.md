@@ -97,19 +97,23 @@ A mobile-first gym logging application focused on:
 - No data loss
 - Works even with long rests
 
-#### Background behavior (Android, current state)
+#### Background behavior (Android, current state, May 2026)
 
-Target platform is Android. When the app is backgrounded (user switches apps, locks screen), Android suspends/throttles the JS thread — `setInterval` stops, `Animated` driven by JS pauses. Consequence:
+Target platform is Android. When the app is backgrounded (user switches apps, locks screen), Android suspends/throttles the JS thread — `setInterval` stops, JS-driven `Animated` pauses. The system handles this in three coordinated pieces, all keyed off `restStartRef`:
 
-- **Visible countdown freezes** while backgrounded. On return it resumes from where it stopped (does not self-correct), because the displayed seconds are tracked in component state, not derived from `restStartRef`.
-- **Saved rest value is still correct.** `stopRestTimer()` computes `secondsBetween(new Date(), restStartRef.current)`, which is wall-clock math and independent of whether JS was running.
-- **No alert when rest finishes.** There is no `expo-notifications`, no foreground service, no `AppState` listener anywhere in the repo. The user gets no buzz/banner if the app is not in the foreground at the 90s mark.
+1. **Visible counter (`restSeconds`)** — every `setInterval` tick recomputes the displayed value as `duration - secondsBetween(new Date(), restStartRef.current)`, **not** `prev - 1`. So when JS resumes in the foreground, the next tick (within ~1s) snaps the counter to the correct elapsed value. Counter goes negative past 0 to indicate "rest exceeded". Don't refactor this back to decrementing — that's the broken pattern we replaced.
+2. **OS-scheduled local notification** — `services/notifications.ts` schedules an `expo-notifications` time-interval notification at `restStartRef + duration` whenever rest starts. ID kept in `restNotificationIdRef`. Fires regardless of JS state — app backgrounded, screen off, app killed. Two kinds:
+   - `"set"` (90s) → title "Rest done", body "Time for your next set"
+   - `"transition"` (120s) → title "Next exercise", body "Ready for the next exercise"
+3. **Saved rest value** — `secondsBetween(new Date(), restStartRef)` accumulated into `accumulatedRest` on `stopRestTimer`. Wall-clock math, independent of JS thread state.
 
-Known limitations to fix when this becomes a real problem:
+**Cancellation invariants:** at most one rest notification scheduled at any time. `startRestTimer` cancels any prior `restNotificationIdRef` before scheduling a new one. `stopRestTimer` cancels the saved ID. Every code path that ends rest goes through `stopRestTimer`.
 
-1. Self-correcting visible timer — derive displayed seconds from `restStartRef + now` so the UI snaps to the correct value on resume.
-2. Local notification scheduled at `restStartRef + duration` via `expo-notifications` — Android fires it even with the app killed / screen off. Cancel on Start Set / Finish Exercise / manual stop.
-3. (Heavier) Foreground service with persistent progress notification, if a live lockscreen ticker is desired.
+**Notification handler:** `Notifications.setNotificationHandler` runs at module load in `services/notifications.ts`. Without it, `expo-notifications` suppresses banner/sound while the app is foregrounded — meaning the user wouldn't see the buzz if they were staring at the rest screen. Override forces show.
+
+**Android battery optimization caveat:** Doze mode can delay scheduled-notification delivery by 10-30+ seconds when the device is idle. The user must mark the app as "Unrestricted" in system Settings → Apps → gym-log → Battery for on-time delivery. We don't request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` programmatically — that's a documented one-time per-device setup. OEM skins (Samsung, Xiaomi/MIUI, OnePlus, Realme) often add additional restriction layers that need separate whitelisting.
+
+**Known cosmetic drift:** the breathing-cat ring (`Animated.timing` on `restRingProgress`) is JS-driven and pauses in background. After a long background, the ring animation will be out of sync with the numeric counter. Not blocking — counter is the actual signal.
 
 ---
 
@@ -194,14 +198,47 @@ Used to validate correctness.
 
 ### 3.6 Settings Page
 
+#### Layout (May 2026 refresh)
+
+Settings is sectioned and uses two horizontal button rows instead of stacked full-width buttons. Each button is a two-line label (action verb on top, context line below) at compact font sizes (13/10) so all three sync actions fit on a phone width.
+
+```
+[Sync not configured banner — only if env vars missing]
+
+Local backup
+[ Export ]   [ Share ]
+  save JSON   send backup
+
+Google Sheets
+[ Push history ]  [ Restore history ]  [ Pull library ]
+   ↑ to Sheets       ↓ from Sheets        ↓ from Sheets
+
+History last pushed: …
+Library last pulled: …
+
+Open spreadsheet ↗   ← only if EXPO_PUBLIC_GSHEETS_SPREADSHEET_URL set
+
+Logged but not in library (n)
+  · <name> (count×)
+  …
+
+[Show Debug JSON]   ← dev panel, sessions/exercises raw dump
+```
+
 #### Features
 
-- Export JSON backup
-- Share backup
-- Sync to Google Sheets (sessions + exercises)
-- Restore from Sheets
-- Sync exercise library (Pass 2, May 2026) — pulls library tab from the Sheet, full-replaces local `exercise_library`
-- "Logged but not in library" nudge panel — passive list of exercise names the user has logged that don't match any library row, prompting them to add the names to their Sheet
+- **Export** — write a local JSON backup file (works with no env vars).
+- **Share** — same export, then share-sheet via `expo-sharing`.
+- **Push history** (`syncToGoogleSheets`) — POST sessions + exercises snapshot to Apps Script.
+- **Restore history** (`restoreFromGoogleSheets`) — destructive. Wipes local sessions/exercises, re-imports from Sheets. `exercise_library` left intact. Confirmation alert before running.
+- **Pull library** (`syncExerciseLibrary`) — GET `?type=library`, full-replace local `exercise_library`.
+- **Open spreadsheet** — `Linking.openURL` to `EXPO_PUBLIC_GSHEETS_SPREADSHEET_URL`. Only renders if the env var is set.
+- **Logged but not in library** — passive list from `getLoggedExercisesNotInLibrary()`. Surfaces names typed into a session that don't match any library row, prompting the user to add them to their Sheet manually then pull.
+- **Sync not configured banner** — `isSyncConfigured()` returns false → red banner explains the env var is missing. Sync still attempts, but the user is told upfront the build is broken.
+
+#### Focus refresh
+
+`useFocusEffect` re-reads last-sync timestamps and the unsynced-names list every time the Settings tab gains focus, so logging an unknown exercise → switching tabs → coming back to Settings shows the new entry without an app reload. Same pattern is used in `components/ActiveSession.tsx` (library names for suggestion chips) and `app/(tabs)/exercises.tsx` (the library-listing screen).
 
 ---
 
@@ -240,13 +277,15 @@ This means the user can edit the library outside the app and have changes propag
 
 ### Completed
 
-- Rest timer (correct, production-safe)
+- Rest timer (timestamp-based, self-correcting visible counter on background→foreground resume)
+- Rest-timer notifications via `expo-notifications` (set rest 90s, exercise transition 120s, foreground display enabled)
 - Set tracking UX
 - Exercise logging (including unknown names — Pass 1, May 2026)
 - Google Sheets sync for sessions + exercises (stable, with strict dedupe)
 - Exercise library sync (Sheets → DB, Pass 2, May 2026) + logged-but-not-in-library nudge
-- Restore-from-Sheets flow
-- Settings integration
+- Restore-from-Sheets flow (sessions/exercises only; library untouched)
+- Settings UX refresh: sectioned layout, three-button sync row, "Sync not configured" banner, "Open spreadsheet" link
+- Focus-based refresh of library data (Home active session, Settings, Exercises tab)
 - Debugging system (used and removed)
 
 ### Stable Areas
@@ -284,18 +323,23 @@ This means the user can edit the library outside the app and have changes propag
 
 ### UX
 
-- Rest timer color change after threshold
+- Rest timer color change after threshold (e.g. red after 0)
 - Haptic feedback on set completion
 - Active set highlighting
-
-### Settings
-
-- Manual refresh on Exercises screen
+- Quick rest-time picker (60/90/120/180s) instead of fixed 90s/120s
+- Warmup-set toggle so warmups don't pollute PR / volume calculations
+- Plate calculator (target weight → bar load breakdown)
+- Keep screen awake during active session (`expo-keep-awake`)
 
 ### Performance
 
 - Memoized DB reads
 - Pagination for large datasets
+
+### Notifications
+
+- Re-anchor the breathing-cat ring animation from `restStartRef` so it doesn't drift on long backgrounds
+- Programmatic prompt to disable battery optimization (via `expo-intent-launcher` to open the system page) so the user doesn't have to be told manually
 
 ---
 
@@ -313,7 +357,8 @@ This means the user can edit the library outside the app and have changes propag
 
 ### Services
 
-- `services/googleSheetsSync.ts` — only sync service; covers sessions + exercises POST and the GET-based restore. No library sync.
+- `services/googleSheetsSync.ts` — sessions + exercises POST sync, GET-based restore, library sync via `?type=library`, plus `isSyncConfigured()` and `getSpreadsheetUrl()` helpers for the Settings UI.
+- `services/notifications.ts` — `expo-notifications` wrapper. Configures the rest-timer Android channel + permission request (`setupNotifications`, called from `_layout.tsx`), exposes `scheduleRestDoneNotification(seconds, kind)` and `cancelRestNotification(id)`, sets a foreground notification handler at module load.
 
 ### UI
 
@@ -378,30 +423,38 @@ sequenceDiagram
   participant User
   participant ActiveSession
   participant TimerUI as Rest Timer UI
+  participant Notif as services/notifications.ts
+  participant OS as Android OS
   User->>ActiveSession: Finish Set
   ActiveSession->>ActiveSession: restStartRef = now
+  ActiveSession->>Notif: scheduleRestDoneNotification(90, "set")
+  Notif->>OS: schedule local notification at +90s
+  OS-->>Notif: id
+  Notif-->>ActiveSession: id (stored in restNotificationIdRef)
   ActiveSession->>TimerUI: show 90s countdown
-  loop Every second
-    ActiveSession->>TimerUI: decrement visible restSeconds
+  loop Every second (foreground only)
+    ActiveSession->>TimerUI: restSeconds = duration - secondsBetween(now, restStartRef)
   end
-  alt Countdown reaches 0
-    ActiveSession->>TimerUI: display +00:01, +00:02...
+  alt JS suspended (app backgrounded / screen off)
+    Note over ActiveSession,TimerUI: setInterval pauses, counter freezes
+    Note over OS: scheduled alarm continues independently
+    OS->>User: buzz + banner at restStartRef + 90s (if battery unrestricted)
+  end
+  alt Countdown reaches 0 in foreground
+    ActiveSession->>TimerUI: display negative seconds (rest exceeded)
     Note over ActiveSession: restStartRef stays active
   end
-  alt User starts next set
+  alt User starts next set (or finishes exercise / manual close)
     User->>ActiveSession: Start Set
+    ActiveSession->>Notif: cancelRestNotification(restNotificationIdRef)
+    Notif->>OS: cancel scheduled alarm
     ActiveSession->>ActiveSession: elapsed = now - restStartRef
     ActiveSession->>ActiveSession: accumulatedRest += elapsed
     ActiveSession->>TimerUI: hide timer
-  else User finishes exercise
-    User->>ActiveSession: Finish Exercise
-    ActiveSession->>ActiveSession: elapsed = now - restStartRef
-    ActiveSession->>ActiveSession: totalRest = accumulatedRest + elapsed
-    ActiveSession->>TimerUI: hide timer
-  else User manually closes rest
-    User->>TimerUI: Tap ✕
-    ActiveSession->>ActiveSession: elapsed = now - restStartRef
-    ActiveSession->>TimerUI: hide timer
+    opt Saving Set rest, restart for next set
+      ActiveSession->>ActiveSession: restStartRef = now
+      ActiveSession->>Notif: scheduleRestDoneNotification(90, "set")
+    end
   end
 ```
 
@@ -413,54 +466,64 @@ sequenceDiagram
 sequenceDiagram
   participant User
   participant SettingsUI as Settings Screen
-  participant SyncService as exerciseLibrarySync.ts
+  participant SyncService as services/googleSheetsSync.ts
   participant AppsScript as Google Apps Script
   participant Sheets as Google Sheets
   participant SQLite as SQLite exercise_library
-  User->>SettingsUI: Tap Sync Exercise Library
+  User->>SettingsUI: Tap Pull library
   SettingsUI->>SyncService: syncExerciseLibrary()
-  SyncService->>AppsScript: POST ?type=exercise_library + secret
-  AppsScript->>Sheets: Read exercise_library sheet
+  SyncService->>AppsScript: GET WEBHOOK_URL?type=library
+  AppsScript->>AppsScript: doGet(e) branches on e.parameter.type === "library"
+  AppsScript->>Sheets: read exercise_library tab via sheetToJson
   Sheets-->>AppsScript: rows
-  AppsScript-->>SyncService: { ok: true, data: [...] }
-  SyncService->>SQLite: BEGIN
+  AppsScript-->>SyncService: { ok: true, exerciseLib: [...] }
+  SyncService->>SyncService: replaceExerciseLibrary(rows)
+  SyncService->>SQLite: BEGIN TRANSACTION
   SyncService->>SQLite: DELETE FROM exercise_library
-  loop For each valid exercise row
+  loop For each row (validates id, defensively re-stringifies tags JSON)
     SyncService->>SQLite: INSERT exercise_library row
   end
-  SyncService->>SQLite: COMMIT
-  SyncService-->>SettingsUI: success
-  SettingsUI->>SettingsUI: update last sync timestamp
-  SettingsUI->>User: show success alert
+  alt Any insert fails
+    SyncService->>SQLite: ROLLBACK
+    SyncService-->>SettingsUI: throw
+  else All inserts succeed
+    SyncService->>SQLite: COMMIT
+    SyncService->>SyncService: AsyncStorage.set last_exercise_library_sync = now
+    SyncService-->>SettingsUI: row count
+    SettingsUI->>SettingsUI: refresh unsynced-names list, last-sync timestamp
+    SettingsUI->>User: "Library synced — N exercises"
+  end
 ```
 
 ---
 
-### 10.4 Auto Exercise Library Bootstrap Flow
+### 10.4 App Boot Flow
 
 ```mermaid
 sequenceDiagram
   participant App as app/_layout.tsx
   participant DB as SQLite
-  participant SyncService as exerciseLibrarySync.ts
-  participant Seed as seedExercises.ts
-  participant Sheets as Google Sheets
-  App->>DB: initDb()
-  App->>SyncService: ensureExerciseLibrary()
-  SyncService->>DB: SELECT COUNT(*) FROM exercise_library
-  alt Library has rows
-    SyncService-->>App: do nothing
-  else Library empty
-    SyncService->>Sheets: fetch remote exercise library
-    alt Remote sync succeeds
-      SyncService->>DB: replace exercise_library table
-    else Remote sync fails
-      SyncService->>Seed: seedExerciseLibrary()
-      Seed->>DB: insert hardcoded fallback exercises
-    end
+  participant Seed as db/seedExercises.ts
+  participant Notif as services/notifications.ts
+  participant OS as Android OS
+  App->>DB: initDb() — create tables, run ALTER migrations
+  DB->>Seed: seedExerciseLibrary() — INSERT OR IGNORE on hardcoded list
+  Seed-->>DB: rows added if missing (no-op once user has run library sync)
+  App->>App: setDbReady(true) — Stack mounts, screens render
+  App->>Notif: setupNotifications() (fire-and-forget)
+  Notif->>OS: setNotificationChannelAsync("rest-timer", HIGH importance)
+  Notif->>OS: getPermissionsAsync()
+  alt Permission already granted
+    Notif-->>App: ready
+  else canAskAgain
+    Notif->>User: system permission prompt
+    User-->>Notif: allow / deny
+  else canAskAgain === false
+    Notif-->>App: not granted (scheduling will silently no-op)
   end
-  App->>App: setDbReady(true)
 ```
+
+(There is no auto-sync of the library on boot — `seedExerciseLibrary` only fills empty rows from the hardcoded list. The user pulls the canonical library from Sheets manually via Settings → Pull library. Earlier drafts of this doc described an `ensureExerciseLibrary()` flow; that code never landed.)
 
 ---
 
@@ -508,27 +571,29 @@ sequenceDiagram
 sequenceDiagram
   participant User
   participant SettingsUI as Settings Screen
-  participant SyncService as googleSheetsSync.ts
+  participant SyncService as services/googleSheetsSync.ts
   participant AppsScript as Google Apps Script
   participant Sheets as Google Sheets
   participant SQLite as SQLite
-  User->>SettingsUI: Tap Restore from Sheets
-  SettingsUI->>User: confirmation alert
-  User->>SettingsUI: Confirm restore
+  User->>SettingsUI: Tap Restore history
+  SettingsUI->>User: "wipes sessions/exercises, library untouched" alert
+  User->>SettingsUI: Confirm
   SettingsUI->>SyncService: restoreFromGoogleSheets()
-  SyncService->>AppsScript: GET/POST restore data
-  AppsScript->>Sheets: read sessions + exercises sheets
+  SyncService->>AppsScript: GET WEBHOOK_URL (no params)
+  AppsScript->>AppsScript: doGet(e) — default branch (no e.parameter.type)
+  AppsScript->>Sheets: read sessions + exercises + exercise_library tabs
   Sheets-->>AppsScript: rows
-  AppsScript-->>SyncService: { sessions, exercises }
-  SyncService->>SQLite: wipe local sessions + exercises
+  AppsScript-->>SyncService: { sessions, exercises, exerciseLib }
+  Note over SyncService: only sessions + exercises are used; exerciseLib is ignored here<br/>(library is managed via the dedicated Pull library action)
+  SyncService->>SQLite: wipeDatabase() — DELETE FROM sessions, exercises<br/>(exercise_library left intact)
   loop sessions
-    SyncService->>SQLite: insert session row
+    SyncService->>SQLite: insertSessionRaw(row)
   end
   loop exercises
-    SyncService->>SQLite: insert exercise row
+    SyncService->>SQLite: insertExerciseRaw(row)
   end
-  SyncService-->>SettingsUI: success
-  SettingsUI->>User: restore complete alert
+  SyncService-->>SettingsUI: done
+  SettingsUI->>User: "Restore complete"
 ```
 
 ---
