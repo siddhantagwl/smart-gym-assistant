@@ -10,7 +10,8 @@ A deeper system overview (rest-timer rationale, sync semantics, sequence diagram
 npm install              # install deps (run once / after pulling)
 npm start                # expo start — Metro + dev menu
 npm run ios              # native iOS build via expo run:ios
-npm run android          # native Android build via expo run:android
+npm run android          # native Android build via expo run:android (debug)
+npm run android:release  # release-variant Android build (the APK the user installs)
 npm run web              # web build (expo start --web)
 npm run lint             # expo lint (eslint-config-expo flat config)
 ```
