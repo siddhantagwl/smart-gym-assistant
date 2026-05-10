@@ -84,8 +84,8 @@ export default function SettingsScreen() {
     if (restoring) return;
 
     Alert.alert(
-      "Restore from Google Sheets",
-      "This will wipe all local data and restore from Google Sheets. Continue?",
+      "Restore workout history",
+      "This wipes local sessions and exercises and re-imports them from Google Sheets. Your exercise library is not affected. Continue?",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -157,132 +157,158 @@ export default function SettingsScreen() {
         </View>
       )}
 
-      <Pressable
-        onPress={onExport}
-        style={{
-          backgroundColor: "#1DB954",
-          paddingVertical: 14,
-          borderRadius: 8,
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ color: "#000", fontSize: 16 }}>Export workout data</Text>
-      </Pressable>
-      <View style={{ height: 12 }} />
+      <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 8 }}>
+        Local backup
+      </Text>
 
-      <Pressable
-        onPress={onShare}
-        style={{
-          backgroundColor: "#444",
-          paddingVertical: 14,
-          borderRadius: 8,
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ color: "#fff", fontSize: 16 }}>Share backup</Text>
-      </Pressable>
-      <View style={{ height: 12 }} />
-
-      <Pressable
-        onPress={async () => {
-          if (syncing) return;
-
-          try {
-            setSyncing(true);
-            await syncToGoogleSheets();
-            const ts = await getLastGoogleSheetsSync();
-            setLastSync(ts);
-            Alert.alert("Sync complete", "Data synced to Google Sheets");
-          } catch (e) {
-            Alert.alert("Sync failed", String(e));
-          } finally {
-            setSyncing(false);
-          }
-        }}
-        style={({ pressed }) => ({
-          backgroundColor: syncing ? "#1f5fa8" : "#2D8CFF",
-          paddingVertical: 14,
-          borderRadius: 8,
-          alignItems: "center",
-          opacity: syncing ? 0.6 : pressed ? 0.85 : 1,
-        })}
-      >
-        <Text style={{ color: "#fff", fontSize: 16 }}>
-          {syncing ? "Syncing…" : "Sync to Google Sheets"}
-        </Text>
-      </Pressable>
-      {lastSync && (
-        <Text
-          style={{
-            marginTop: 10,
-            color: "rgba(255,255,255,0.6)",
-            fontSize: 12,
-          }}
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+        <Pressable
+          onPress={onExport}
+          style={({ pressed }) => ({
+            flex: 1,
+            backgroundColor: "#1DB954",
+            paddingVertical: 14,
+            borderRadius: 8,
+            alignItems: "center",
+            opacity: pressed ? 0.85 : 1,
+          })}
         >
-          Last synced at: {formatDateTime(lastSync)}
-        </Text>
-      )}
+          <Text style={{ color: "#000", fontSize: 13, fontWeight: "600" }}>
+            Export
+          </Text>
+          <Text style={{ color: "rgba(0,0,0,0.6)", fontSize: 10, marginTop: 2 }}>
+            save JSON
+          </Text>
+        </Pressable>
 
-      <View style={{ height: 12 }} />
-
-      <Pressable
-        onPress={onRestore}
-        disabled={restoring}
-        style={({ pressed }) => ({
-          backgroundColor: restoring ? "#4a1a1a" : "#8B1E1E",
-          paddingVertical: 14,
-          borderRadius: 8,
-          alignItems: "center",
-          opacity: restoring ? 0.6 : pressed ? 0.85 : 1,
-        })}
-      >
-        <Text style={{ color: "#fff", fontSize: 16 }}>
-          {restoring ? "Restoring…" : "Restore from Sheets"}
-        </Text>
-      </Pressable>
-
-      <View style={{ height: 12 }} />
-
-      <Pressable
-        onPress={async () => {
-          if (librarySyncing) return;
-
-          try {
-            setLibrarySyncing(true);
-            const count = await syncExerciseLibrary();
-            const ts = await getLastExerciseLibrarySync();
-            setLastLibrarySync(ts);
-            setUnsyncedNames(getLoggedExercisesNotInLibrary());
-            Alert.alert("Library synced", `${count} exercises in library.`);
-          } catch (e) {
-            Alert.alert("Library sync failed", String(e));
-          } finally {
-            setLibrarySyncing(false);
-          }
-        }}
-        disabled={librarySyncing}
-        style={({ pressed }) => ({
-          backgroundColor: librarySyncing ? "#3a3a3a" : "#5a5a5a",
-          paddingVertical: 14,
-          borderRadius: 8,
-          alignItems: "center",
-          opacity: librarySyncing ? 0.6 : pressed ? 0.85 : 1,
-        })}
-      >
-        <Text style={{ color: "#fff", fontSize: 16 }}>
-          {librarySyncing ? "Syncing library…" : "Sync exercise library"}
-        </Text>
-      </Pressable>
-      {lastLibrarySync && (
-        <Text
-          style={{
-            marginTop: 10,
-            color: "rgba(255,255,255,0.6)",
-            fontSize: 12,
-          }}
+        <Pressable
+          onPress={onShare}
+          style={({ pressed }) => ({
+            flex: 1,
+            backgroundColor: "#444",
+            paddingVertical: 14,
+            borderRadius: 8,
+            alignItems: "center",
+            opacity: pressed ? 0.85 : 1,
+          })}
         >
-          Library last synced at: {formatDateTime(lastLibrarySync)}
-        </Text>
+          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
+            Share
+          </Text>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2 }}>
+            send backup
+          </Text>
+        </Pressable>
+      </View>
+
+      <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 8 }}>
+        Google Sheets
+      </Text>
+
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Pressable
+          onPress={async () => {
+            if (syncing) return;
+
+            try {
+              setSyncing(true);
+              await syncToGoogleSheets();
+              const ts = await getLastGoogleSheetsSync();
+              setLastSync(ts);
+              Alert.alert("Sync complete", "Workout history synced to Google Sheets.");
+            } catch (e) {
+              Alert.alert("Sync failed", String(e));
+            } finally {
+              setSyncing(false);
+            }
+          }}
+          disabled={syncing}
+          style={({ pressed }) => ({
+            flex: 1,
+            backgroundColor: syncing ? "#1f5fa8" : "#2D8CFF",
+            paddingVertical: 14,
+            borderRadius: 8,
+            alignItems: "center",
+            opacity: syncing ? 0.6 : pressed ? 0.85 : 1,
+          })}
+        >
+          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
+            {syncing ? "Pushing…" : "Push history"}
+          </Text>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2 }}>
+            ↑ to Sheets
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={onRestore}
+          disabled={restoring}
+          style={({ pressed }) => ({
+            flex: 1,
+            backgroundColor: restoring ? "#4a1a1a" : "#8B1E1E",
+            paddingVertical: 14,
+            borderRadius: 8,
+            alignItems: "center",
+            opacity: restoring ? 0.6 : pressed ? 0.85 : 1,
+          })}
+        >
+          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
+            {restoring ? "Restoring…" : "Restore history"}
+          </Text>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2 }}>
+            ↓ from Sheets
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={async () => {
+            if (librarySyncing) return;
+
+            try {
+              setLibrarySyncing(true);
+              const count = await syncExerciseLibrary();
+              const ts = await getLastExerciseLibrarySync();
+              setLastLibrarySync(ts);
+              setUnsyncedNames(getLoggedExercisesNotInLibrary());
+              Alert.alert("Library synced", `${count} exercises in library.`);
+            } catch (e) {
+              Alert.alert("Library sync failed", String(e));
+            } finally {
+              setLibrarySyncing(false);
+            }
+          }}
+          disabled={librarySyncing}
+          style={({ pressed }) => ({
+            flex: 1,
+            backgroundColor: librarySyncing ? "#3a3a3a" : "#5a5a5a",
+            paddingVertical: 14,
+            borderRadius: 8,
+            alignItems: "center",
+            opacity: librarySyncing ? 0.6 : pressed ? 0.85 : 1,
+          })}
+        >
+          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
+            {librarySyncing ? "Syncing…" : "Pull library"}
+          </Text>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2 }}>
+            ↓ from Sheets
+          </Text>
+        </Pressable>
+      </View>
+
+      {(lastSync || lastLibrarySync) && (
+        <View style={{ marginTop: 10 }}>
+          {lastSync && (
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>
+              History last pushed: {formatDateTime(lastSync)}
+            </Text>
+          )}
+          {lastLibrarySync && (
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 2 }}>
+              Library last pulled: {formatDateTime(lastLibrarySync)}
+            </Text>
+          )}
+        </View>
       )}
 
       {unsyncedNames.length > 0 && (
