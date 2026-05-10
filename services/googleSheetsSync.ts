@@ -17,6 +17,12 @@ export function isSyncConfigured(): boolean {
   return Boolean(WEBHOOK_URL && SHARED_SECRET);
 }
 
+// Optional: direct URL of the user's spreadsheet for quick browser access.
+// Independent of sync config — sync works without it; this is just a UI link.
+export function getSpreadsheetUrl(): string | null {
+  return process.env.EXPO_PUBLIC_GSHEETS_SPREADSHEET_URL || null;
+}
+
 export async function syncToGoogleSheets() {
   if (!WEBHOOK_URL || !SHARED_SECRET) {
     throw new Error("Google Sheets sync is not configured");

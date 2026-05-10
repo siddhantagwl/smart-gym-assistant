@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Sharing from "expo-sharing";
 import Constants from "expo-constants";
@@ -16,6 +16,7 @@ import {
   syncExerciseLibrary,
   getLastExerciseLibrarySync,
   isSyncConfigured,
+  getSpreadsheetUrl,
 } from "@/services/googleSheetsSync";
 
 function formatDateTime(ts: string) {
@@ -309,6 +310,17 @@ export default function SettingsScreen() {
             </Text>
           )}
         </View>
+      )}
+
+      {getSpreadsheetUrl() && (
+        <Pressable
+          onPress={() => Linking.openURL(getSpreadsheetUrl()!)}
+          style={{ marginTop: 10, alignSelf: "flex-start" }}
+        >
+          <Text style={{ color: "#4da6ff", fontSize: 12 }}>
+            Open spreadsheet ↗
+          </Text>
+        </Pressable>
       )}
 
       {unsyncedNames.length > 0 && (
