@@ -1,5 +1,6 @@
 import { View, Text, ScrollView } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
 
 import { Session } from "@/domain/session";
 import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats } from "@/db/sessions";
@@ -28,9 +29,15 @@ export default function HomeScreen() {
     ? "pending"
     : "idle";
 
-  // Re-derive stats whenever the active session ends (by depending on activeSession),
-  // so finishing a workout updates the chips immediately.
-  const stats = mode === "active" ? null : getWorkoutStats();
+  // Re-derive on every focus so deletions made in session-details (or any
+  // other screen) are reflected when the user returns to Home.
+  const [stats, setStats] = useState<{ thisWeek: number; currentStreak: number } | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      setStats(activeSession ? null : getWorkoutStats());
+    }, [activeSession])
+  );
 
   useEffect(() => {
     const s = getActiveSession();
