@@ -1,16 +1,21 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Sharing from "expo-sharing";
 import Constants from "expo-constants";
+import { useFocusEffect } from "expo-router";
 
 import { getAllExercises } from "@/db/exercises";
+import { getLoggedExercisesNotInLibrary } from "@/db/exerciseLibrary";
 import { exportAllDataToFile } from "@/db/export";
 import { getAllSessions } from "@/db/sessions";
 import {
   getLastGoogleSheetsSync,
   syncToGoogleSheets,
   restoreFromGoogleSheets,
+  syncExerciseLibrary,
+  getLastExerciseLibrarySync,
+  isSyncConfigured,
 } from "@/services/googleSheetsSync";
 
 function formatDateTime(ts: string) {
@@ -32,10 +37,19 @@ export default function SettingsScreen() {
   const [showDebug, setShowDebug] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const [showExercises, setShowExercises] = useState(false);
+  const [lastLibrarySync, setLastLibrarySync] = useState<string | null>(null);
+  const [librarySyncing, setLibrarySyncing] = useState(false);
+  const [unsyncedNames, setUnsyncedNames] = useState<
+    { name: string; count: number; lastLogged: string }[]
+  >([]);
 
-  useEffect(() => {
-    getLastGoogleSheetsSync().then(setLastSync);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getLastGoogleSheetsSync().then(setLastSync);
+      getLastExerciseLibrarySync().then(setLastLibrarySync);
+      setUnsyncedNames(getLoggedExercisesNotInLibrary());
+    }, [])
+  );
 
   async function onExport() {
     try {
@@ -112,6 +126,36 @@ export default function SettingsScreen() {
           v{Constants.expoConfig?.version ?? "—"}
         </Text>
       </View>
+
+      {!isSyncConfigured() && (
+        <View
+          style={{
+            backgroundColor: "rgba(229, 57, 53, 0.15)",
+            borderColor: "#e53935",
+            borderWidth: 1,
+            borderRadius: 8,
+            padding: 12,
+            marginBottom: 16,
+          }}
+        >
+          <Text style={{ color: "#ff8a80", fontSize: 13, fontWeight: "600" }}>
+            Sync not configured
+          </Text>
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.7)",
+              fontSize: 12,
+              marginTop: 4,
+              lineHeight: 16,
+            }}
+          >
+            EXPO_PUBLIC_GSHEETS_WEBHOOK_URL or EXPO_PUBLIC_GSHEETS_SECRET is
+            missing from this build. Sheets sync, restore, and library sync
+            will all fail. Set both vars in .env (local builds) or via EAS
+            env (cloud builds), then rebuild.
+          </Text>
+        </View>
+      )}
 
       <Pressable
         onPress={onExport}
@@ -196,6 +240,88 @@ export default function SettingsScreen() {
           {restoring ? "Restoring…" : "Restore from Sheets"}
         </Text>
       </Pressable>
+
+      <View style={{ height: 12 }} />
+
+      <Pressable
+        onPress={async () => {
+          if (librarySyncing) return;
+
+          try {
+            setLibrarySyncing(true);
+            const count = await syncExerciseLibrary();
+            const ts = await getLastExerciseLibrarySync();
+            setLastLibrarySync(ts);
+            setUnsyncedNames(getLoggedExercisesNotInLibrary());
+            Alert.alert("Library synced", `${count} exercises in library.`);
+          } catch (e) {
+            Alert.alert("Library sync failed", String(e));
+          } finally {
+            setLibrarySyncing(false);
+          }
+        }}
+        disabled={librarySyncing}
+        style={({ pressed }) => ({
+          backgroundColor: librarySyncing ? "#3a3a3a" : "#5a5a5a",
+          paddingVertical: 14,
+          borderRadius: 8,
+          alignItems: "center",
+          opacity: librarySyncing ? 0.6 : pressed ? 0.85 : 1,
+        })}
+      >
+        <Text style={{ color: "#fff", fontSize: 16 }}>
+          {librarySyncing ? "Syncing library…" : "Sync exercise library"}
+        </Text>
+      </Pressable>
+      {lastLibrarySync && (
+        <Text
+          style={{
+            marginTop: 10,
+            color: "rgba(255,255,255,0.6)",
+            fontSize: 12,
+          }}
+        >
+          Library last synced at: {formatDateTime(lastLibrarySync)}
+        </Text>
+      )}
+
+      {unsyncedNames.length > 0 && (
+        <View
+          style={{
+            marginTop: 16,
+            padding: 12,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: "#333",
+            backgroundColor: "#0d0d0d",
+          }}
+        >
+          <Text style={{ color: "#FFC107", fontSize: 13, marginBottom: 6 }}>
+            Logged but not in library ({unsyncedNames.length})
+          </Text>
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.5)",
+              fontSize: 11,
+              marginBottom: 8,
+            }}
+          >
+            Add these to your Google Sheet&apos;s library tab, then sync.
+          </Text>
+          {unsyncedNames.map((u) => (
+            <Text
+              key={u.name}
+              style={{
+                color: "#ddd",
+                fontSize: 12,
+                paddingVertical: 2,
+              }}
+            >
+              · {u.name} ({u.count}×)
+            </Text>
+          ))}
+        </View>
+      )}
 
       <View style={{ height: 16 }} />
 

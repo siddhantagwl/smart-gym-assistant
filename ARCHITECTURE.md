@@ -131,9 +131,9 @@ Known limitations to fix when this becomes a real problem:
 
 #### Source of truth
 
-The library is **local-only**. It comes from a hardcoded TypeScript list in `db/seedExercises.ts` and is loaded into SQLite via `seedExerciseLibrary()` on every `initDb()` call. The seeder uses `INSERT OR IGNORE`, so it is idempotent — existing rows are never overwritten, new rows in the seed file get added on next boot.
+Google Sheets is canonical. The user maintains an `exercise_library` tab with columns `id | name | video_url | primary_muscle | tags` (where `tags` is a JSON-array string per cell). The app pulls this into the local `exercise_library` table on demand via `syncExerciseLibrary()`.
 
-There is **no Google Sheets → library sync**. Earlier drafts of this document described one (`services/exerciseLibrarySync.ts`, `ensureExerciseLibrary()`, full-replace transaction); that code never landed. Do not reason from those mentions.
+The hardcoded list in `db/seedExercises.ts` exists only as a first-install bootstrap — it runs via `INSERT OR IGNORE` inside `seedExerciseLibrary()` so it never overwrites synced rows. Once the user runs library sync, the seed is effectively replaced.
 
 #### Schema
 
@@ -146,15 +146,20 @@ exercise_library
 - tags (TEXT, JSON-stringified)
 ```
 
-#### Adding new exercises today
+#### Sync mechanics (Pass 2, May 2026)
 
-- Edit `db/seedExercises.ts` and rebuild. New rows get inserted on next app boot.
-- Or (post Pass 1, May 2026): log a workout with an unrecognised name. The session row carries the typed name as both `name` and synthetic `exercise_library_id`, but the **library table itself is not updated** by this path. A "promote to library" UI in Settings (Pass 2) is the planned reconciliation.
+- App calls `fetch(WEBHOOK_URL + "?type=library")` → Apps Script `doGet` branches on `e.parameter.type === "library"` and returns `{ ok: true, exerciseLib: [...] }`.
+- `replaceExerciseLibrary()` in `db/exerciseLibrary.ts` runs `BEGIN; DELETE FROM exercise_library; INSERT ...; COMMIT;` (rolls back on any failure). **Full replace, no upsert** — Sheet wins, period.
+- `tags` is round-tripped through `JSON.parse → JSON.stringify` defensively; malformed cells become `[]` rather than throwing.
+
+#### Reconciliation: logged-but-not-in-library names
+
+Pass 1 lets users log exercises with names not in the library; the session row stores the typed name as a synthetic `exercise_library_id`. `getLoggedExercisesNotInLibrary()` (in `db/exerciseLibrary.ts`) surfaces these on the Settings screen as a passive list ("Logged but not in library — add these to your Google Sheet's library tab, then sync."). It does **not** auto-write to the Sheet — the user copies them over manually and runs library sync.
 
 #### Entry points
 
-- App boot: `seedExerciseLibrary()` runs as part of `initDb()`.
-- No manual library-sync button exists in Settings.
+- App boot: `seedExerciseLibrary()` runs as part of `initDb()`. Idempotent.
+- Settings → "Sync exercise library" button: pulls from Sheet and full-replaces local table.
 
 ---
 
@@ -195,8 +200,8 @@ Used to validate correctness.
 - Share backup
 - Sync to Google Sheets (sessions + exercises)
 - Restore from Sheets
-
-There is no "Sync exercise library" button. Past drafts mentioned one — it does not exist.
+- Sync exercise library (Pass 2, May 2026) — pulls library tab from the Sheet, full-replaces local `exercise_library`
+- "Logged but not in library" nudge panel — passive list of exercise names the user has logged that don't match any library row, prompting them to add the names to their Sheet
 
 ---
 
@@ -216,9 +221,13 @@ There is no "Sync exercise library" button. Past drafts mentioned one — it doe
 | DB       | Storage          |
 | Services | Network + sync   |
 
-### 4.3 Google Sheets as session archive
+### 4.3 Google Sheets as canonical store
 
-Google Sheets stores a copy of every session and exercise the user logs, via the Apps Script POST endpoint. It is a one-way archive + restore mechanism, not a CMS — the library is **not** managed in Sheets.
+Google Sheets is the source of truth for two things:
+- **Sessions + exercises archive** — the app POSTs every logged session to Apps Script, and `restoreFromGoogleSheets` can rebuild the local DB from there.
+- **Exercise library** — the user maintains the library tab in the Sheet directly; the app pulls it via `syncExerciseLibrary` (full-replace).
+
+This means the user can edit the library outside the app and have changes propagate on next sync — no app rebuild needed.
 
 ### 4.4 Fail-Safe Sync
 
@@ -235,6 +244,7 @@ Google Sheets stores a copy of every session and exercise the user logs, via the
 - Set tracking UX
 - Exercise logging (including unknown names — Pass 1, May 2026)
 - Google Sheets sync for sessions + exercises (stable, with strict dedupe)
+- Exercise library sync (Sheets → DB, Pass 2, May 2026) + logged-but-not-in-library nudge
 - Restore-from-Sheets flow
 - Settings integration
 - Debugging system (used and removed)
@@ -270,7 +280,7 @@ Google Sheets stores a copy of every session and exercise the user logs, via the
 ### Data Layer
 
 - Delta sync for sessions/exercises (based on timestamps) instead of full snapshot
-- "Promote to library" flow (Pass 2): surface logged exercise names that aren't in `exercise_library` and let the user add them with a muscle group, so they show up as suggestion chips next time
+- "Promote to library" auto-write: skip the manual copy step by POSTing logged-but-not-in-library names directly into the Sheet's library tab
 
 ### UX
 

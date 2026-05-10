@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import { Animated, Pressable, Text, TextInput, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
@@ -259,11 +260,15 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     setSessionExercises(rows);
   }, [activeSession.id]);
 
-  useEffect(() => {
-    const allLibExercises = getAllLibraryExercises();
-    setExerciseLibrary(allLibExercises);
-    setExerciseLibraryNames(allLibExercises.map((e) => e.name));
-  }, []);
+  // Refresh the in-memory library whenever this screen regains focus, so
+  // suggestion chips reflect new entries pulled by Settings → Sync library.
+  useFocusEffect(
+    useCallback(() => {
+      const allLibExercises = getAllLibraryExercises();
+      setExerciseLibrary(allLibExercises);
+      setExerciseLibraryNames(allLibExercises.map((e) => e.name));
+    }, [])
+  );
 
   function formatDuration(totalSeconds: number) {
     const h = Math.floor(totalSeconds / 3600);

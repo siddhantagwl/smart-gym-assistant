@@ -68,7 +68,7 @@ Two principles drive almost every design choice — violating either is usually 
 
 Returning `null` while not ready is intentional. Don't render fallback UI here; the goal is to guarantee no screen reads from an uninitialised DB.
 
-There is **no** remote library sync on boot. The exercise library is local-only, sourced from the hardcoded seed file.
+There is no automatic library sync on boot. `seedExerciseLibrary()` only fills the table on first install (idempotent). The user runs `syncExerciseLibrary()` manually from Settings to pull the canonical library from Google Sheets.
 
 ### Routing
 
@@ -98,13 +98,12 @@ All SQL lives under `db/` — never inline `db.runSync` in components. Conventio
 
 ### Sync semantics (read before touching)
 
-Only one sync flow exists, and it covers sessions + exercises only:
+Two sync flows, both in `services/googleSheetsSync.ts`:
 
-- **Sessions + exercises** (SQLite → Sheets, in `services/googleSheetsSync.ts`): full snapshot POST; the Apps Script handles dedup by ID. Restore (GET) flow wipes local sessions/exercises and re-inserts from Sheets via `insertSessionRaw` / `insertExerciseRaw`.
+- **Sessions + exercises** (SQLite → Sheets, `syncToGoogleSheets`): full snapshot POST; the Apps Script handles dedup by ID. Restore (`restoreFromGoogleSheets`, GET no-param) wipes local sessions/exercises and re-inserts from Sheets via `insertSessionRaw` / `insertExerciseRaw`. Restore does **not** touch `exercise_library`.
+- **Exercise library** (Sheets → SQLite, `syncExerciseLibrary`): GET `?type=library`, full-replace inside a transaction (`replaceExerciseLibrary` in `db/exerciseLibrary.ts`). Sheet is authoritative; locally added entries are wiped on next sync. The hardcoded seed in `db/seedExercises.ts` only fills the table on first install via `INSERT OR IGNORE` — once the user runs library sync, they're effectively replacing the seed.
 
-The **exercise library is not synced**. It is seeded once from `db/seedExercises.ts` and only updated by editing that source file (or, after Pass 2, via in-app library writes — TBD). Past versions of these docs claimed a Sheets→library sync; that code never landed.
-
-The Sheets sync requires `EXPO_PUBLIC_GSHEETS_WEBHOOK_URL` + `EXPO_PUBLIC_GSHEETS_SECRET`.
+Both sync flows require `EXPO_PUBLIC_GSHEETS_WEBHOOK_URL` + `EXPO_PUBLIC_GSHEETS_SECRET`.
 
 ### Rest timer (non-obvious)
 
