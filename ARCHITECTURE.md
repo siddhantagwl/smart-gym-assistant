@@ -123,6 +123,12 @@ Target platform is Android. When the app is backgrounded (user switches apps, lo
 - Finish Set button (red)
 - Finish disabled until Start pressed
 
+#### Finish Exercise auto-saves the in-flight set
+
+If a set is mid-flight (`isSetInProgress` in `AddExercise.tsx`) when the user taps **Finish Exercise**, that set is counted as completed before the exercise is recorded — i.e. tapping Finish Exercise is treated as "Finish Set + Finish Exercise" in one gesture. The same PR check that runs in `saveSet()` also runs for the auto-saved set.
+
+Why: previously, `finishExercise()` only read the `sets` counter, which is bumped exclusively in `saveSet()`. Habitual users would tap Finish Exercise on their last set without first tapping Finish Set, silently losing the set. The button label flips to `Finish Set N & Exercise` while a set is active so the behavior is visible; `canFinish` is also relaxed (`sets > 0 || isSetInProgress`) so the very first set can be auto-saved on a single-set exercise. Don't refactor `finishExercise` back to ignore the in-flight set without restoring an equivalent safety net.
+
 #### Enhancements
 
 - Animated set chips
