@@ -855,9 +855,21 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   }
 
   // ✅ Finish Exercise
-  function finishExercise() {
+  function finishExercise(autoSaveSetInProgress: boolean = false) {
     if (!isExerciseActive || !currentExerciseStart) return;
-    if (sets === 0) return;
+
+    // Auto-save: count the mid-flight set so the user doesn't lose it.
+    const finalSets = sets + (autoSaveSetInProgress ? 1 : 0);
+    if (finalSets === 0) return;
+
+    // Mirror saveSet()'s PR check for the auto-saved set.
+    if (autoSaveSetInProgress && !prFiredRef.current && weightKg > 0) {
+      const dbMax = getMaxWeightForExercise(exerciseName);
+      if (weightKg > dbMax) {
+        prFiredRef.current = true;
+        setPrBadge({ weight: weightKg });
+      }
+    }
 
     const finalRestFromTimer = stopRestTimer();
     const totalRest = accumulatedRest + finalRestFromTimer;
@@ -871,7 +883,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       sessionId: activeSession.id,
       exerciseLibraryId: exerciseLibraryId ?? exerciseName,
       name: exerciseName,
-      sets,
+      sets: finalSets,
       reps,
       weightKg,
       note: exerciseNote,
@@ -1149,11 +1161,11 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
             setWeightKg((w) => Math.round((w + 0.5) * 10) / 10)
           }
           onNoteChange={(text) => setExerciseNote(text)}
-          onSave={() => {
+          onSave={(autoSaveSetInProgress) => {
             if (!isExerciseActive) {
               startExercise();
             } else {
-              finishExercise();
+              finishExercise(autoSaveSetInProgress);
             }
           }}
           onWeightCommit={(v) => setWeightKg(v)}

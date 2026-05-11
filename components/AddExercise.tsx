@@ -24,7 +24,7 @@ type AddExerciseProps = {
   onWeightMinus: () => void;
   onWeightPlus: () => void;
 
-  onSave: () => void;
+  onSave: (autoSaveSetInProgress?: boolean) => void;
 
   onSaveSet: () => void;
   onStartSet: () => void;
@@ -269,7 +269,8 @@ export default function AddExercise({
   }, [exerciseName, suggestions]);
 
   const canStart = exerciseName.trim().length > 0;
-  const canFinish = sets > 0;
+  // Allow Finish Exercise when a set is mid-flight too — that set will be auto-saved.
+  const canFinish = sets > 0 || isSetInProgress;
   const mainDisabled = isExerciseActive ? !canFinish : !canStart;
 
   return (
@@ -637,7 +638,7 @@ export default function AddExercise({
 
         {!isExerciseActive ? (
           <Pressable
-            onPress={onSave}
+            onPress={() => onSave()}
             disabled={!canStart}
             style={{
               backgroundColor: !canStart ? "#333" : "#222",
@@ -659,7 +660,17 @@ export default function AddExercise({
           </Pressable>
         ) : (
           <Pressable
-            onPress={onSave}
+            onPress={() => {
+              // If a set is mid-flight, treat Finish Exercise as "Finish Set + Finish Exercise"
+              // so the user doesn't silently lose the last set they just performed.
+              const autoSave = isSetInProgress;
+              if (autoSave) {
+                setIsSetInProgress(false);
+                setStartRef.current = null;
+                setSetNow(null);
+              }
+              onSave(autoSave);
+            }}
             disabled={!canFinish}
             style={{
               backgroundColor: !canFinish ? "#333" : "#222",
@@ -676,7 +687,7 @@ export default function AddExercise({
                 fontWeight: "600",
               }}
             >
-              Finish Exercise
+              {isSetInProgress ? `Finish Set ${sets + 1} & Exercise` : "Finish Exercise"}
             </Text>
           </Pressable>
         )}
