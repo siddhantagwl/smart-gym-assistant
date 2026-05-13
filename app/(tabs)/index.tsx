@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from "react-native";
+import { View, Text, ScrollView, Pressable } from "react-native";
 import { useState, useEffect, useCallback } from "react";
 import { useFocusEffect } from "expo-router";
 
@@ -22,6 +22,7 @@ const colors = {
 export default function HomeScreen() {
   const [activeSession, setActiveSession] = useState<Session | null>(null); // “In-progress session that the user is currently working on” state
   const [pendingSession, setPendingSession] = useState<StoredSession | null>(null); // “DB knows about it, but it hasn’t started yet” state
+  const [showMeaning, setShowMeaning] = useState(false);
 
   const mode: HomeMode = activeSession
     ? "active"
@@ -61,7 +62,10 @@ export default function HomeScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ alignItems: "center", marginTop: 48, marginBottom: 24 }}>
+        <Pressable
+          onPress={() => setShowMeaning((v) => !v)}
+          style={{ alignItems: "center", marginTop: 48, marginBottom: 24 }}
+        >
           <Text
             style={{
               color: colors.text,
@@ -84,7 +88,32 @@ export default function HomeScreen() {
           >
             Train · Log · Repeat
           </Text>
-        </View>
+          {showMeaning && (
+            <Text
+              style={{
+                color: "rgba(255,255,255,0.4)",
+                fontSize: 12,
+                fontStyle: "italic",
+                letterSpacing: 0.3,
+                marginTop: 16,
+                maxWidth: 280,
+                textAlign: "center",
+                lineHeight: 18,
+              }}
+            >
+              <Text
+                style={{
+                  backgroundColor: "rgba(255,153,51,0.18)",
+                  color: "rgba(255,200,140,0.95)",
+                  fontStyle: "normal",
+                }}
+              >
+                {" साधना "}
+              </Text>
+              {" — Sanskrit for daily, disciplined practice. The work you return to until it becomes who you are."}
+            </Text>
+          )}
+        </Pressable>
 
         {stats && (stats.currentStreak > 0 || stats.thisWeek > 0) ? (
           <View

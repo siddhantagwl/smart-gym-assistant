@@ -427,6 +427,29 @@ export default function SettingsScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
+
+      <View style={{ marginTop: 24, alignItems: "center" }}>
+        <Text
+          style={{
+            color: "rgba(255,255,255,0.3)",
+            fontSize: 11,
+            textAlign: "center",
+            lineHeight: 16,
+            maxWidth: 280,
+          }}
+        >
+          {"Sadhana ("}
+          <Text
+            style={{
+              backgroundColor: "rgba(255,153,51,0.18)",
+              color: "rgba(255,200,140,0.9)",
+            }}
+          >
+            {"साधना"}
+          </Text>
+          {") — Sanskrit for daily, disciplined practice."}
+        </Text>
+      </View>
       </View>
     </SafeAreaView>
   );

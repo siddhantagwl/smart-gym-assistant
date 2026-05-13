@@ -1,5 +1,7 @@
 # Sadhana — Architecture, Features, and Current Status
 
+*Sadhana* (साधना) is the Sanskrit term for a daily, disciplined practice — the work you return to until it becomes who you are. The app is named for the same intent applied to training: not a one-off workout logger, but the daily ritual.
+
 ## 1. Core Idea
 
 A mobile-first gym logging application focused on:
