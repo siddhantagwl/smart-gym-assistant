@@ -1,6 +1,17 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { ReactNode, useMemo, useState, useEffect, useRef } from "react";
 import { Animated } from "react-native";
 import { View, Text, Pressable, TextInput, Keyboard } from "react-native";
+import { WeightUnit } from "@/domain/exercise";
+
+const KG_PER_LB = 0.45359237;
+
+function kgToLb(kg: number): number {
+  return Math.round((kg / KG_PER_LB) * 10) / 10;
+}
+
+function lbToKg(lb: number): number {
+  return Math.round(lb * KG_PER_LB * 10) / 10;
+}
 
 type AddExerciseProps = {
   titleColor: string;
@@ -12,6 +23,7 @@ type AddExerciseProps = {
   sets: number;
   reps: number;
   weightKg: number;
+  weightUnit: WeightUnit;
   note: string;
 
   onNoteChange: (text: string) => void;
@@ -23,6 +35,8 @@ type AddExerciseProps = {
 
   onWeightMinus: () => void;
   onWeightPlus: () => void;
+
+  onWeightUnitChange: (u: WeightUnit) => void;
 
   onSave: (autoSaveSetInProgress?: boolean) => void;
 
@@ -51,7 +65,7 @@ function Stepper({
   onPlus,
   onCommit,
 }: {
-  label: string;
+  label: ReactNode;
   value: number;
   onMinus: () => void;
   onPlus: () => void;
@@ -69,7 +83,11 @@ function Stepper({
 
   return (
     <View style={{ width: "100%" }}>
-      <Text style={{ color: "#aaa", marginBottom: 6, fontSize: 12 }}>{label}</Text>
+      {typeof label === "string" ? (
+        <Text style={{ color: "#aaa", marginBottom: 6, fontSize: 12 }}>{label}</Text>
+      ) : (
+        <View style={{ marginBottom: 6 }}>{label}</View>
+      )}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Pressable
           onPress={onMinus}
@@ -156,6 +174,7 @@ export default function AddExercise({
   sets,
   reps,
   weightKg,
+  weightUnit,
   note,
   onNoteChange,
   onSelectExercise,
@@ -164,6 +183,7 @@ export default function AddExercise({
   onRepsPlus,
   onWeightMinus,
   onWeightPlus,
+  onWeightUnitChange,
   onSave,
   onSaveSet,
   onStartSet,
@@ -172,6 +192,21 @@ export default function AddExercise({
   onWeightCommit,
   lastTime,
 }: AddExerciseProps) {
+  const isLb = weightUnit === "lb";
+  const displayedWeight = isLb ? kgToLb(weightKg) : weightKg;
+
+  function stepWeight(direction: 1 | -1) {
+    if (isLb) {
+      // Step by 2.5 lb in lb mode (matches the 1.13 kg increment of a typical
+      // small plate pair). Convert through kg so storage stays canonical.
+      const nextLb = Math.max(0, Math.round((displayedWeight + direction * 2.5) * 10) / 10);
+      onWeightCommit(lbToKg(nextLb));
+    } else if (direction === 1) {
+      onWeightPlus();
+    } else {
+      onWeightMinus();
+    }
+  }
   const [showNote, setShowNote] = useState(false);
   const [isNameFocused, setIsNameFocused] = useState(false);
 
@@ -389,7 +424,8 @@ export default function AddExercise({
             }}
           >
             <Text style={{ color: "#FFC107", fontSize: 12, fontWeight: "500" }}>
-              Prev logged · {lastTime.sets}×{lastTime.reps} · {lastTime.weightKg}kg
+              Prev logged · {lastTime.sets}×{lastTime.reps} ·{" "}
+              {isLb ? `${kgToLb(lastTime.weightKg)}lb` : `${lastTime.weightKg}kg`}
             </Text>
           </View>
         ) : (
@@ -418,12 +454,48 @@ export default function AddExercise({
 
           <View style={{ flex: 1 }}>
             <Stepper
-              label="Kg"
-              value={weightKg}
-              onMinus={onWeightMinus}
-              onPlus={onWeightPlus}
+              label={
+                <View style={{ flexDirection: "row", gap: 4 }}>
+                  {(["kg", "lb"] as const).map((u) => {
+                    const active = weightUnit === u;
+                    return (
+                      <Pressable
+                        key={u}
+                        onPress={() => {
+                          if (!active) onWeightUnitChange(u);
+                        }}
+                        style={{
+                          paddingVertical: 2,
+                          paddingHorizontal: 8,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: active ? "#4CAF50" : "#222",
+                          backgroundColor: active
+                            ? "rgba(76,175,80,0.12)"
+                            : "transparent",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: active ? "#4CAF50" : "#777",
+                            fontSize: 11,
+                            fontWeight: active ? "700" : "500",
+                            letterSpacing: 0.4,
+                          }}
+                        >
+                          {u.toUpperCase()}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              }
+              value={displayedWeight}
+              onMinus={() => stepWeight(-1)}
+              onPlus={() => stepWeight(1)}
               onCommit={(v) => {
-                if (v >= 0) onWeightCommit(v);
+                if (v < 0) return;
+                onWeightCommit(isLb ? lbToKg(v) : v);
               }}
             />
           </View>

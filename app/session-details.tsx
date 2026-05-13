@@ -396,6 +396,9 @@ export default function SessionDetailsScreen() {
                     </View>
                     <Text style={{ color: colors.muted }}>
                       {item.sets} sets · {item.reps} reps · {item.weightKg} kg
+                      {item.weightUnit === "lb"
+                        ? `  (${Math.round((item.weightKg / 0.45359237) * 10) / 10} lb)`
+                        : ""}
                     </Text>
                     {isPR && delta !== null && (
                       <Text

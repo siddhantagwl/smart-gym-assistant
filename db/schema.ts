@@ -56,6 +56,10 @@ export function initDb() {
     ensureColumn("exercises", "end_time", "TEXT NOT NULL DEFAULT ''");
     ensureColumn("exercises", "rest_seconds", "INTEGER NOT NULL DEFAULT 0");
     ensureColumn("exercises", "exercise_library_id", "TEXT NOT NULL DEFAULT ''");
+    // weight_kg stays canonical; weight_unit records which unit the user
+    // typed in so history can echo it back ("(220 lb)") even though storage
+    // and PR/aggregation logic always use kg.
+    ensureColumn("exercises", "weight_unit", "TEXT NOT NULL DEFAULT 'kg'");
 
     seedExerciseLibrary();
 

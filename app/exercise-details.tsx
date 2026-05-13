@@ -96,6 +96,9 @@ export default function ExerciseDetailsScreen() {
                 }}
               >
                 {item.sets} sets · {item.reps} reps · {item.weightKg} kg
+                {item.weightUnit === "lb"
+                  ? `  (${Math.round((item.weightKg / 0.45359237) * 10) / 10} lb)`
+                  : ""}
               </Text>
 
               <View

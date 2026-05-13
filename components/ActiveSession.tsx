@@ -50,6 +50,7 @@ function SessionExerciseList({
     sets: number;
     reps: number;
     weightKg: number;
+    weightUnit: "kg" | "lb";
     restSeconds: number;
     startTime: string;
     endTime: string;
@@ -92,6 +93,9 @@ function SessionExerciseList({
 
             <Text style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
               {e.sets} sets · {e.reps} reps · {e.weightKg} kg
+              {e.weightUnit === "lb"
+                ? `  (${Math.round((e.weightKg / 0.45359237) * 10) / 10} lb)`
+                : ""}
             </Text>
 
             <Text style={{ color: "#777", fontSize: 11, marginTop: 2 }}>
@@ -119,6 +123,10 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   const [sets, setSets] = useState(0);
   const [reps, setReps] = useState(10);
   const [weightKg, setWeightKg] = useState(10);
+  // Session-sticky: if a machine is in lb the user toggles once and it stays
+  // for the rest of the session. Storage is always kg; this only controls
+  // the input/display unit and the (X lb) hint on saved sets.
+  const [weightUnit, setWeightUnit] = useState<"kg" | "lb">("kg");
 
   const [exerciseNote, setExerciseNote] = useState("");
   const [sessionNote, setSessionNote] = useState("");
@@ -139,6 +147,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       sets: number;
       reps: number;
       weightKg: number;
+      weightUnit: "kg" | "lb";
       restSeconds: number;
       startTime: string;
       endTime: string;
@@ -886,6 +895,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       sets: finalSets,
       reps,
       weightKg,
+      weightUnit,
       note: exerciseNote,
       restSeconds: totalRest,
       startTime: currentExerciseStart.toISOString(),
@@ -1141,6 +1151,8 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
           sets={sets}
           reps={reps}
           weightKg={weightKg}
+          weightUnit={weightUnit}
+          onWeightUnitChange={setWeightUnit}
           note={exerciseNote}
           onSelectExercise={(name) => {
             setExerciseName(name);

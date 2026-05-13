@@ -52,6 +52,7 @@ export async function syncToGoogleSheets() {
       sets: e.sets,
       reps: e.reps,
       weight_kg: e.weightKg,
+      weight_unit: e.weightUnit,
       rest_seconds: e.restSeconds ?? 0,
       start_time: e.startTime,
       end_time: e.endTime,
