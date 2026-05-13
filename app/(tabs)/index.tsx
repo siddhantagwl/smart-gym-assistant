@@ -61,9 +61,30 @@ export default function HomeScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={{ color: colors.text, fontSize: 28, marginBottom: 20, marginTop: 40 }}>
-          Train. Log. Progress.
-        </Text>
+        <View style={{ alignItems: "center", marginTop: 48, marginBottom: 24 }}>
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 44,
+              fontWeight: "300",
+              letterSpacing: 4,
+            }}
+          >
+            Sadhana
+          </Text>
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.45)",
+              fontSize: 11,
+              fontWeight: "500",
+              letterSpacing: 4,
+              marginTop: 10,
+              textTransform: "uppercase",
+            }}
+          >
+            Train · Log · Repeat
+          </Text>
+        </View>
 
         {stats && (stats.currentStreak > 0 || stats.thisWeek > 0) ? (
           <View

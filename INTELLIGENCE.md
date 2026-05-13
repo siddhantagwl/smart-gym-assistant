@@ -1,6 +1,6 @@
 # Intelligence Roadmap
 
-Ideas for making gym-log feel "intelligent" — i.e. surfacing things the user couldn't compute in their head from their own data, not just buzzwords. Captured for later; nothing here is built yet.
+Ideas for making Sadhana feel "intelligent" — i.e. surfacing things the user couldn't compute in their head from their own data, not just buzzwords. Captured for later; nothing here is built yet.
 
 Most of the genuine value is plain math on the existing SQLite tables. LLM-tier features only earn their keep where pattern recognition or natural language is the actual value-add.
 

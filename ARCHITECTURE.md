@@ -1,4 +1,4 @@
-# Gym Log App — Architecture, Features, and Current Status
+# Sadhana — Architecture, Features, and Current Status
 
 ## 1. Core Idea
 
@@ -111,7 +111,7 @@ Target platform is Android. When the app is backgrounded (user switches apps, lo
 
 **Notification handler:** `Notifications.setNotificationHandler` runs at module load in `services/notifications.ts`. Without it, `expo-notifications` suppresses banner/sound while the app is foregrounded — meaning the user wouldn't see the buzz if they were staring at the rest screen. Override forces show.
 
-**Android battery optimization caveat:** Doze mode can delay scheduled-notification delivery by 10-30+ seconds when the device is idle. The user must mark the app as "Unrestricted" in system Settings → Apps → gym-log → Battery for on-time delivery. We don't request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` programmatically — that's a documented one-time per-device setup. OEM skins (Samsung, Xiaomi/MIUI, OnePlus, Realme) often add additional restriction layers that need separate whitelisting.
+**Android battery optimization caveat:** Doze mode can delay scheduled-notification delivery by 10-30+ seconds when the device is idle. The user must mark the app as "Unrestricted" in system Settings → Apps → Sadhana → Battery for on-time delivery. We don't request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` programmatically — that's a documented one-time per-device setup. OEM skins (Samsung, Xiaomi/MIUI, OnePlus, Realme) often add additional restriction layers that need separate whitelisting.
 
 **Known cosmetic drift:** the breathing-cat ring (`Animated.timing` on `restRingProgress`) is JS-driven and pauses in background. After a long background, the ring animation will be out of sync with the numeric counter. Not blocking — counter is the actual signal.
 

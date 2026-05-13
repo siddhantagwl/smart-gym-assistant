@@ -1,3 +1,3 @@
 import * as SQLite from "expo-sqlite";
 
-export const db = SQLite.openDatabaseSync("gym-log.db");
+export const db = SQLite.openDatabaseSync("sadhana.db");
