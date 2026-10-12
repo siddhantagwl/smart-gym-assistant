@@ -6,7 +6,9 @@
 import { useSyncExternalStore } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type UpNextItem = { libraryId: string; name: string };
+// `movement` set → the equipment variant is chosen when it loads into the
+// picker (last used at this gym); libraryId/name are then just a fallback.
+export type UpNextItem = { libraryId: string; name: string; movement?: string };
 
 // What ActiveSession is showing right now, so the Exercises tab can label
 // rows "Now" / "Next" without reaching into ActiveSession's state.

@@ -19,7 +19,10 @@ type AddExerciseProps = {
   titleColor: string;
   accentColor: string;
 
-  suggestions: string[];
+  // One entry per movement; `search` = movement + variant names, lowercased.
+  suggestions: { key: string; label: string; search: string; count: number }[];
+  // Every library variant name, to recognise an exact pick.
+  knownNames: string[];
 
   exerciseName: string;
   sets: number;
@@ -29,7 +32,13 @@ type AddExerciseProps = {
   note: string;
 
   onNoteChange: (text: string) => void;
-  onSelectExercise: (name: string) => void;
+  onSelectMovement: (movementKey: string) => void;
+
+  // Equipment chips for the picked movement (only shown before the exercise
+  // starts; switching equipment mid-exercise isn't supported).
+  variants?: { id: string; label: string }[] | null;
+  selectedVariantId?: string | null;
+  onSelectVariant?: (libraryId: string) => void;
   onExerciseNameChange: (text: string) => void;
 
   onRepsMinus: () => void;
@@ -186,6 +195,7 @@ export default function AddExercise({
   titleColor,
   accentColor,
   suggestions,
+  knownNames,
   exerciseName,
   sets,
   reps,
@@ -193,7 +203,10 @@ export default function AddExercise({
   weightUnit,
   note,
   onNoteChange,
-  onSelectExercise,
+  onSelectMovement,
+  variants,
+  selectedVariantId,
+  onSelectVariant,
   onExerciseNameChange,
   onRepsMinus,
   onRepsPlus,
@@ -330,15 +343,20 @@ export default function AddExercise({
     if (!query) return [];
 
     return suggestions
-      .filter((name) => name.toLowerCase().includes(query))
-      .filter((name) => name.toLowerCase() !== query); // remove exact match
+      .filter((s) => s.search.includes(query))
+      .sort(
+        (a, b) =>
+          Number(!a.label.toLowerCase().startsWith(query)) -
+            Number(!b.label.toLowerCase().startsWith(query)) || a.label.localeCompare(b.label),
+      )
+      .slice(0, 12);
   }, [exerciseName, suggestions]);
 
   const isExactMatch = useMemo(() => {
     const q = exerciseName.trim().toLowerCase();
     if (!q) return false;
-    return suggestions.some((name) => name.trim().toLowerCase() === q);
-  }, [exerciseName, suggestions]);
+    return knownNames.some((name) => name.trim().toLowerCase() === q);
+  }, [exerciseName, knownNames]);
 
   // One button toggles Start Set ↔ Finish Set. A second tap within 700ms is
   // ignored so a double-tap can't finish a set and immediately start the next.
@@ -455,11 +473,11 @@ export default function AddExercise({
                 marginTop: 8,
               }}
             >
-              {filteredSuggestions.map((name) => (
+              {filteredSuggestions.map((s) => (
                 <Pressable
-                  key={name}
+                  key={s.key}
                   onPress={() => {
-                    onSelectExercise(name);
+                    onSelectMovement(s.key);
                     Keyboard.dismiss();
                   }}
                   style={{
@@ -471,9 +489,41 @@ export default function AddExercise({
                     borderColor: "#2a2a2a",
                   }}
                 >
-                  <Text style={{ color: "#ddd", fontSize: 12 }}>{name}</Text>
+                  <Text style={{ color: "#ddd", fontSize: 12 }}>
+                    {s.label}
+                    {s.count > 1 ? <Text style={{ color: "#777" }}>{`  ·${s.count}`}</Text> : null}
+                  </Text>
                 </Pressable>
               ))}
+            </View>
+          ) : null}
+
+          {/* Equipment for the picked movement; last used at this gym is preselected. */}
+          {!isExerciseActive && variants && variants.length > 1 ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+              {variants.map((v) => {
+                const on = v.id === selectedVariantId;
+                return (
+                  <Pressable
+                    key={v.id}
+                    onPress={() => onSelectVariant?.(v.id)}
+                    hitSlop={4}
+                    style={({ pressed }) => ({
+                      paddingVertical: 5,
+                      paddingHorizontal: 11,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: on ? "#2E7D5A" : "#2a2a2a",
+                      backgroundColor: on ? "rgba(46,125,90,0.18)" : "transparent",
+                      opacity: pressed ? 0.6 : 1,
+                    })}
+                  >
+                    <Text style={{ color: on ? "#cfe9d4" : "#aaa", fontSize: 12, fontWeight: on ? "700" : "500" }}>
+                      {v.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           ) : null}
 

@@ -252,6 +252,28 @@ export function getRecentExerciseRows(
   return rows.map((r) => ({ weightKg: Number(r.weight_kg), reps: Number(r.reps) }));
 }
 
+// Which of these library ids (variants of one movement) was logged most
+// recently — at `gym` if given and found there, otherwise anywhere.
+export function getLastUsedVariant(libraryIds: string[], gym: string): string | null {
+  if (libraryIds.length === 0) return null;
+  const placeholders = libraryIds.map(() => "?").join(",");
+  const base = `
+    SELECT e.exercise_library_id AS id
+    FROM exercises e
+    JOIN sessions s ON s.id = e.session_id
+    WHERE e.exercise_library_id IN (${placeholders}) AND s.note != '__DISCARDED__'`;
+  const order = ` ORDER BY e.start_time DESC LIMIT 1;`;
+
+  if (gym) {
+    const atGym = db.getFirstSync(base + ` AND s.gym = ?` + order, [...libraryIds, gym]) as
+      | { id: string }
+      | null;
+    if (atGym) return String(atGym.id);
+  }
+  const anywhere = db.getFirstSync(base + order, libraryIds) as { id: string } | null;
+  return anywhere ? String(anywhere.id) : null;
+}
+
 export function getMaxWeightForExercise(exerciseName: string): number {
   const trimmed = exerciseName.trim();
   if (!trimmed) return 0;

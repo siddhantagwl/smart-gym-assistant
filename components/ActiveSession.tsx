@@ -16,7 +16,7 @@ const REST_RING_SIZE = 110;
 const REST_RING_STROKE = 8;
 const REST_RING_RADIUS = (REST_RING_SIZE - REST_RING_STROKE) / 2;
 const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
-import { getAllLibraryExercises } from "@/db/exerciseLibrary";
+import { ExerciseLibraryItem, getAllLibraryExercises, groupMovements } from "@/db/exerciseLibrary";
 import { suggestNext } from "@/domain/progression";
 import { DEFAULT_REST, restTargetFor } from "@/domain/restTarget";
 import {
@@ -24,6 +24,7 @@ import {
   getLatestExerciseByName,
   getMaxWeightForExercise,
   getRecentExerciseRows,
+  getLastUsedVariant,
   deleteExercise,
   insertExercise,
   LatestExercise,
@@ -251,15 +252,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   );
   const [showExercises, setShowExercises] = useState(true);
 
-  const [exerciseLibrary, setExerciseLibrary] = useState<
-    {
-      id: string;
-      name: string;
-      primaryMuscle: string;
-      tags: string[];
-      videoUrl: string;
-    }[]
-  >([]);
+  const [exerciseLibrary, setExerciseLibrary] = useState<ExerciseLibraryItem[]>([]);
 
   const [showLabelConfirm, setShowLabelConfirm] = useState(false);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
@@ -392,10 +385,54 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     }, [])
   );
 
+  // ----- Movement / equipment picker -----
+  const gym = activeSession.gym ?? "";
+  const movements = useMemo(() => groupMovements(exerciseLibrary), [exerciseLibrary]);
+  const movementSuggestions = useMemo(
+    () =>
+      movements.map((m) => ({
+        key: m.movement,
+        label: m.name,
+        search: [m.name, ...m.variants.map((v) => v.name)].join(" | ").toLowerCase(),
+        count: m.variants.length,
+      })),
+    [movements],
+  );
+
+  // Picking a movement selects the variant last used at this gym (else the
+  // most recent anywhere, else the first listed).
+  function selectMovement(movementKey: string) {
+    const m = movements.find((x) => x.movement === movementKey);
+    if (!m) return;
+    const lastId = getLastUsedVariant(m.variants.map((v) => v.id), gym);
+    const v = m.variants.find((x) => x.id === lastId) ?? m.variants[0];
+    setExerciseName(v.name);
+    setExerciseLibraryId(v.id);
+    setExerciseNote("");
+  }
+
+  function selectVariant(libraryId: string) {
+    const v = exerciseLibrary.find((x) => x.id === libraryId);
+    if (!v) return;
+    setExerciseName(v.name);
+    setExerciseLibraryId(v.id);
+  }
+
+  const currentVariants = useMemo(() => {
+    const item = exerciseLibraryId ? exerciseLibrary.find((x) => x.id === exerciseLibraryId) : null;
+    if (!item) return null;
+    const m = movements.find((x) => x.movement === item.movement);
+    return m && m.variants.length > 1 ? m.variants.map((v) => ({ id: v.id, label: v.variant })) : null;
+  }, [exerciseLibraryId, exerciseLibrary, movements]);
+
   // ----- Up next queue (filled from the Exercises tab) -----
   const upNext = useUpNextItems(activeSession.id);
 
   function loadIntoPicker(item: UpNextItem) {
+    if (item.movement && movements.some((m) => m.movement === item.movement)) {
+      selectMovement(item.movement);
+      return;
+    }
     setExerciseName(item.name);
     setExerciseLibraryId(item.libraryId);
     setExerciseNote("");
@@ -1477,7 +1514,12 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
         <AddExercise
           titleColor={colors.text}
           accentColor={colors.accent}
-          suggestions={exerciseLibraryNames}
+          suggestions={movementSuggestions}
+          knownNames={exerciseLibraryNames}
+          variants={currentVariants}
+          selectedVariantId={exerciseLibraryId}
+          onSelectVariant={selectVariant}
+          onSelectMovement={selectMovement}
           exerciseName={exerciseName}
           sets={sets}
           reps={reps}
@@ -1485,12 +1527,6 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
           weightUnit={weightUnit}
           onWeightUnitChange={setWeightUnit}
           note={exerciseNote}
-          onSelectExercise={(name) => {
-            setExerciseName(name);
-            const match = exerciseLibrary.find((e) => e.name === name);
-            setExerciseLibraryId(match ? match.id : null);
-            setExerciseNote("");
-          }}
           onExerciseNameChange={(text) => {
             setExerciseName(text);
             setExerciseLibraryId(null);
