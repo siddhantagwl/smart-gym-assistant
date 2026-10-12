@@ -220,12 +220,13 @@ export default function ExercisesScreen() {
     if (recency === "new") filtered = filtered.filter(isNew);
     if (recency === "stale") filtered = filtered.filter(isStale);
 
-    // "2+ weeks" lists the longest-neglected first; otherwise alphabetical.
+    // "2+ weeks" lists the longest-neglected first; otherwise grouped by
+    // pattern (movements that do the same job sit together), then by name.
     const gap = (m: Movement) => daysSince(movementSummary(m)?.lastStartTime ?? "") ?? 0;
     const sorted = [...filtered].sort((a, b) =>
       recency === "stale"
         ? gap(b) - gap(a) || a.name.localeCompare(b.name)
-        : a.name.localeCompare(b.name)
+        : a.pattern.localeCompare(b.pattern) || a.name.localeCompare(b.name)
     );
 
     const map: Record<string, Movement[]> = {};
@@ -472,12 +473,33 @@ export default function ExercisesScreen() {
             </Text>
           </View>
         )}
-        renderItem={({ item: m }) => {
+        renderItem={({ item: m, index, section }) => {
           const summary = movementSummary(m);
+          // Pattern sub-header ("HORIZONTAL ROW") when it changes within a muscle.
+          const patternHeader =
+            recency !== "stale" && (index === 0 || section.data[index - 1].pattern !== m.pattern)
+              ? m.pattern
+              : null;
           const names = variantNames(m);
           const video = m.variants.find((v) => v.videoUrl)?.videoUrl;
           const single = m.variants.length === 1 ? m.variants[0] : null;
           return (
+          <View>
+          {patternHeader ? (
+            <Text
+              style={{
+                color: "#6b8f73",
+                fontSize: 10,
+                fontWeight: "700",
+                letterSpacing: 0.8,
+                marginTop: index === 0 ? 2 : 12,
+                marginBottom: 2,
+                marginLeft: 8,
+              }}
+            >
+              {patternHeader.toUpperCase()}
+            </Text>
+          ) : null}
           <Pressable
             disabled={!summary}
             onPress={() => openHistory(m)}
@@ -611,6 +633,7 @@ export default function ExercisesScreen() {
               ) : null}
             </View>
           </Pressable>
+          </View>
           );
         }}
         ListEmptyComponent={

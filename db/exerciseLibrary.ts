@@ -13,6 +13,7 @@ export type ExerciseLibraryItem = {
   movement: string; // falls back to id
   movementName: string; // falls back to name
   variant: string; // chip label; falls back to the equipment label
+  pattern: string; // what it trains within its muscle; falls back to movementName
   equipment: Equipment;
 };
 
@@ -20,12 +21,13 @@ export type Movement = {
   movement: string;
   name: string;
   primaryMuscle: string;
+  pattern: string;
   variants: ExerciseLibraryItem[];
 };
 
 export function getAllLibraryExercises(): ExerciseLibraryItem[] {
   const rows = db.getAllSync(
-    `SELECT id, name, video_url, primary_muscle, tags, movement, movement_name, variant
+    `SELECT id, name, video_url, primary_muscle, tags, movement, movement_name, variant, pattern
      FROM exercise_library;`
   ) as any[];
 
@@ -48,6 +50,10 @@ export function getAllLibraryExercises(): ExerciseLibraryItem[] {
       movement: String(r.movement ?? "").trim() || String(r.id),
       movementName: String(r.movement_name ?? "").trim() || String(r.name),
       variant: String(r.variant ?? "").trim() || equipmentLabel(equipment),
+      pattern:
+        String(r.pattern ?? "").trim() ||
+        String(r.movement_name ?? "").trim() ||
+        String(r.name),
       equipment,
     };
   });
@@ -64,6 +70,7 @@ export function groupMovements(items: ExerciseLibraryItem[]): Movement[] {
         movement: it.movement,
         name: it.movementName,
         primaryMuscle: it.primaryMuscle,
+        pattern: it.pattern,
         variants: [it],
       });
   });
@@ -96,8 +103,8 @@ export function replaceExerciseLibrary(rows: any[]) {
       }
 
       db.runSync(
-        `INSERT INTO exercise_library (id, name, video_url, primary_muscle, tags, movement, movement_name, variant)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+        `INSERT INTO exercise_library (id, name, video_url, primary_muscle, tags, movement, movement_name, variant, pattern)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         [
           id,
           String(r.name ?? ""),
@@ -107,6 +114,7 @@ export function replaceExerciseLibrary(rows: any[]) {
           String(r.movement ?? "").trim(),
           String(r.movement_name ?? "").trim(),
           String(r.variant ?? "").trim(),
+          String(r.pattern ?? "").trim(),
         ]
       );
     });

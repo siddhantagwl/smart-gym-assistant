@@ -20,6 +20,7 @@ import { ExerciseLibraryItem, getAllLibraryExercises, groupMovements } from "@/d
 import { suggestNext } from "@/domain/progression";
 import { DEFAULT_REST, restTargetFor } from "@/domain/restTarget";
 import { equipmentOf, isGymScoped, weightUnitSuffix } from "@/domain/movement";
+import { overlapHint, sessionCoverage } from "@/domain/patternCoverage";
 import {
   getExercisesForSession,
   getLatestExerciseByName,
@@ -441,6 +442,25 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     setExerciseName(v.name);
     setExerciseLibraryId(v.id);
   }
+
+  // Pattern coverage (domain/patternCoverage.ts): what this session has hit
+  // per muscle, and a heads-up when the picked exercise repeats a pattern.
+  const doneLibraryIds = useMemo(
+    () => sessionExercises.map((e) => e.exerciseLibraryId),
+    [sessionExercises],
+  );
+  const coverage = useMemo(
+    () => sessionCoverage(doneLibraryIds, exerciseLibrary),
+    [doneLibraryIds, exerciseLibrary],
+  );
+  const overlap = useMemo(() => {
+    if (isExerciseActive) return null;
+    const h = overlapHint(exerciseLibraryId, doneLibraryIds, exerciseLibrary);
+    if (!h) return null;
+    const open = h.openPatterns.slice(0, 3).join(" · ");
+    return `⚠ ${h.pattern} already done today (${h.doneNames.join(", ")})` +
+      (open ? `\nNot done yet: ${open}` : "");
+  }, [isExerciseActive, exerciseLibraryId, doneLibraryIds, exerciseLibrary]);
 
   const currentVariants = useMemo(() => {
     const item = exerciseLibraryId ? exerciseLibrary.find((x) => x.id === exerciseLibraryId) : null;
@@ -1550,6 +1570,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
           selectedVariantId={exerciseLibraryId}
           onSelectVariant={selectVariant}
           onSelectMovement={selectMovement}
+          overlapHint={overlap}
           exerciseName={exerciseName}
           sets={sets}
           reps={reps}
@@ -1654,6 +1675,28 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
               </View>
             ))}
           </View>
+        </View>
+      ) : null}
+
+      {coverage.length > 0 ? (
+        // Per muscle trained today: patterns done (✓), doubled (✓2) or open (○).
+        <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 6, marginBottom: 2, gap: 3 }}>
+          {coverage.map((c) => (
+            <Text key={c.muscle} style={{ fontSize: 11, lineHeight: 16 }}>
+              <Text style={{ color: "#ddd", fontWeight: "700" }}>{c.muscle}  </Text>
+              {c.patterns.map((p, i) => (
+                <Text
+                  key={p.pattern}
+                  style={{
+                    color: p.count === 0 ? "#666" : p.count === 1 ? "#7bc47f" : "#FFC107",
+                  }}
+                >
+                  {i > 0 ? " · " : ""}
+                  {p.pattern} {p.count === 0 ? "○" : p.count === 1 ? "✓" : `✓${p.count}`}
+                </Text>
+              ))}
+            </Text>
+          ))}
         </View>
       ) : null}
 

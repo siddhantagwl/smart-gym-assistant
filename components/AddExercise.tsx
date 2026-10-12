@@ -39,6 +39,9 @@ type AddExerciseProps = {
   variants?: { id: string; label: string }[] | null;
   selectedVariantId?: string | null;
   onSelectVariant?: (libraryId: string) => void;
+
+  // "⚠ Horizontal row already done today …" (domain/patternCoverage.ts).
+  overlapHint?: string | null;
   onExerciseNameChange: (text: string) => void;
 
   onRepsMinus: () => void;
@@ -211,6 +214,7 @@ export default function AddExercise({
   variants,
   selectedVariantId,
   onSelectVariant,
+  overlapHint,
   onExerciseNameChange,
   onRepsMinus,
   onRepsPlus,
@@ -530,6 +534,12 @@ export default function AddExercise({
                 );
               })}
             </View>
+          ) : null}
+
+          {!isExerciseActive && overlapHint ? (
+            <Text style={{ color: "#FFC107", fontSize: 11, marginTop: 8, lineHeight: 16 }}>
+              {overlapHint}
+            </Text>
           ) : null}
 
           {exerciseName.trim() && !isExactMatch && filteredSuggestions.length === 0 ? (

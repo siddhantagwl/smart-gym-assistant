@@ -71,6 +71,9 @@ export function initDb() {
     ensureColumn("exercise_library", "movement", "TEXT NOT NULL DEFAULT ''");
     ensureColumn("exercise_library", "movement_name", "TEXT NOT NULL DEFAULT ''");
     ensureColumn("exercise_library", "variant", "TEXT NOT NULL DEFAULT ''");
+    // What the movement trains within its muscle ("Horizontal row"); movements
+    // sharing a pattern do the same job (domain/patternCoverage.ts).
+    ensureColumn("exercise_library", "pattern", "TEXT NOT NULL DEFAULT ''");
 
     // Each set as logged at Finish Set: [{reps, weightKg, weightUnit, durationSec}].
     // The row's reps/weight_kg stay the last set's values (summary for PRs/charts).

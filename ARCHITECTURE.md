@@ -322,6 +322,15 @@ Training at different gyms means the same exercise is done on different equipmen
 - **Dumbbells** are logged per dumbbell and shown as `kg/db`.
 - **Exercises tab** shows one row per movement with equipment chips (logged ones bright with counts → that variant's history). **History** (`app/exercise-details.tsx`) loads all variants of the movement (`getExercisesByLibraryIds`) with `All · Barbell · Dumbbell…` tabs; stats + chart render only for a single variant so weights are never mixed; entries show variant and 📍 gym.
 
+### 3.16 Patterns: avoid doubling up on the same job (Oct 2026)
+
+Logs showed 18/50 sessions with two different movements doing the same job (e.g. Bent-Over Row + Seated Row: 11×) and 15/50 with the same movement on two pieces of equipment, while patterns like lat isolation / rear delts / overhead triceps were rarely trained.
+
+- Library column `pattern` (seeded by `apps-script/PrefillPatterns_2026_10.gs`, 36 patterns, editable in the Sheet): what a movement trains within its `primary_muscle` ("Horizontal row", "Vertical pull", "Fly", "Pushdown / kickback"…). Empty → the movement is its own pattern.
+- `domain/patternCoverage.ts`: `sessionCoverage()` (per muscle trained this session: each library pattern with how often it was hit) and `overlapHint()` (picked exercise repeats a pattern already done). Cardio ignored. Hints only — nothing is blocked.
+- Active session: an amber line under the picked exercise ("⚠ Horizontal row already done today (Seated Row) · Not done yet: Lat isolation · …") and a coverage line per muscle (✓ done, ✓2 doubled in amber, ○ open) above "Exercises this session".
+- Exercises tab: within each muscle, movements are grouped under a pattern sub-header (not when sorting by "2+ weeks ago").
+
 ---
 
 ## 4. Important Architectural Decisions
