@@ -250,9 +250,13 @@ Logged but not in library (n)
 
 ---
 
-### 3.7 Up Next Queue (Exercises tab → active session)
+### 3.7 Exercises tab: done / not-done hints + history
 
-While a session is open (`getActiveSession()` returns a row), every Exercises-tab row gets a ＋ button. Tapping it queues the library exercise for the session; tapping the `#n` badge again removes it. Exercises already logged this session show `✓ done`; the one in the Home picker shows `NOW` (running) or `NEXT` (selected, not started).
+Every library row shows an all-time status line from `getExerciseLogSummaries()` (one `GROUP BY exercise_library_id` query, re-read on focus): `● Logged N× · 3d ago` or `○ Not done yet`. Logged rows show a `›` and tapping the row opens `/exercise-details` (same screen as from Session details). Keyed by `exercise_library_id`, same as `getExercisesByLibraryId`, so the count matches the history screen. Rows never logged aren't tappable.
+
+### 3.8 Up Next Queue (Exercises tab → active session)
+
+While a session is open (`getActiveSession()` returns a row), every Exercises-tab row gets a ＋ button. Tapping it queues the library exercise for the session; tapping the `#n` badge again removes it. Exercises already logged this session show `✓ this session`; the one in the Home picker shows `NOW` (running) or `NEXT` (selected, not started).
 
 - **Store:** `hooks/use-up-next.ts` — module-level store read via `useSyncExternalStore`, keyed to the session id and persisted to AsyncStorage (`up_next_queue_v1`) so it survives Android killing the app. Cleared on Confirm & Save / Discard.
 - **Auto-load into the picker** (`ActiveSession.tsx`) happens only when (a) an exercise just finished, or (b) something was just queued — and only if no exercise is running and the picker is empty. It never starts an exercise, never overwrites a typed/picked name, and doesn't fire when the user clears the picker by hand. Rest/transition timers are untouched.

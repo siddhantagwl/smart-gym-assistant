@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getExercisesByLibraryId } from "@/db/exercises";
+import { getExercisesByLibraryId, StoredExercise } from "@/db/exercises";
+import ExerciseProgress from "@/components/ExerciseProgress";
 
 export default function ExerciseDetailsScreen() {
   const { exerciseLibraryId, name } = useLocalSearchParams<{
@@ -11,7 +12,7 @@ export default function ExerciseDetailsScreen() {
 
   const router = useRouter();
 
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<StoredExercise[]>([]);
 
   useEffect(() => {
     if (!exerciseLibraryId) return;
@@ -58,12 +59,13 @@ export default function ExerciseDetailsScreen() {
         </Pressable>
       </View>
 
-      {/* Stats */}
-      <Text style={{ color: "#888", marginBottom: 16 }}>
-        {history.length} logged sessions
-      </Text>
-
       <ScrollView>
+        <Text style={{ color: "#888", marginBottom: 4 }}>
+          {history.length} logged sessions
+        </Text>
+
+        <ExerciseProgress history={history} />
+
         {history.map((item, index) => {
           const durationSeconds =
             (new Date(item.endTime).getTime() -

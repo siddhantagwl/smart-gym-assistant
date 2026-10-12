@@ -220,6 +220,27 @@ export function insertExerciseRaw(row: any) {
   );
 }
 
+export type ExerciseLogSummary = { count: number; lastStartTime: string };
+
+// Per-library-id log count + most recent start, for the Exercises tab's
+// "done / not done yet" hints. Keyed the same way as getExercisesByLibraryId
+// so the count matches what the history screen lists.
+export function getExerciseLogSummaries(): Record<string, ExerciseLogSummary> {
+  const rows = db.getAllSync(
+    `
+    SELECT exercise_library_id AS lib_id, COUNT(*) AS cnt, MAX(start_time) AS last
+    FROM exercises
+    GROUP BY exercise_library_id;
+    `
+  ) as { lib_id: string; cnt: number; last: string | null }[];
+
+  const map: Record<string, ExerciseLogSummary> = {};
+  rows.forEach((r) => {
+    map[String(r.lib_id)] = { count: Number(r.cnt), lastStartTime: r.last ? String(r.last) : "" };
+  });
+  return map;
+}
+
 export function getExercisesByLibraryId(exerciseLibraryId: string): StoredExercise[] {
   const rows = db.getAllSync(
     `

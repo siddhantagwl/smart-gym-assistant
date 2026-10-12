@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, TextInput, SectionList, Pressable, Linking, Animated } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ExerciseLibraryItem, getAllLibraryExercises } from "@/db/exerciseLibrary";
-import { getExercisesForSession } from "@/db/exercises";
+import {
+  ExerciseLogSummary,
+  getExerciseLogSummaries,
+  getExercisesForSession,
+} from "@/db/exercises";
 import { getActiveSession } from "@/db/sessions";
 import { addToUpNext, removeFromUpNext, useUpNext } from "@/hooks/use-up-next";
 
@@ -15,12 +19,30 @@ const colors = {
   border: "#222",
 };
 
+function timeAgo(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (!iso || Number.isNaN(t)) return "";
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  if (t >= startOfToday.getTime()) return "today";
+  const days = Math.ceil((startOfToday.getTime() - t) / 86_400_000);
+  if (days === 1) return "yesterday";
+  if (days < 14) return `${days}d ago`;
+  if (days < 60) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
 export default function ExercisesScreen() {
   console.debug("Rendering ExercisesScreen");
   const [query, setQuery] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [exercises, setExercises] = useState<ExerciseLibraryItem[]>([]);
   const clearAnim = useState(new Animated.Value(0))[0];
+  const router = useRouter();
+
+  // All-time log summary per library id: drives the "Logged N× · 3d ago" /
+  // "Not done yet" line and whether the row opens exercise history.
+  const [logSummary, setLogSummary] = useState<Record<string, ExerciseLogSummary>>({});
 
   // Active-session mode: when a session is open, each row gets a ＋ that
   // queues the exercise into the session's "Up next" list on Home.
@@ -60,6 +82,7 @@ export default function ExercisesScreen() {
   useFocusEffect(
     useCallback(() => {
       setExercises(getAllLibraryExercises());
+      setLogSummary(getExerciseLogSummaries());
       const s = getActiveSession();
       setSessionId(s?.id ?? null);
       setDoneNames(
@@ -246,7 +269,7 @@ export default function ExercisesScreen() {
       <SectionList
         sections={sections}
         stickySectionHeadersEnabled
-        extraData={[queued, current, doneNames]}
+        extraData={[queued, current, doneNames, logSummary]}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
         renderSectionHeader={({ section }) => (
@@ -269,24 +292,45 @@ export default function ExercisesScreen() {
             </Text>
           </View>
         )}
-        renderItem={({ item }) => (
-          <View
-            style={{
+        renderItem={({ item }) => {
+          const summary = logSummary[item.id];
+          return (
+          <Pressable
+            disabled={!summary}
+            onPress={() =>
+              router.push({
+                pathname: "/exercise-details",
+                params: { exerciseLibraryId: item.id, name: item.name },
+              })
+            }
+            style={({ pressed }) => ({
               paddingVertical: 10,
               paddingHorizontal: 12,
               borderBottomWidth: 1,
               borderBottomColor: colors.border,
               marginLeft: 8,
-            }}
+              backgroundColor: pressed ? "#0d0d0d" : "transparent",
+            })}
           >
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.text, fontSize: 17 }}>
                   {item.name}
                   {sessionId && doneNames.has(item.name.toLowerCase()) ? (
-                    <Text style={{ color: "#4CAF50", fontSize: 12 }}>  ✓ done</Text>
+                    <Text style={{ color: "#4CAF50", fontSize: 12 }}>  ✓ this session</Text>
                   ) : null}
                 </Text>
+
+                {summary ? (
+                  <Text style={{ color: "#7bc47f", fontSize: 12, marginTop: 3 }}>
+                    ● Logged {summary.count}×
+                    {timeAgo(summary.lastStartTime) ? ` · ${timeAgo(summary.lastStartTime)}` : ""}
+                  </Text>
+                ) : (
+                  <Text style={{ color: "#666", fontSize: 12, marginTop: 3 }}>
+                    ○ Not done yet
+                  </Text>
+                )}
 
                 <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}>
                   <View
@@ -355,9 +399,14 @@ export default function ExercisesScreen() {
               ) : null}
 
               {sessionId ? renderQueueControl(item) : null}
+
+              {summary ? (
+                <Text style={{ color: "#555", fontSize: 20, marginLeft: 10 }}>›</Text>
+              ) : null}
             </View>
-          </View>
-        )}
+          </Pressable>
+          );
+        }}
         ListEmptyComponent={
           <Text style={{ color: colors.sub, marginTop: 24, textAlign: "center" }}>
             No exercises found
