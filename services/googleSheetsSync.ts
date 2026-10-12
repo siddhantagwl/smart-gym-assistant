@@ -56,6 +56,8 @@ export async function syncToGoogleSheets() {
       rest_seconds: e.restSeconds ?? 0,
       // Stored only if the Sheet's exercises tab has a "rest_periods" column.
       rest_periods: JSON.stringify(e.restPeriods ?? []),
+      // Likewise needs a "set_log" column header in the Sheet.
+      set_log: JSON.stringify(e.setLog ?? []),
       start_time: e.startTime,
       end_time: e.endTime,
       note: e.note,

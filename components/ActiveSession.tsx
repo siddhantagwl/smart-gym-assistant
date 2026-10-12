@@ -30,6 +30,7 @@ import {
 } from "@/db/exercises";
 import { endSession } from "@/db/sessions";
 import { Session } from "@/domain/session";
+import { SetEntry } from "@/domain/exercise";
 import {
   clearUpNext,
   pushFrontUpNext,
@@ -190,6 +191,15 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   // transition rest before the exercise are not between-set rests, so excluded.
   const restPeriodsRef = useRef<number[]>([]);
   const restKindRef = useRef<"set" | "transition" | null>(null);
+  // Each set as logged at Finish Set (reps × weight at that moment). Refs are
+  // the source of truth for saving; the state copies only drive the live chips.
+  const setLogRef = useRef<SetEntry[]>([]);
+  const [setLogView, setSetLogView] = useState<SetEntry[]>([]);
+  const [restPeriodsView, setRestPeriodsView] = useState<number[]>([]);
+  function syncSetViews() {
+    setSetLogView([...setLogRef.current]);
+    setRestPeriodsView([...restPeriodsRef.current]);
+  }
 
   // Undo for Finish Exercise: everything needed to put the exercise back
   // exactly as it was (row is deleted, rest/set timers resume from their
@@ -204,6 +214,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     weightKg: number;
     sets: number; // completed sets before finishing (excludes an auto-saved in-flight set)
     restPeriods: number[];
+    setLog: SetEntry[];
     finalSets: number;
     setInProgress: boolean;
     setStartedAt: string | null;
@@ -562,6 +573,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       setAccumulatedRest((r) => r + elapsed);
       if (endsBetweenSetRest && restKindRef.current === "set") {
         restPeriodsRef.current.push(elapsed);
+        setRestPeriodsView([...restPeriodsRef.current]);
       }
       restStartRef.current = null;
     }
@@ -994,6 +1006,8 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     // Ensure no rest timer is visible when exercise starts
     stopRestTimer();
     restPeriodsRef.current = [];
+    setLogRef.current = [];
+    syncSetViews();
     setRestType(null);
     setRestSeconds(null);
   }
@@ -1007,9 +1021,20 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     }
   }
 
+  function logSet(setStartedAt: Date | null | undefined) {
+    setLogRef.current.push({
+      reps,
+      weightKg,
+      weightUnit,
+      ...(setStartedAt ? { durationSec: secondsBetween(new Date(), setStartedAt) } : {}),
+    });
+    setSetLogView([...setLogRef.current]);
+  }
+
   // 💪 Save Set
-  function saveSet() {
+  function saveSet(setStartedAt?: Date | null) {
     if (!isExerciseActive) return;
+    logSet(setStartedAt);
     // Stop any running rest immediately when starting a new set
     if (restSeconds !== null) {
       stopRestTimer(true);
@@ -1043,6 +1068,11 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     const finalSets = sets + (autoSaveSetInProgress ? 1 : 0);
     if (finalSets === 0) return;
 
+    // Snapshot before the auto-saved set is appended, so Undo restores the
+    // log as it was (that set is still in flight after Undo).
+    const setLogBefore = [...setLogRef.current];
+    if (autoSaveSetInProgress) logSet(setStartedAt);
+
     const exerciseId = Date.now().toString();
     const snapshot: UndoSnapshot = {
       exerciseId,
@@ -1053,6 +1083,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       weightKg,
       sets,
       restPeriods: [...restPeriodsRef.current],
+      setLog: setLogBefore,
       finalSets,
       setInProgress: autoSaveSetInProgress,
       setStartedAt: setStartedAt ? setStartedAt.toISOString() : null,
@@ -1091,6 +1122,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       note: exerciseNote,
       restSeconds: totalRest,
       restPeriods: [...restPeriodsRef.current],
+      setLog: [...setLogRef.current],
       startTime: currentExerciseStart.toISOString(),
       endTime: endTime.toISOString(),
     });
@@ -1137,6 +1169,8 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     setWeightKg(u.weightKg);
     setSets(u.sets);
     restPeriodsRef.current = [...u.restPeriods];
+    setLogRef.current = [...u.setLog];
+    syncSetViews();
     setCurrentExerciseStart(new Date(u.exerciseStart));
     prFiredRef.current = u.prFired;
 
@@ -1478,6 +1512,8 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
             }
           }}
           restoreSetState={restoreSetState}
+          setLog={setLogView}
+          restPeriods={restPeriodsView}
           onWeightCommit={(v) => setWeightKg(v)}
           onRepsCommit={(v) => setReps(v)}
           onSaveSet={saveSet}

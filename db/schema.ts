@@ -63,6 +63,9 @@ export function initDb() {
     // Each rest between sets, in seconds, as a JSON array (e.g. "[95,140,160]").
     // rest_seconds stays the exercise's total; older rows default to "[]".
     ensureColumn("exercises", "rest_periods", "TEXT NOT NULL DEFAULT '[]'");
+    // Each set as logged at Finish Set: [{reps, weightKg, weightUnit, durationSec}].
+    // The row's reps/weight_kg stay the last set's values (summary for PRs/charts).
+    ensureColumn("exercises", "set_log", "TEXT NOT NULL DEFAULT '[]'");
 
     seedExerciseLibrary();
 

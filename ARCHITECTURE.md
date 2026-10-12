@@ -288,6 +288,13 @@ A single pill above "Start session" — `🎯 Today: Back + Biceps ›` (`Next:`
 - **Per-set rest log**: new column `exercises.rest_periods` (JSON array of seconds, default `"[]"`, added via `ensureColumn`). `stopRestTimer(true)` appends the elapsed rest only when it ends a between-set rest (next set started or Skip rest) and the running rest was a `"set"` rest (`restKindRef`). The trailing rest before Finish Exercise and the transition rest before an exercise are excluded. `rest_seconds` keeps its old meaning (total, which also includes the preceding transition rest).
 - Undo restores the log; Sheets push sends `rest_periods` (kept only if the exercises tab has a `rest_periods` header); restore parses it back via `parseRestPeriods`.
 
+### 3.12 Per-set log (reps × weight per set)
+
+- New column `exercises.set_log` (JSON, default `"[]"`): one `{reps, weightKg, weightUnit, durationSec}` per set, captured at Finish Set from the steppers at that moment (`logSet` in `ActiveSession`; `AddExercise.onSaveSet(setStartedAt)` passes the set start for the duration). Hold-to-finish with a set in flight logs that set too. The row's `reps`/`weight_kg` keep their meaning (= last set), so PRs, charts and 🎯 Try today are unchanged.
+- **Live**: the `Set N` chips stay and show the set's duration (`Set 1 · 0:38`, from `durationSec`); each set is one column — chip, reps × weight under it, then the rest after that set in blue (`💤1:35`, `rest_periods[i]`). The strip is a single sideways-scrolling row that never wraps and auto-scrolls to the newest set. The running set shows the current stepper values under it. Shared pieces live in `components/SetBreakdown.tsx` (`SetColumn`, `RestGap`, `formatSetLoad`).
+- **Static** (`<SetBreakdown>` in Session details and exercise history): same layout, smaller. Hidden for older rows without a log, and for rows edited afterwards (set count differs, or last set ≠ row reps × weight).
+- Undo restores the log; Sheets push sends `set_log` (kept once the exercises tab has a `set_log` header); restore parses it back.
+
 ---
 
 ## 4. Important Architectural Decisions

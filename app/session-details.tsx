@@ -22,6 +22,7 @@ import {
 } from "@/db/exercises";
 import { deleteSession, getAllSessions } from "@/db/sessions";
 import Svg, { Polyline } from "react-native-svg";
+import SetBreakdown from "@/components/SetBreakdown";
 
 const LB_TO_KG = 0.45359237;
 
@@ -491,6 +492,13 @@ export default function SessionDetailsScreen() {
                         ? `  (${Math.round((item.weightKg / 0.45359237) * 10) / 10} lb)`
                         : ""}
                     </Text>
+                    <SetBreakdown
+                      setLog={item.setLog}
+                      restPeriods={item.restPeriods}
+                      sets={item.sets}
+                      reps={item.reps}
+                      weightKg={item.weightKg}
+                    />
                     {isPR && delta !== null && (
                       <Text
                         style={{

@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getExercisesByLibraryId, StoredExercise } from "@/db/exercises";
 import ExerciseProgress from "@/components/ExerciseProgress";
+import SetBreakdown from "@/components/SetBreakdown";
 
 export default function ExerciseDetailsScreen() {
   const { exerciseLibraryId, name } = useLocalSearchParams<{
@@ -102,6 +103,14 @@ export default function ExerciseDetailsScreen() {
                   ? `  (${Math.round((item.weightKg / 0.45359237) * 10) / 10} lb)`
                   : ""}
               </Text>
+
+              <SetBreakdown
+                setLog={item.setLog}
+                restPeriods={item.restPeriods}
+                sets={item.sets}
+                reps={item.reps}
+                weightKg={item.weightKg}
+              />
 
               <View
                 style={{

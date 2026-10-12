@@ -1,8 +1,9 @@
 import { ReactNode, useMemo, useState, useEffect, useRef } from "react";
 import * as Haptics from "expo-haptics";
 import { Animated } from "react-native";
-import { View, Text, Pressable, TextInput, Keyboard } from "react-native";
-import { WeightUnit } from "@/domain/exercise";
+import { View, Text, Pressable, TextInput, Keyboard, ScrollView } from "react-native";
+import { SetEntry, WeightUnit } from "@/domain/exercise";
+import { formatSetLabel, formatSetLoad, SetColumn } from "@/components/SetBreakdown";
 
 const KG_PER_LB = 0.45359237;
 
@@ -42,7 +43,8 @@ type AddExerciseProps = {
   // setStartedAt: when the auto-saved in-flight set began (lets Undo restore it).
   onSave: (autoSaveSetInProgress?: boolean, setStartedAt?: Date | null) => void;
 
-  onSaveSet: () => void;
+  // setStartedAt lets the parent log the set's duration.
+  onSaveSet: (setStartedAt?: Date | null) => void;
   onStartSet: () => void;
   isExerciseActive: boolean;
 
@@ -56,6 +58,10 @@ type AddExerciseProps = {
     sessionLabels?: string[];
     sessionStartTime: string;
   } | null;
+
+  // Live per-set breakdown under the set chips (reps × weight, rests between).
+  setLog?: SetEntry[];
+  restPeriods?: number[];
 
   // Undo of Finish Exercise: when the exercise re-activates with a new `key`,
   // restore this set state instead of auto-starting set 1.
@@ -204,6 +210,8 @@ export default function AddExercise({
   suggestion,
   onApplySuggestion,
   restoreSetState,
+  setLog,
+  restPeriods,
 }: AddExerciseProps) {
   const isLb = weightUnit === "lb";
   const displayedWeight = isLb ? kgToLb(weightKg) : weightKg;
@@ -232,6 +240,7 @@ export default function AddExercise({
   const setPulse = useRef(new Animated.Value(0)).current;
 
   const lastChipScale = useRef(new Animated.Value(1)).current;
+  const setStripRef = useRef<ScrollView>(null);
   const prevSetCount = useRef(sets);
   const prevExerciseActive = useRef(isExerciseActive);
 
@@ -340,7 +349,7 @@ export default function AddExercise({
     lastSetTapRef.current = now;
 
     if (isSetInProgress) {
-      onSaveSet();
+      onSaveSet(setStartRef.current);
       setIsSetInProgress(false);
       setStartRef.current = null;
       setSetNow(null);
@@ -657,23 +666,31 @@ export default function AddExercise({
         ) : null}
 
         {isExerciseActive && (sets > 0 || isSetInProgress) ? (
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 12,
-            }}
+          // One sideways-scrolling row (never wraps); jumps to the newest set.
+          <ScrollView
+            ref={setStripRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            onContentSizeChange={() => setStripRef.current?.scrollToEnd({ animated: true })}
+            style={{ marginBottom: 12 }}
+            contentContainerStyle={{ alignItems: "flex-start", columnGap: 8 }}
           >
             {Array.from({ length: sets }).map((_, i) => {
               const isLast = i === sets - 1;
 
               const ChipWrapper = isLast ? Animated.View : View;
+              const entry = setLog?.[i];
+              const rest = restPeriods?.[i];
+              // Rest after set i is only known once the next set has started.
+              const showRest = rest != null && (i < sets - 1 || isSetInProgress);
 
               return (
-                <ChipWrapper
+                <SetColumn
                   key={i}
+                  load={entry ? formatSetLoad(entry) : undefined}
+                  rest={showRest ? rest : null}
+                  chip={
+                <ChipWrapper
                   style={[
                     {
                       paddingVertical: 4,
@@ -695,13 +712,18 @@ export default function AddExercise({
                       fontWeight: "600",
                     }}
                   >
-                    Set {i + 1}
+                    {formatSetLabel(i, entry)}
                   </Text>
                 </ChipWrapper>
+                  }
+                />
               );
             })}
 
             {isSetInProgress ? (
+              <SetColumn
+                load={formatSetLoad({ reps, weightKg, weightUnit })}
+                chip={
               <Animated.View
                 style={{
                   paddingVertical: 4,
@@ -745,8 +767,10 @@ export default function AddExercise({
                   {(setElapsedSeconds % 60).toString().padStart(2, "0")}
                 </Text>
               </Animated.View>
+                }
+              />
             ) : null}
-          </View>
+          </ScrollView>
         ) : null}
 
         {/* Collapsed with text: the button itself previews the note (one line),
