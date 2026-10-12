@@ -1,25 +1,48 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getExercisesByLibraryId, StoredExercise } from "@/db/exercises";
+import { getExercisesByLibraryIds } from "@/db/exercises";
+import { getAllLibraryExercises } from "@/db/exerciseLibrary";
+import { weightUnitSuffix } from "@/domain/movement";
 import ExerciseProgress from "@/components/ExerciseProgress";
 import SetBreakdown from "@/components/SetBreakdown";
 
+// History for a movement: every equipment variant's logs, with
+// "All · Barbell · Dumbbell…" tabs when more than one variant was logged.
+// Stats + chart only render for a single variant so different equipment's
+// weights are never mixed. `tab` (optional) opens a specific variant.
 export default function ExerciseDetailsScreen() {
-  const { exerciseLibraryId, name } = useLocalSearchParams<{
+  const { exerciseLibraryId, name, tab } = useLocalSearchParams<{
     exerciseLibraryId: string;
     name: string;
+    tab?: string;
   }>();
 
   const router = useRouter();
 
-  const [history, setHistory] = useState<StoredExercise[]>([]);
+  const { title, variants, history } = useMemo(() => {
+    const lib = getAllLibraryExercises();
+    const item = lib.find((l) => l.id === exerciseLibraryId);
+    const vs = item ? lib.filter((l) => l.movement === item.movement) : [];
+    const ids = vs.length ? vs.map((v) => v.id) : exerciseLibraryId ? [exerciseLibraryId] : [];
+    return {
+      title: item && vs.length > 1 ? item.movementName : (name ?? item?.name ?? ""),
+      variants: vs,
+      history: getExercisesByLibraryIds(ids),
+    };
+  }, [exerciseLibraryId, name]);
 
-  useEffect(() => {
-    if (!exerciseLibraryId) return;
-    const rows = getExercisesByLibraryId(exerciseLibraryId);
-    setHistory(rows);
-  }, [exerciseLibraryId]);
+  const loggedVariants = variants.filter((v) => history.some((h) => h.exerciseLibraryId === v.id));
+  const showTabs = loggedVariants.length > 1;
+
+  const [selected, setSelected] = useState<string>(() => {
+    if (tab && history.some((h) => h.exerciseLibraryId === tab)) return tab;
+    return showTabs ? "all" : (loggedVariants[0]?.id ?? exerciseLibraryId ?? "all");
+  });
+
+  const filtered =
+    selected === "all" ? history : history.filter((h) => h.exerciseLibraryId === selected);
+  const variantOf = (libraryId: string) => variants.find((v) => v.id === libraryId);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000", padding: 20 }}>
@@ -29,7 +52,7 @@ export default function ExerciseDetailsScreen() {
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 20,
+          marginBottom: showTabs ? 12 : 20,
         }}
       >
         <Text
@@ -42,7 +65,7 @@ export default function ExerciseDetailsScreen() {
             marginRight: 12,
           }}
         >
-          {name}
+          {title}
         </Text>
 
         <Pressable
@@ -60,14 +83,55 @@ export default function ExerciseDetailsScreen() {
         </Pressable>
       </View>
 
+      {showTabs ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0, marginBottom: 14 }}
+          contentContainerStyle={{ gap: 6 }}
+        >
+          {[{ id: "all", label: "All", count: history.length }, ...loggedVariants.map((v) => ({
+            id: v.id,
+            label: v.variant,
+            count: history.filter((h) => h.exerciseLibraryId === v.id).length,
+          }))].map((t) => {
+            const on = t.id === selected;
+            return (
+              <Pressable
+                key={t.id}
+                onPress={() => setSelected(t.id)}
+                style={{
+                  paddingVertical: 5,
+                  paddingHorizontal: 12,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: on ? "#2E7D5A" : "#2a2a2a",
+                  backgroundColor: on ? "rgba(46,125,90,0.18)" : "transparent",
+                }}
+              >
+                <Text style={{ color: on ? "#cfe9d4" : "#aaa", fontSize: 12, fontWeight: on ? "700" : "500" }}>
+                  {t.label} · {t.count}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
+
       <ScrollView>
         <Text style={{ color: "#888", marginBottom: 4 }}>
-          {history.length} logged sessions
+          {filtered.length} logged sessions
         </Text>
 
-        <ExerciseProgress history={history} />
+        {selected === "all" && showTabs ? (
+          <Text style={{ color: "#666", fontSize: 12, marginBottom: 14 }}>
+            Stats and chart are per equipment — pick a tab above.
+          </Text>
+        ) : (
+          <ExerciseProgress history={filtered} />
+        )}
 
-        {history.map((item, index) => {
+        {filtered.map((item) => {
           const durationSeconds =
             (new Date(item.endTime).getTime() -
               new Date(item.startTime).getTime()) /
@@ -75,6 +139,8 @@ export default function ExerciseDetailsScreen() {
 
           const minutes = Math.floor(durationSeconds / 60);
           const seconds = Math.floor(durationSeconds % 60);
+          const v = variantOf(item.exerciseLibraryId);
+          const suffix = v ? weightUnitSuffix(v.equipment) : "";
 
           return (
             <View
@@ -88,6 +154,8 @@ export default function ExerciseDetailsScreen() {
             >
               <Text style={{ color: "#aaa", fontSize: 12 }}>
                 {new Date(item.startTime).toDateString()}
+                {showTabs && v ? ` · ${v.variant}` : ""}
+                {item.sessionGym ? ` · 📍 ${item.sessionGym}` : ""}
               </Text>
 
               <Text
@@ -98,7 +166,7 @@ export default function ExerciseDetailsScreen() {
                   marginTop: 4,
                 }}
               >
-                {item.sets} sets · {item.reps} reps · {item.weightKg} kg
+                {item.sets} sets · {item.reps} reps · {item.weightKg} kg{suffix}
                 {item.weightUnit === "lb"
                   ? `  (${Math.round((item.weightKg / 0.45359237) * 10) / 10} lb)`
                   : ""}

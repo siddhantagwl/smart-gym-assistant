@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, TextInput, SectionList, Pressable, Linking, Animated } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { ExerciseLibraryItem, getAllLibraryExercises } from "@/db/exerciseLibrary";
+import {
+  ExerciseLibraryItem,
+  getAllLibraryExercises,
+  groupMovements,
+  Movement,
+} from "@/db/exerciseLibrary";
 import {
   ExerciseLogSummary,
   getExerciseLogSummaries,
@@ -70,13 +75,27 @@ export default function ExercisesScreen() {
   const [recency, setRecency] = useState<Recency>("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  const isNew = (e: ExerciseLibraryItem) => !logSummary[e.id];
-  const isStale = (e: ExerciseLibraryItem) => {
-    const s = logSummary[e.id];
+  // One row per movement; its log summary combines all equipment variants.
+  const movements = useMemo(() => groupMovements(exercises), [exercises]);
+  const movementSummary = (m: Movement): ExerciseLogSummary | null => {
+    let count = 0;
+    let last = "";
+    m.variants.forEach((v) => {
+      const s = logSummary[v.id];
+      if (!s) return;
+      count += s.count;
+      if (s.lastStartTime > last) last = s.lastStartTime;
+    });
+    return count > 0 ? { count, lastStartTime: last } : null;
+  };
+  const isNew = (m: Movement) => !movementSummary(m);
+  const isStale = (m: Movement) => {
+    const s = movementSummary(m);
     if (!s) return false;
     const d = daysSince(s.lastStartTime);
     return d !== null && d >= STALE_DAYS;
   };
+  const variantNames = (m: Movement) => m.variants.map((v) => v.name.toLowerCase());
 
   // Active-session mode: when a session is open, each row gets a ＋ that
   // queues the exercise into the session's "Up next" list on Home.
@@ -100,8 +119,8 @@ export default function ExercisesScreen() {
   const muscles = useMemo(() => {
     const map: Record<string, number> = {};
 
-    exercises.forEach((e) => {
-      map[e.primaryMuscle] = (map[e.primaryMuscle] || 0) + 1;
+    movements.forEach((m) => {
+      map[m.primaryMuscle] = (map[m.primaryMuscle] || 0) + 1;
     });
 
     return Object.keys(map)
@@ -110,7 +129,7 @@ export default function ExercisesScreen() {
         name: muscle,
         count: map[muscle],
       }));
-  }, [exercises]);
+  }, [movements]);
 
   // Re-read library on focus so post-sync changes appear without app reload.
   useFocusEffect(
@@ -125,22 +144,47 @@ export default function ExercisesScreen() {
     }, [])
   );
 
-  function toggleQueued(item: ExerciseLibraryItem) {
+  // Queues the movement; the equipment is picked when it loads on Home
+  // (last used at that session's gym).
+  const queuedIndex = (m: Movement) =>
+    queued.findIndex((q) => q.movement === m.movement || q.name === m.name);
+
+  function toggleQueued(m: Movement) {
     if (!sessionId) return;
     Haptics.selectionAsync().catch(() => {});
-    if (queued.some((q) => q.name === item.name)) {
-      removeFromUpNext(sessionId, item.name);
-      showToast(`Removed ${item.name}`);
+    const i = queuedIndex(m);
+    if (i >= 0) {
+      removeFromUpNext(sessionId, queued[i].name);
+      showToast(`Removed ${m.name}`);
       return;
     }
-    addToUpNext(sessionId, { libraryId: item.id, name: item.name });
+    addToUpNext(sessionId, { libraryId: m.variants[0].id, name: m.name, movement: m.movement });
     showToast(
       current?.active
         ? `Up next after ${current.name}`
         : current
           ? `Queued · #${queued.length + 1}`
-          : `${item.name} ready on Home`,
+          : `${m.name} ready on Home`,
     );
+  }
+
+  // Row tap → movement history; chip tap → that equipment's tab.
+  function openHistory(m: Movement, variantId?: string) {
+    const logged = m.variants.filter((v) => logSummary[v.id]);
+    const target =
+      variantId ??
+      [...logged].sort((a, b) =>
+        (logSummary[b.id]?.lastStartTime ?? "").localeCompare(logSummary[a.id]?.lastStartTime ?? ""),
+      )[0]?.id;
+    if (!target) return;
+    router.push({
+      pathname: "/exercise-details",
+      params: {
+        exerciseLibraryId: target,
+        name: m.name,
+        ...(variantId ? { tab: variantId } : {}),
+      },
+    });
   }
 
   useEffect(() => {
@@ -155,17 +199,21 @@ export default function ExercisesScreen() {
   const sections = useMemo(() => {
     const q = query.trim().toLowerCase();
 
-    let filtered = exercises;
+    let filtered = movements;
 
     if (selectedMuscle) {
-      filtered = filtered.filter(e => e.primaryMuscle === selectedMuscle);
+      filtered = filtered.filter(m => m.primaryMuscle === selectedMuscle);
     }
 
     if (q) {
-      filtered = filtered.filter((e) =>
-        e.name.toLowerCase().includes(q) ||
-        e.primaryMuscle.toLowerCase().includes(q) ||
-        e.tags.some(tag => tag.toLowerCase().includes(q))
+      filtered = filtered.filter((m) =>
+        m.name.toLowerCase().includes(q) ||
+        m.primaryMuscle.toLowerCase().includes(q) ||
+        m.variants.some((v) =>
+          v.name.toLowerCase().includes(q) ||
+          v.variant.toLowerCase().includes(q) ||
+          v.tags.some(tag => tag.toLowerCase().includes(q))
+        )
       );
     }
 
@@ -173,20 +221,19 @@ export default function ExercisesScreen() {
     if (recency === "stale") filtered = filtered.filter(isStale);
 
     // "2+ weeks" lists the longest-neglected first; otherwise alphabetical.
-    const gap = (e: ExerciseLibraryItem) =>
-      daysSince(logSummary[e.id]?.lastStartTime ?? "") ?? 0;
+    const gap = (m: Movement) => daysSince(movementSummary(m)?.lastStartTime ?? "") ?? 0;
     const sorted = [...filtered].sort((a, b) =>
       recency === "stale"
         ? gap(b) - gap(a) || a.name.localeCompare(b.name)
         : a.name.localeCompare(b.name)
     );
 
-    const map: Record<string, ExerciseLibraryItem[]> = {};
+    const map: Record<string, Movement[]> = {};
 
-    sorted.forEach((ex) => {
-      const muscle = ex.primaryMuscle;
+    sorted.forEach((m) => {
+      const muscle = m.primaryMuscle;
       if (!map[muscle]) map[muscle] = [];
-      map[muscle].push(ex);
+      map[muscle].push(m);
     });
 
     return Object.keys(map)
@@ -197,16 +244,16 @@ export default function ExercisesScreen() {
       }));
     // isNew/isStale only read logSummary, which is listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, exercises, selectedMuscle, recency, logSummary]);
+  }, [query, movements, selectedMuscle, recency, logSummary]);
 
   // Counts follow the muscle filter so "Not done yet (3)" means "3 chest exercises".
   const recencyCounts = useMemo(() => {
     const pool = selectedMuscle
-      ? exercises.filter((e) => e.primaryMuscle === selectedMuscle)
-      : exercises;
+      ? movements.filter((m) => m.primaryMuscle === selectedMuscle)
+      : movements;
     return { new: pool.filter(isNew).length, stale: pool.filter(isStale).length };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercises, selectedMuscle, logSummary]);
+  }, [movements, selectedMuscle, logSummary]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, padding: 16, marginTop: 32 }}>
@@ -238,7 +285,7 @@ export default function ExercisesScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder={`Search from ${exercises.length} exercises`}
+          placeholder={`Search ${movements.length} exercises`}
           placeholderTextColor="#666"
           style={{
             backgroundColor: colors.card,
@@ -403,7 +450,7 @@ export default function ExercisesScreen() {
         sections={sections}
         stickySectionHeadersEnabled
         extraData={[queued, current, doneNames, logSummary]}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.movement}
         keyboardShouldPersistTaps="handled"
         renderSectionHeader={({ section }) => (
           <View
@@ -425,17 +472,15 @@ export default function ExercisesScreen() {
             </Text>
           </View>
         )}
-        renderItem={({ item }) => {
-          const summary = logSummary[item.id];
+        renderItem={({ item: m }) => {
+          const summary = movementSummary(m);
+          const names = variantNames(m);
+          const video = m.variants.find((v) => v.videoUrl)?.videoUrl;
+          const single = m.variants.length === 1 ? m.variants[0] : null;
           return (
           <Pressable
             disabled={!summary}
-            onPress={() =>
-              router.push({
-                pathname: "/exercise-details",
-                params: { exerciseLibraryId: item.id, name: item.name },
-              })
-            }
+            onPress={() => openHistory(m)}
             style={({ pressed }) => ({
               paddingVertical: 10,
               paddingHorizontal: 12,
@@ -448,8 +493,8 @@ export default function ExercisesScreen() {
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.text, fontSize: 17 }}>
-                  {item.name}
-                  {sessionId && doneNames.has(item.name.toLowerCase()) ? (
+                  {m.name}
+                  {sessionId && names.some((n) => doneNames.has(n)) ? (
                     <Text style={{ color: "#4CAF50", fontSize: 12 }}>  ✓ this session</Text>
                   ) : null}
                 </Text>
@@ -479,35 +524,63 @@ export default function ExercisesScreen() {
                     }}
                   >
                     <Text style={{ color: "#7bed9f", fontSize: 11, fontWeight: "500" }}>
-                      {item.primaryMuscle}
+                      {m.primaryMuscle}
                     </Text>
                   </View>
 
-                  {item.tags.map((tag) => (
-                    <View
-                      key={tag}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: "#333",
-                        backgroundColor: "rgba(255,255,255,0.04)",
-                        borderRadius: 12,
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
-                        marginRight: 6,
-                        marginBottom: 4,
-                      }}
-                    >
-                      <Text style={{ color: "#aaa", fontSize: 11 }}>
-                        {tag}
-                      </Text>
-                    </View>
-                  ))}
+                  {single
+                    ? single.tags.map((tag) => (
+                        <View
+                          key={tag}
+                          style={{
+                            borderWidth: 1,
+                            borderColor: "#333",
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                            borderRadius: 12,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            marginRight: 6,
+                            marginBottom: 4,
+                          }}
+                        >
+                          <Text style={{ color: "#aaa", fontSize: 11 }}>{tag}</Text>
+                        </View>
+                      ))
+                    : m.variants.map((v) => {
+                        // Equipment chips: logged ones are bright (with count) and
+                        // open that equipment's history; unused ones are dim.
+                        const vs = logSummary[v.id];
+                        return (
+                          <Pressable
+                            key={v.id}
+                            disabled={!vs}
+                            onPress={() => openHistory(m, v.id)}
+                            hitSlop={4}
+                            style={({ pressed }) => ({
+                              borderWidth: 1,
+                              borderColor: vs ? "#3a5a7a" : "#262626",
+                              backgroundColor: vs ? "rgba(108,180,255,0.10)" : "transparent",
+                              borderRadius: 12,
+                              paddingHorizontal: 8,
+                              paddingVertical: 2,
+                              marginRight: 6,
+                              marginBottom: 4,
+                              opacity: pressed ? 0.6 : 1,
+                            })}
+                          >
+                            <Text style={{ color: vs ? "#b9dcff" : "#666", fontSize: 11 }}>
+                              {v.variant}
+                              {vs ? ` ·${vs.count}` : ""}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
                 </View>
               </View>
 
-              {item.videoUrl ? (
+              {video ? (
                 <Pressable
-                  onPress={() => Linking.openURL(item.videoUrl)}
+                  onPress={() => Linking.openURL(video)}
                   style={({ pressed }) => ({
                     opacity: pressed ? 0.6 : 1,
                   })}
@@ -531,7 +604,7 @@ export default function ExercisesScreen() {
                 </Pressable>
               ) : null}
 
-              {sessionId ? renderQueueControl(item) : null}
+              {sessionId ? renderQueueControl(m) : null}
 
               {summary ? (
                 <Text style={{ color: "#555", fontSize: 20, marginLeft: 10 }}>›</Text>
@@ -572,8 +645,8 @@ export default function ExercisesScreen() {
     </View>
   );
 
-  function renderQueueControl(item: ExerciseLibraryItem) {
-    const isCurrent = current && current.name.toLowerCase() === item.name.toLowerCase();
+  function renderQueueControl(m: Movement) {
+    const isCurrent = current && variantNames(m).includes(current.name.toLowerCase());
     if (isCurrent) {
       return (
         <View style={{ ...queueBtn, borderColor: "#1f7a4d", backgroundColor: "#0f2e1f" }}>
@@ -584,10 +657,10 @@ export default function ExercisesScreen() {
       );
     }
 
-    const pos = queued.findIndex((q) => q.name === item.name);
+    const pos = queuedIndex(m);
     return (
       <Pressable
-        onPress={() => toggleQueued(item)}
+        onPress={() => toggleQueued(m)}
         hitSlop={6}
         style={({ pressed }) => ({
           ...queueBtn,

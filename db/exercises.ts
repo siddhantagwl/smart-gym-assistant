@@ -15,6 +15,7 @@ export type StoredExercise = {
   restSeconds: number;
   restPeriods?: number[]; // only populated by queries that select rest_periods
   setLog?: SetEntry[]; // likewise for set_log
+  sessionGym?: string; // only populated by getExercisesByLibraryIds
   startTime: string;
   endTime: string;
 };
@@ -348,15 +349,20 @@ export function getExerciseLogSummaries(): Record<string, ExerciseLogSummary> {
   return map;
 }
 
-export function getExercisesByLibraryId(exerciseLibraryId: string): StoredExercise[] {
+// History of several library ids (the variants of one movement), newest
+// first, with each row's session gym.
+export function getExercisesByLibraryIds(libraryIds: string[]): StoredExercise[] {
+  if (libraryIds.length === 0) return [];
   const rows = db.getAllSync(
     `
-    SELECT id, session_id, exercise_library_id, name, sets, reps, weight_kg, weight_unit, rest_seconds, rest_periods, set_log, start_time, end_time, note
-    FROM exercises
-    WHERE exercise_library_id = ?
-    ORDER BY start_time DESC;
+    SELECT e.id, e.session_id, e.exercise_library_id, e.name, e.sets, e.reps, e.weight_kg, e.weight_unit,
+           e.rest_seconds, e.rest_periods, e.set_log, e.start_time, e.end_time, e.note, s.gym AS session_gym
+    FROM exercises e
+    LEFT JOIN sessions s ON s.id = e.session_id
+    WHERE e.exercise_library_id IN (${libraryIds.map(() => "?").join(",")})
+    ORDER BY e.start_time DESC;
     `,
-    [exerciseLibraryId]
+    libraryIds
   ) as any[];
 
   return rows.map((r) => ({
@@ -374,5 +380,6 @@ export function getExercisesByLibraryId(exerciseLibraryId: string): StoredExerci
     startTime: String(r.start_time),
     endTime: String(r.end_time),
     note: r.note ? String(r.note) : "",
+    sessionGym: r.session_gym ? String(r.session_gym) : "",
   }));
 }

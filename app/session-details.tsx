@@ -14,6 +14,7 @@ import {
 
 import { WeightUnit } from "@/domain/exercise";
 import { getAllLibraryExercises } from "@/db/exerciseLibrary";
+import { weightUnitSuffix } from "@/domain/movement";
 import {
   getAllExercises,
   getExercisesForSession,
@@ -50,6 +51,14 @@ export default function SessionDetailsScreen() {
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
   const [sessionGym, setSessionGym] = useState("");
+  // "/db" for dumbbell variants (weights are per dumbbell).
+  const weightSuffixById = useMemo(() => {
+    const map: Record<string, string> = {};
+    getAllLibraryExercises().forEach((l) => {
+      map[l.id] = weightUnitSuffix(l.equipment);
+    });
+    return map;
+  }, []);
 
   // Long-press an exercise card to fix a typo'd name / sets / reps / weight / note.
   const [editing, setEditing] = useState<StoredExercise | null>(null);
@@ -432,6 +441,7 @@ export default function SessionDetailsScreen() {
                       params: {
                         exerciseLibraryId: item.exerciseLibraryId,
                         name: item.name,
+                        tab: item.exerciseLibraryId,
                       },
                     })
                   }
@@ -496,6 +506,7 @@ export default function SessionDetailsScreen() {
                     </View>
                     <Text style={{ color: colors.muted }}>
                       {item.sets} sets · {item.reps} reps · {item.weightKg} kg
+                      {weightSuffixById[item.exerciseLibraryId] ?? ""}
                       {item.weightUnit === "lb"
                         ? `  (${Math.round((item.weightKg / 0.45359237) * 10) / 10} lb)`
                         : ""}

@@ -65,7 +65,7 @@ export default function ExerciseProgress({
 }: {
   history: StoredExercise[];
 }) {
-  // history arrives newest-first (getExercisesByLibraryId); charts read oldest-first.
+  // history arrives newest-first (getExercisesByLibraryIds); charts read oldest-first.
   const chrono = useMemo(
     () =>
       [...history]

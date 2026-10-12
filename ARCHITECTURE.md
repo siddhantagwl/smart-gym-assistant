@@ -311,6 +311,17 @@ The web-app script lives in the repo at `apps-script/Code.gs` (constants `SHARED
 - `user_version 1` — library cleanup: 13 exercises logged under names that weren't in the library are relinked (by exercise id) to their library entry. The Sheet side is `apps-script/Cleanup_2026_10.gs` (`cleanupLibrary_2026_10`, run once from the editor, `DRY_RUN` first); it also fixes Barbell Shrug → Traps, Deadlift → Back, adds `machine` to Seated Dip / Arm Extension, and adds 8 library entries (Cable Front Raise, Seated Cable Row (Narrow Grip), Cable Bicep Curl, Cable Wrist Curl, Cable Upright Row, Cable Shrug, Hack Squat Machine, Shoulder Press Machine). The two mappings must stay identical.
 - Library conventions: `id` lower_snake_case and **never changed** (history links to it); `name` Title Case with variants in brackets; `primary_muscle` one of Back, Chest, Shoulders, Biceps, Triceps, Legs, Core, Traps, Forearms, Cardio; `tags` = `[push|pull|core, muscle, compound|isolation, equipment, sub-muscles…]`.
 
+### 3.15 Movements, equipment variants and gyms (Oct 2026)
+
+Training at different gyms means the same exercise is done on different equipment, and machine weights aren't comparable between gyms.
+
+- **Movement vs variant.** A library row is a *variant* (Barbell Squat, Hack Squat Machine…); rows sharing the Sheet column `movement` form one *movement* ("Squat"), shown by `movement_name`, with `variant` as the chip label. Empty `movement` → its own single-variant movement. Ids never change. Helpers: `domain/movement.ts` (`equipmentOf(tags)`, `isGymScoped`, `weightUnitSuffix`), `groupMovements()` in `db/exerciseLibrary.ts`. Grouping was seeded by `apps-script/PrefillMovements_2026_10.gs`; new library rows should fill the three columns by hand.
+- **Picker.** Search lists one entry per movement (matches movement + variant names). Picking one selects the variant last used at this gym (`getLastUsedVariant`, else most recent anywhere, else first); equipment chips switch variant before the exercise starts, hidden once running (no mid-exercise switching). Logged rows keep the variant's own name/id, so per-variant history works unchanged.
+- **Gym per session.** `sessions.gym` ('' = unknown), picked via the 📍 pill above Start session (`components/home/GymPicker.tsx`, remembered in `services/gymPreference.ts`). Synced by header (`EXTRA_SESSION_FIELDS` in `apps-script/Code.gs`).
+- **Comparisons.** Free weights (barbell, EZ-bar, dumbbell, bodyweight) use history from all gyms. Machine / cable / Smith use only this gym's history for Prev logged, 🎯 Try today and PRs, with a labelled fallback to another gym ("@ Gym B", "Other gym's machine — …"); a first time on this gym's machine is not a PR. Sessions without a gym don't scope.
+- **Dumbbells** are logged per dumbbell and shown as `kg/db`.
+- **Exercises tab** shows one row per movement with equipment chips (logged ones bright with counts → that variant's history). **History** (`app/exercise-details.tsx`) loads all variants of the movement (`getExercisesByLibraryIds`) with `All · Barbell · Dumbbell…` tabs; stats + chart render only for a single variant so weights are never mixed; entries show variant and 📍 gym.
+
 ---
 
 ## 4. Important Architectural Decisions

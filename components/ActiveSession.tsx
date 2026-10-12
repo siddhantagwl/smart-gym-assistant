@@ -1176,7 +1176,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     const endTime = new Date();
     console.log("Final accumulated rest:", totalRest);
 
-    // Unknown exercise: name doubles as synthetic library ID (matches db/sessions.ts manual-import pattern) so getExercisesByLibraryId still groups history.
+    // Unknown exercise: name doubles as synthetic library ID (matches db/sessions.ts manual-import pattern) so getExercisesByLibraryIds still groups history.
     insertExercise({
       id: exerciseId,
       sessionId: activeSession.id,
