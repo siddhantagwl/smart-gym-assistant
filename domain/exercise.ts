@@ -12,6 +12,7 @@ export type Exercise = {
   weightKg: number;
   weightUnit?: WeightUnit; // what the user typed in; storage stays kg
   restSeconds: number;
+  restPeriods?: number[]; // each rest between sets, seconds
   startTime: string;
   endTime: string;
   note?: string;

@@ -13,6 +13,7 @@ export type StoredExercise = {
   weightUnit: WeightUnit;
   note: string;
   restSeconds: number;
+  restPeriods?: number[]; // only populated by queries that select rest_periods
   startTime: string;
   endTime: string;
 };
@@ -33,11 +34,27 @@ function normaliseUnit(v: unknown): WeightUnit {
   return v === "lb" ? "lb" : "kg";
 }
 
+// rest_periods arrives as a JSON string (SQLite), an array (Sheets restore)
+// or nothing (older rows); always hand back clean whole seconds.
+function parseRestPeriods(v: unknown): number[] {
+  let arr: unknown = v;
+  if (typeof v === "string") {
+    try {
+      arr = JSON.parse(v);
+    } catch {
+      return [];
+    }
+  }
+  return Array.isArray(arr)
+    ? arr.map(Number).filter((n) => Number.isFinite(n) && n >= 0).map(Math.round)
+    : [];
+}
+
 export function insertExercise(exercise: Exercise) {
   db.runSync(
     `
-    INSERT INTO exercises (id, session_id, exercise_library_id, name, sets, reps, weight_kg, weight_unit, rest_seconds, start_time, end_time, note)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    INSERT INTO exercises (id, session_id, exercise_library_id, name, sets, reps, weight_kg, weight_unit, rest_seconds, rest_periods, start_time, end_time, note)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `,
     [
       exercise.id,
@@ -49,6 +66,7 @@ export function insertExercise(exercise: Exercise) {
       exercise.weightKg,
       exercise.weightUnit ?? "kg",
       exercise.restSeconds ?? 0,
+      JSON.stringify(exercise.restPeriods ?? []),
       exercise.startTime,
       exercise.endTime,
       exercise.note ?? "",
@@ -90,7 +108,7 @@ export function deleteExercise(id: string) {
 export function getAllExercises(): StoredExercise[] {
   const rows = db.getAllSync(
     `
-    SELECT id, session_id, exercise_library_id, name, sets, reps, weight_kg, weight_unit, rest_seconds, start_time, end_time, note
+    SELECT id, session_id, exercise_library_id, name, sets, reps, weight_kg, weight_unit, rest_seconds, rest_periods, start_time, end_time, note
     FROM exercises
     ORDER BY start_time ASC;
     `
@@ -106,6 +124,7 @@ export function getAllExercises(): StoredExercise[] {
     weightKg: Number(r.weight_kg),
     weightUnit: normaliseUnit(r.weight_unit),
     restSeconds: Number(r.rest_seconds),
+    restPeriods: parseRestPeriods(r.rest_periods),
     startTime: String(r.start_time),
     endTime: String(r.end_time),
     note: r.note ? String(r.note) : "",
@@ -229,8 +248,8 @@ export function insertExerciseRaw(row: any) {
   db.runSync(
     `
     INSERT INTO exercises
-    (id, session_id, exercise_library_id, name, sets, reps, weight_kg, weight_unit, rest_seconds, start_time, end_time, note)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id, session_id, exercise_library_id, name, sets, reps, weight_kg, weight_unit, rest_seconds, rest_periods, start_time, end_time, note)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       row.id,
@@ -242,6 +261,7 @@ export function insertExerciseRaw(row: any) {
       Number(row.weight_kg),
       normaliseUnit(row.weight_unit),
       Number(row.rest_seconds || 0),
+      JSON.stringify(parseRestPeriods(row.rest_periods)),
       row.start_time,
       row.end_time,
       row.note || "",

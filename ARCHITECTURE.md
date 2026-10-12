@@ -86,7 +86,7 @@ A mobile-first gym logging application focused on:
 
 #### Behavior
 
-- Countdown (90s) is visual only
+- Countdown is visual only — its length is the per-exercise-type target (see §3.11; 90s for unknown types)
 - After 0 → timer continues upward (+seconds)
 - Rest ends ONLY when:
   - Start Set
@@ -105,7 +105,7 @@ Target platform is Android. When the app is backgrounded (user switches apps, lo
 
 1. **Visible counter (`restSeconds`)** — every `setInterval` tick recomputes the displayed value as `duration - secondsBetween(new Date(), restStartRef.current)`, **not** `prev - 1`. So when JS resumes in the foreground, the next tick (within ~1s) snaps the counter to the correct elapsed value. Counter goes negative past 0 to indicate "rest exceeded". Don't refactor this back to decrementing — that's the broken pattern we replaced.
 2. **OS-scheduled local notification** — `services/notifications.ts` schedules an `expo-notifications` time-interval notification at `restStartRef + duration` whenever rest starts. ID kept in `restNotificationIdRef`. Fires regardless of JS state — app backgrounded, screen off, app killed. Two kinds:
-   - `"set"` (90s) → title "Rest done", body "Time for your next set"
+   - `"set"` (type target: 2:30 compound / 1:15 isolation / 1:00 cardio / 1:30 other) → title "Rest done", body "Time for your next set"
    - `"transition"` (120s) → title "Next exercise", body "Ready for the next exercise"
 3. **Saved rest value** — `secondsBetween(new Date(), restStartRef)` accumulated into `accumulatedRest` on `stopRestTimer`. Wall-clock math, independent of JS thread state.
 
@@ -281,6 +281,12 @@ A single pill above "Start session" — `🎯 Today: Back + Biceps ›` (`Next:`
 - Data: `getTrainingLog()` in `db/sessions.ts` — finished, non-discarded, non-sauna sessions with their confirmed `session_labels`, falling back to the logged exercises' library `primary_muscle` when a session has no labels.
 - Logic: `computeTodayFocus()` in `domain/todayFocus.ts` (pure, `now` injectable). Window = 8 weeks before the **last** session (not before today), so long breaks don't erase the pattern. **Split mode** when repeated muscle combos (≥2× each) cover ≥60% of the window → suggest the combo done longest ago whose muscles aren't recovering (continues the rotation). Otherwise **muscle mode** → longest-gap regular muscle + its most frequent partner. Cardio/Sauna ignored. Breaks of 7+ / 21+ days add a "go lighter / ease back in" note.
 - Shown only in idle mode; recomputed on Home focus and when a session ends.
+
+### 3.11 Rest target by exercise type + per-set rest log
+
+- **Target**: after Finish Set the countdown uses `restTargetFor(tags)` from `domain/restTarget.ts` — library tag `compound` → 2:30, `isolation` → 1:15, `cardio` → 1:00, else 1:30. The rest header reads e.g. `🧘 REST · 2:30 compound`, and the "Rest done" notification fires at that point. It is only a target: actual rest is still wall-clock, so going over/under never loses data. (Chosen over learning from the user's own history, Oct 2026.)
+- **Per-set rest log**: new column `exercises.rest_periods` (JSON array of seconds, default `"[]"`, added via `ensureColumn`). `stopRestTimer(true)` appends the elapsed rest only when it ends a between-set rest (next set started or Skip rest) and the running rest was a `"set"` rest (`restKindRef`). The trailing rest before Finish Exercise and the transition rest before an exercise are excluded. `rest_seconds` keeps its old meaning (total, which also includes the preceding transition rest).
+- Undo restores the log; Sheets push sends `rest_periods` (kept only if the exercises tab has a `rest_periods` header); restore parses it back via `parseRestPeriods`.
 
 ---
 

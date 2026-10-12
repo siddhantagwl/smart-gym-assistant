@@ -54,6 +54,8 @@ export async function syncToGoogleSheets() {
       weight_kg: e.weightKg,
       weight_unit: e.weightUnit,
       rest_seconds: e.restSeconds ?? 0,
+      // Stored only if the Sheet's exercises tab has a "rest_periods" column.
+      rest_periods: JSON.stringify(e.restPeriods ?? []),
       start_time: e.startTime,
       end_time: e.endTime,
       note: e.note,

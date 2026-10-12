@@ -18,6 +18,7 @@ const REST_RING_RADIUS = (REST_RING_SIZE - REST_RING_STROKE) / 2;
 const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
 import { getAllLibraryExercises } from "@/db/exerciseLibrary";
 import { suggestNext } from "@/domain/progression";
+import { DEFAULT_REST, restTargetFor } from "@/domain/restTarget";
 import {
   getExercisesForSession,
   getLatestExerciseByName,
@@ -184,6 +185,11 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     null,
   );
   const [accumulatedRest, setAccumulatedRest] = useState(0);
+  // Each completed between-set rest for the current exercise (seconds).
+  // Saved as rest_periods; the trailing rest before Finish Exercise and the
+  // transition rest before the exercise are not between-set rests, so excluded.
+  const restPeriodsRef = useRef<number[]>([]);
+  const restKindRef = useRef<"set" | "transition" | null>(null);
 
   // Undo for Finish Exercise: everything needed to put the exercise back
   // exactly as it was (row is deleted, rest/set timers resume from their
@@ -197,6 +203,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     reps: number;
     weightKg: number;
     sets: number; // completed sets before finishing (excludes an auto-saved in-flight set)
+    restPeriods: number[];
     finalSets: number;
     setInProgress: boolean;
     setStartedAt: string | null;
@@ -345,6 +352,14 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     const rows = getExercisesForSession(activeSession.id);
     setSessionExercises(rows);
   }, [activeSession.id]);
+
+  // Rest countdown target by exercise type (domain/restTarget.ts).
+  const restTarget = useMemo(() => {
+    const lib =
+      (exerciseLibraryId && exerciseLibrary.find((l) => l.id === exerciseLibraryId)) ||
+      exerciseLibrary.find((l) => l.name.toLowerCase() === exerciseName.trim().toLowerCase());
+    return lib ? restTargetFor(lib.tags) : DEFAULT_REST;
+  }, [exerciseLibraryId, exerciseName, exerciseLibrary]);
 
   // "Try today" target from the last 3 logs of this exercise. Recomputed when
   // the exercise, display unit (kg/lb step) or this session's logs change.
@@ -514,6 +529,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     }
 
     restStartRef.current = startedAt;
+    restKindRef.current = kind;
     setRestSeconds(remaining);
     setRestTotalSeconds(duration);
     restOpacity.setValue(1);
@@ -536,14 +552,20 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     }, 1000);
   }
 
-  function stopRestTimer(): number {
+  // `endsBetweenSetRest`: this stop is the end of a rest between two sets
+  // (next set started / rest skipped), so log it in restPeriodsRef.
+  function stopRestTimer(endsBetweenSetRest: boolean = false): number {
     let elapsed = 0;
 
     if (restStartRef.current) {
       elapsed = secondsBetween(new Date(), restStartRef.current);
       setAccumulatedRest((r) => r + elapsed);
+      if (endsBetweenSetRest && restKindRef.current === "set") {
+        restPeriodsRef.current.push(elapsed);
+      }
       restStartRef.current = null;
     }
+    restKindRef.current = null;
 
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -971,6 +993,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     // Ensure no rest timer is visible when exercise starts
     stopRestTimer();
+    restPeriodsRef.current = [];
     setRestType(null);
     setRestSeconds(null);
   }
@@ -978,7 +1001,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   // ▶ Start Set (stops any running rest immediately)
   function handleStartSet() {
     if (restSeconds !== null) {
-      stopRestTimer();
+      stopRestTimer(true);
       setRestType(null);
       setRestSeconds(null);
     }
@@ -989,13 +1012,13 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     if (!isExerciseActive) return;
     // Stop any running rest immediately when starting a new set
     if (restSeconds !== null) {
-      stopRestTimer();
+      stopRestTimer(true);
       setRestType(null);
       setRestSeconds(null);
     }
     setSets((prev) => prev + 1);
     setRestType("set");
-    startRestTimer(90, "set");
+    startRestTimer(restTarget.seconds, "set");
     onScrollToTop?.();
 
     // PR check: fire once per exercise instance, when this set's weight
@@ -1029,6 +1052,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       reps,
       weightKg,
       sets,
+      restPeriods: [...restPeriodsRef.current],
       finalSets,
       setInProgress: autoSaveSetInProgress,
       setStartedAt: setStartedAt ? setStartedAt.toISOString() : null,
@@ -1066,6 +1090,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       weightUnit,
       note: exerciseNote,
       restSeconds: totalRest,
+      restPeriods: [...restPeriodsRef.current],
       startTime: currentExerciseStart.toISOString(),
       endTime: endTime.toISOString(),
     });
@@ -1111,6 +1136,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     setReps(u.reps);
     setWeightKg(u.weightKg);
     setSets(u.sets);
+    restPeriodsRef.current = [...u.restPeriods];
     setCurrentExerciseStart(new Date(u.exerciseStart));
     prFiredRef.current = u.prFired;
 
@@ -1123,7 +1149,14 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     if (u.restStartedAt) {
       setRestType(u.restType ?? "set");
-      startRestTimer(90, "set", new Date(u.restStartedAt));
+      startRestTimer(
+        restTargetFor(
+          (u.libraryId && exerciseLibrary.find((l) => l.id === u.libraryId)?.tags) ||
+            exerciseLibrary.find((l) => l.name === u.name)?.tags,
+        ).seconds,
+        "set",
+        new Date(u.restStartedAt),
+      );
     } else {
       setRestType(null);
     }
@@ -1280,7 +1313,9 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
               letterSpacing: 0.5,
             }}
           >
-            {restType === "transition" ? "🔄 TRANSITION" : "🧘 REST"}
+            {restType === "transition"
+              ? "🔄 TRANSITION"
+              : `🧘 REST · ${formatDuration(restTotalSeconds ?? restTarget.seconds)} ${restTarget.label}`}
           </Text>
 
           <Animated.View
@@ -1370,7 +1405,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
           </Text>
 
           <Pressable
-            onPress={stopRestTimer}
+            onPress={() => stopRestTimer(true)}
             style={{
               marginTop: 6,
               paddingVertical: 4,

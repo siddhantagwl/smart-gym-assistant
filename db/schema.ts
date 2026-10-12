@@ -60,6 +60,9 @@ export function initDb() {
     // typed in so history can echo it back ("(220 lb)") even though storage
     // and PR/aggregation logic always use kg.
     ensureColumn("exercises", "weight_unit", "TEXT NOT NULL DEFAULT 'kg'");
+    // Each rest between sets, in seconds, as a JSON array (e.g. "[95,140,160]").
+    // rest_seconds stays the exercise's total; older rows default to "[]".
+    ensureColumn("exercises", "rest_periods", "TEXT NOT NULL DEFAULT '[]'");
 
     seedExerciseLibrary();
 
