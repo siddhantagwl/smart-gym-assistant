@@ -23,6 +23,7 @@ import {
   getLatestExerciseByName,
   getMaxWeightForExercise,
   getRecentExerciseRows,
+  deleteExercise,
   insertExercise,
   LatestExercise,
 } from "@/db/exercises";
@@ -47,12 +48,16 @@ type Props = {
   activeSession: Session;
   onEnd: () => void;
   colors: Colors;
+  // Home scrolls back up so the timers are visible after Finish Set / Finish Exercise / Undo.
+  onScrollToTop?: () => void;
 };
 
 function SessionExerciseList({
   exercises,
   sessionStart,
   textColor,
+  undoExerciseId,
+  onUndo,
 }: {
   exercises: {
     id: string;
@@ -70,6 +75,9 @@ function SessionExerciseList({
   }[];
   sessionStart: Date;
   textColor: string;
+  // Only the just-finished exercise's card offers Undo.
+  undoExerciseId?: string | null;
+  onUndo?: () => void;
 }) {
   if (exercises.length === 0) return null;
 
@@ -99,9 +107,31 @@ function SessionExerciseList({
               marginBottom: 6,
             }}
           >
-            <Text style={{ color: textColor, fontSize: 12 }}>
-              {serialNumber}. {e.name}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={{ color: textColor, fontSize: 12, flex: 1 }} numberOfLines={1}>
+                {serialNumber}. {e.name}
+              </Text>
+              {onUndo && e.id === undoExerciseId ? (
+                <Pressable
+                  onPress={onUndo}
+                  hitSlop={8}
+                  style={({ pressed }) => ({
+                    marginLeft: 8,
+                    paddingVertical: 2,
+                    paddingHorizontal: 8,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: "#1f7a4d",
+                    backgroundColor: "rgba(0, 255, 150, 0.08)",
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Text style={{ color: "#4dffa6", fontSize: 11, fontWeight: "700" }}>
+                    ↩ Undo
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
 
             <Text style={{ color: "#aaa", fontSize: 12, marginTop: 2 }}>
               {e.sets} sets · {e.reps} reps · {e.weightKg} kg
@@ -129,7 +159,7 @@ function SessionExerciseList({
   );
 }
 
-export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
+export default function ActiveSession({ activeSession, onEnd, colors, onScrollToTop }: Props) {
   // Screen stays on for the whole session so it doesn't lock between sets.
   // Tied to this component's lifetime: it stays mounted while the user is on
   // other tabs, and unmounts on save/discard, which releases the lock.
@@ -154,6 +184,32 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     null,
   );
   const [accumulatedRest, setAccumulatedRest] = useState(0);
+
+  // Undo for Finish Exercise: everything needed to put the exercise back
+  // exactly as it was (row is deleted, rest/set timers resume from their
+  // original start). Shown as "↩ Undo" on the latest card in "Exercises this
+  // session" until the next exercise starts or the session ends.
+  type UndoSnapshot = {
+    exerciseId: string;
+    name: string;
+    libraryId: string | null;
+    note: string;
+    reps: number;
+    weightKg: number;
+    sets: number; // completed sets before finishing (excludes an auto-saved in-flight set)
+    finalSets: number;
+    setInProgress: boolean;
+    setStartedAt: string | null;
+    accumulatedRest: number;
+    restStartedAt: string | null;
+    restType: "set" | "transition" | null;
+    exerciseStart: string;
+    prFired: boolean;
+  };
+  const [undo, setUndo] = useState<UndoSnapshot | null>(null);
+  const [restoreSetState, setRestoreSetState] = useState<
+    { key: number; inProgress: boolean; startedAt: string | null } | null
+  >(null);
 
   const [sessionExercises, setSessionExercises] = useState<
     {
@@ -436,26 +492,36 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   // when rest is stopped early (Start Set, Finish Exercise, manual close).
   const restNotificationIdRef = useRef<string | null>(null);
 
-  function startRestTimer(duration: number = 90, kind: "set" | "transition" = "set") {
+  // `startedAt` lets Undo resume a rest that began before the exercise was finished.
+  function startRestTimer(
+    duration: number = 90,
+    kind: "set" | "transition" = "set",
+    startedAt: Date = new Date(),
+  ) {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
+    const alreadyElapsed = secondsBetween(new Date(), startedAt);
+    const remaining = duration - alreadyElapsed;
+
     cancelRestNotification(restNotificationIdRef.current);
     restNotificationIdRef.current = null;
-    scheduleRestDoneNotification(duration, kind).then((id) => {
-      restNotificationIdRef.current = id;
-    });
+    if (remaining > 0) {
+      scheduleRestDoneNotification(remaining, kind).then((id) => {
+        restNotificationIdRef.current = id;
+      });
+    }
 
-    restStartRef.current = new Date();
-    setRestSeconds(duration);
+    restStartRef.current = startedAt;
+    setRestSeconds(remaining);
     setRestTotalSeconds(duration);
     restOpacity.setValue(1);
 
-    restRingProgress.setValue(0);
+    restRingProgress.setValue(Math.min(1, alreadyElapsed / duration));
     Animated.timing(restRingProgress, {
       toValue: 1,
-      duration: duration * 1000,
+      duration: Math.max(0, remaining) * 1000,
       useNativeDriver: false,
     }).start();
 
@@ -895,6 +961,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   //▶ Start Exercise
   function startExercise() {
     if (!exerciseName.trim()) return;
+    clearUndo();
 
     setIsExerciseActive(true);
     setCurrentExerciseStart(new Date());
@@ -929,6 +996,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     setSets((prev) => prev + 1);
     setRestType("set");
     startRestTimer(90, "set");
+    onScrollToTop?.();
 
     // PR check: fire once per exercise instance, when this set's weight
     // beats the historical max for this exercise name.
@@ -942,12 +1010,34 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
   }
 
   // ✅ Finish Exercise
-  function finishExercise(autoSaveSetInProgress: boolean = false) {
+  function finishExercise(
+    autoSaveSetInProgress: boolean = false,
+    setStartedAt: Date | null = null,
+  ) {
     if (!isExerciseActive || !currentExerciseStart) return;
 
     // Auto-save: count the mid-flight set so the user doesn't lose it.
     const finalSets = sets + (autoSaveSetInProgress ? 1 : 0);
     if (finalSets === 0) return;
+
+    const exerciseId = Date.now().toString();
+    const snapshot: UndoSnapshot = {
+      exerciseId,
+      name: exerciseName,
+      libraryId: exerciseLibraryId,
+      note: exerciseNote,
+      reps,
+      weightKg,
+      sets,
+      finalSets,
+      setInProgress: autoSaveSetInProgress,
+      setStartedAt: setStartedAt ? setStartedAt.toISOString() : null,
+      accumulatedRest,
+      restStartedAt: restStartRef.current ? restStartRef.current.toISOString() : null,
+      restType,
+      exerciseStart: currentExerciseStart.toISOString(),
+      prFired: prFiredRef.current,
+    };
 
     // Mirror saveSet()'s PR check for the auto-saved set.
     if (autoSaveSetInProgress && !prFiredRef.current && weightKg > 0) {
@@ -966,7 +1056,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
 
     // Unknown exercise: name doubles as synthetic library ID (matches db/sessions.ts manual-import pattern) so getExercisesByLibraryId still groups history.
     insertExercise({
-      id: Date.now().toString(),
+      id: exerciseId,
       sessionId: activeSession.id,
       exerciseLibraryId: exerciseLibraryId ?? exerciseName,
       name: exerciseName,
@@ -988,7 +1078,68 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     startRestTimer(120, "transition");
 
     resetExerciseState();
-    // Removed transition rest timer after finishing exercise
+
+    setUndo(snapshot);
+    onScrollToTop?.();
+  }
+
+  function clearUndo() {
+    setUndo(null);
+  }
+
+  // ↩ Undo Finish Exercise: delete the saved row and put the exercise back
+  // in progress exactly as it was.
+  function undoFinish() {
+    const u = undo;
+    if (!u) return;
+    clearUndo();
+
+    deleteExercise(u.exerciseId);
+
+    // Whatever the Up next queue auto-loaded into the picker goes back to the front.
+    const picked = exerciseName.trim();
+    if (picked && exerciseLibraryId) {
+      pushFrontUpNext(activeSession.id, { libraryId: exerciseLibraryId, name: picked });
+    }
+
+    stopRestTimer(); // ends the transition rest that finishing started
+    setAccumulatedRest(u.accumulatedRest); // overrides what stopRestTimer just added
+
+    setExerciseName(u.name);
+    setExerciseLibraryId(u.libraryId);
+    setExerciseNote(u.note);
+    setReps(u.reps);
+    setWeightKg(u.weightKg);
+    setSets(u.sets);
+    setCurrentExerciseStart(new Date(u.exerciseStart));
+    prFiredRef.current = u.prFired;
+
+    setRestoreSetState({
+      key: Date.now(),
+      inProgress: u.setInProgress,
+      startedAt: u.setStartedAt,
+    });
+    setIsExerciseActive(true);
+
+    if (u.restStartedAt) {
+      setRestType(u.restType ?? "set");
+      startRestTimer(90, "set", new Date(u.restStartedAt));
+    } else {
+      setRestType(null);
+    }
+
+    setSessionExercises(getExercisesForSession(activeSession.id));
+    onScrollToTop?.();
+  }
+
+  function endSessionPressed() {
+    clearUndo();
+    stopRestTimer();
+    setRestSeconds(null);
+    const inferred = inferLabels();
+    setSelectedLabels(inferred);
+    setInferredLabels(inferred);
+    setShowLabelConfirm(true);
   }
 
   // 🔄 Reset Exercise State (after finishing or canceling)
@@ -1045,13 +1196,46 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
         </Animated.View>
       ) : null}
 
-      <Text style={{ color: colors.text, fontSize: 16, marginBottom: 9 }}>
-        Session started at{" "}
-        {activeSession.startTime.toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </Text>
+      {/* End session lives up here, away from the set controls, and is hidden
+          while an exercise runs so it can't drop an unsaved exercise. */}
+      <View
+        style={{
+          width: "100%",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 6,
+          marginBottom: 9,
+          minHeight: 30,
+        }}
+      >
+        <Text style={{ color: colors.text, fontSize: 15 }}>
+          Started{" "}
+          {activeSession.startTime.toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </Text>
+
+        {!isExerciseActive ? (
+          <Pressable
+            onPress={endSessionPressed}
+            hitSlop={6}
+            style={({ pressed }) => ({
+              paddingVertical: 5,
+              paddingHorizontal: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: "#5a2a28",
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Text style={{ color: "#ff6b6b", fontSize: 13, fontWeight: "600" }}>
+              End session
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       <Animated.View
         style={{
@@ -1251,13 +1435,14 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
             setWeightKg((w) => Math.round((w + 0.5) * 10) / 10)
           }
           onNoteChange={(text) => setExerciseNote(text)}
-          onSave={(autoSaveSetInProgress) => {
+          onSave={(autoSaveSetInProgress, setStartedAt) => {
             if (!isExerciseActive) {
               startExercise();
             } else {
-              finishExercise(autoSaveSetInProgress);
+              finishExercise(autoSaveSetInProgress, setStartedAt);
             }
           }}
+          restoreSetState={restoreSetState}
           onWeightCommit={(v) => setWeightKg(v)}
           onRepsCommit={(v) => setReps(v)}
           onSaveSet={saveSet}
@@ -1358,30 +1543,12 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
             exercises={sessionExercises}
             sessionStart={activeSession.startTime}
             textColor={colors.text}
+            undoExerciseId={undo?.exerciseId ?? null}
+            onUndo={undoFinish}
           />
         ) : null}
       </View>
 
-      <View style={{ height: 14 }} />
-
-      <Pressable
-        onPress={() => {
-          stopRestTimer();
-          setRestSeconds(null);
-          const inferred = inferLabels();
-          setSelectedLabels(inferred);
-          setInferredLabels(inferred);
-          setShowLabelConfirm(true);
-        }}
-        style={{
-          backgroundColor: "#e91616",
-          paddingVertical: 10,
-          paddingHorizontal: 24,
-          borderRadius: 8,
-        }}
-      >
-        <Text style={{ color: "#FFFFFF", fontSize: 19 }}>End Session</Text>
-      </Pressable>
     </View>
   );
 }

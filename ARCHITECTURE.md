@@ -121,15 +121,18 @@ Target platform is Android. When the app is backgrounded (user switches apps, lo
 
 ### 3.3 Set Tracking UX
 
-- Start Set button (green)
-- Finish Set button (red)
-- Finish disabled until Start pressed
+Layout during an exercise is built to avoid mis-taps (Oct 2026):
+
+- **One big set button** (full width, tall) toggles `▶ Start Set N` (blue) ↔ `● Finish Set N · m:ss` (red). A second tap within 700 ms is ignored, so a double-tap can't finish a set and immediately start the next.
+- **Finish Exercise is hold-to-confirm** (600 ms, fill animation + haptic), a smaller secondary button set apart below the note. A quick tap only shows "Keep holding to finish".
+- **Undo**: after finishing, the newest card in "Exercises this session" gets a small `↩ Undo` pill (no extra row, no time limit). Undo deletes the saved row (`deleteExercise`) and restores the exercise exactly — name, note, reps/weight, completed sets, accumulated rest, a rest timer resumed from its original start (`startRestTimer(…, startedAt)`), or the in-flight set with its original start (`restoreSetState` prop on `AddExercise`). Anything Up next auto-loaded into the picker goes back to the front of the queue. Starting the next exercise or ending the session drops the undo.
+- **End session** sits in the header row ("Started 18:02 · End session"), away from the set controls, and is **hidden while an exercise is running** — ending mid-exercise used to drop the unsaved exercise.
 
 #### Finish Exercise auto-saves the in-flight set
 
 If a set is mid-flight (`isSetInProgress` in `AddExercise.tsx`) when the user taps **Finish Exercise**, that set is counted as completed before the exercise is recorded — i.e. tapping Finish Exercise is treated as "Finish Set + Finish Exercise" in one gesture. The same PR check that runs in `saveSet()` also runs for the auto-saved set.
 
-Why: previously, `finishExercise()` only read the `sets` counter, which is bumped exclusively in `saveSet()`. Habitual users would tap Finish Exercise on their last set without first tapping Finish Set, silently losing the set. The button label flips to `Finish Set N & Exercise` while a set is active so the behavior is visible; `canFinish` is also relaxed (`sets > 0 || isSetInProgress`) so the very first set can be auto-saved on a single-set exercise. Don't refactor `finishExercise` back to ignore the in-flight set without restoring an equivalent safety net.
+Why: previously, `finishExercise()` only read the `sets` counter, which is bumped exclusively in `saveSet()`. Habitual users would tap Finish Exercise on their last set without first tapping Finish Set, silently losing the set. The hold button's label flips to `Hold · finish set N & exercise` while a set is active so the behavior is visible; `canFinish` is also relaxed (`sets > 0 || isSetInProgress`) so the very first set can be auto-saved on a single-set exercise. Don't refactor `finishExercise` back to ignore the in-flight set without restoring an equivalent safety net.
 
 #### Enhancements
 

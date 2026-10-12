@@ -1,4 +1,5 @@
 import { ReactNode, useMemo, useState, useEffect, useRef } from "react";
+import * as Haptics from "expo-haptics";
 import { Animated } from "react-native";
 import { View, Text, Pressable, TextInput, Keyboard } from "react-native";
 import { WeightUnit } from "@/domain/exercise";
@@ -38,7 +39,8 @@ type AddExerciseProps = {
 
   onWeightUnitChange: (u: WeightUnit) => void;
 
-  onSave: (autoSaveSetInProgress?: boolean) => void;
+  // setStartedAt: when the auto-saved in-flight set began (lets Undo restore it).
+  onSave: (autoSaveSetInProgress?: boolean, setStartedAt?: Date | null) => void;
 
   onSaveSet: () => void;
   onStartSet: () => void;
@@ -54,6 +56,10 @@ type AddExerciseProps = {
     sessionLabels?: string[];
     sessionStartTime: string;
   } | null;
+
+  // Undo of Finish Exercise: when the exercise re-activates with a new `key`,
+  // restore this set state instead of auto-starting set 1.
+  restoreSetState?: { key: number; inProgress: boolean; startedAt: string | null } | null;
 
   // "Try today" target (domain/progression.ts). Opt-in: tapping applies it.
   suggestion?: { weightKg: number; reps: number; reason: string } | null;
@@ -197,6 +203,7 @@ export default function AddExercise({
   lastTime,
   suggestion,
   onApplySuggestion,
+  restoreSetState,
 }: AddExerciseProps) {
   const isLb = weightUnit === "lb";
   const displayedWeight = isLb ? kgToLb(weightKg) : weightKg;
@@ -245,17 +252,32 @@ export default function AddExercise({
 
   // Auto-start set 1 when the exercise becomes active, so the user lands
   // directly on "Finish Set" instead of needing to press "Start Set 1".
+  // Exception: re-activation from Undo restores the pre-finish set state.
+  const appliedRestoreKey = useRef<number | null>(null);
   useEffect(() => {
     if (!prevExerciseActive.current && isExerciseActive) {
-      setIsSetInProgress(true);
-      setStartRef.current = new Date();
-      setSetNow(new Date());
+      if (restoreSetState && restoreSetState.key !== appliedRestoreKey.current) {
+        appliedRestoreKey.current = restoreSetState.key;
+        const startedAt =
+          restoreSetState.inProgress && restoreSetState.startedAt
+            ? new Date(restoreSetState.startedAt)
+            : null;
+        setIsSetInProgress(restoreSetState.inProgress);
+        setStartRef.current = restoreSetState.inProgress ? startedAt ?? new Date() : null;
+        setSetNow(restoreSetState.inProgress ? new Date() : null);
+      } else {
+        setIsSetInProgress(true);
+        setStartRef.current = new Date();
+        setSetNow(new Date());
+      }
     }
     if (prevExerciseActive.current && !isExerciseActive) {
       setStartRef.current = null;
       setSetNow(null);
     }
     prevExerciseActive.current = isExerciseActive;
+    // Only on the activation edge; restoreSetState is read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExerciseActive]);
 
   useEffect(() => {
@@ -308,6 +330,50 @@ export default function AddExercise({
     if (!q) return false;
     return suggestions.some((name) => name.trim().toLowerCase() === q);
   }, [exerciseName, suggestions]);
+
+  // One button toggles Start Set ↔ Finish Set. A second tap within 700ms is
+  // ignored so a double-tap can't finish a set and immediately start the next.
+  const lastSetTapRef = useRef(0);
+  function onSetButton() {
+    const now = Date.now();
+    if (now - lastSetTapRef.current < 700) return;
+    lastSetTapRef.current = now;
+
+    if (isSetInProgress) {
+      onSaveSet();
+      setIsSetInProgress(false);
+      setStartRef.current = null;
+      setSetNow(null);
+    } else {
+      onStartSet(); // stop any running rest in parent
+      setIsSetInProgress(true);
+      setStartRef.current = new Date();
+      setSetNow(new Date());
+    }
+  }
+
+  // Finish Exercise is hold-to-confirm: a quick tap only shows a hint.
+  const HOLD_MS = 600;
+  const holdProgress = useRef(new Animated.Value(0)).current;
+  const [holdHint, setHoldHint] = useState(false);
+  const holdHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (holdHintTimer.current) clearTimeout(holdHintTimer.current);
+  }, []);
+
+  function finishExerciseNow() {
+    // If a set is mid-flight, treat Finish Exercise as "Finish Set + Finish Exercise"
+    // so the user doesn't silently lose the last set they just performed.
+    const autoSave = isSetInProgress;
+    const startedAt = setStartRef.current;
+    if (autoSave) {
+      setIsSetInProgress(false);
+      setStartRef.current = null;
+      setSetNow(null);
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    onSave(autoSave, startedAt);
+  }
 
   const canStart = exerciseName.trim().length > 0;
   // Allow Finish Exercise when a set is mid-flight too — that set will be auto-saved.
@@ -560,75 +626,34 @@ export default function AddExercise({
         <View style={{ height: 12 }} />
 
         {isExerciseActive ? (
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 10,
+          <Pressable
+            onPress={onSetButton}
+            style={({ pressed }) => ({
+              paddingVertical: 18,
+              borderRadius: 12,
+              alignItems: "center",
+              borderWidth: 1,
+              backgroundColor: isSetInProgress ? "#5a1a1a" : "#0f1f2e",
+              borderColor: isSetInProgress ? "#7a2a2a" : "#1f4d7a",
               marginBottom: 12,
-            }}
+              opacity: pressed ? 0.75 : 1,
+            })}
           >
-            <Pressable
-              onPress={() => {
-                if (!isSetInProgress) {
-                  onStartSet(); // 🔥 stop any running rest in parent
-                  setIsSetInProgress(true);
-                  setStartRef.current = new Date();
-                  setSetNow(new Date());
-                }
-              }}
-              disabled={isSetInProgress}
+            <Text
               style={{
-                flex: 1,
-                paddingVertical: 10,
-                borderRadius: 10,
-                alignItems: "center",
-                backgroundColor: isSetInProgress ? "#2a2a2a" : "#0f1f2e",
-                borderWidth: 1,
-                borderColor: isSetInProgress ? "#2a2a2a" : "#1f4d7a",
-                opacity: isSetInProgress ? 0.6 : 1,
+                color: isSetInProgress ? "#ff4d4f" : "#0099ff",
+                fontSize: 17,
+                fontWeight: "700",
+                fontVariant: ["tabular-nums"],
               }}
             >
-              <Text
-                style={{
-                  color: isSetInProgress ? "#aaa" : "#0099ff",
-                  fontSize: 14,
-                  fontWeight: "600",
-                }}
-              >
-                Start Set {sets + 1}
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                if (isSetInProgress) {
-                  onSaveSet();
-                  setIsSetInProgress(false);
-                  setStartRef.current = null;
-                  setSetNow(null);
-                }
-              }}
-              disabled={!isSetInProgress}
-              style={{
-                flex: 1,
-                paddingVertical: 10,
-                borderRadius: 10,
-                alignItems: "center",
-                backgroundColor: isSetInProgress ? "#5a1a1a" : "#2a2a2a",
-                opacity: isSetInProgress ? 1 : 0.6,
-              }}
-            >
-              <Text
-                style={{
-                  color: isSetInProgress ? "#ff4d4f" : "#666",
-                  fontSize: 14,
-                  fontWeight: "700",
-                }}
-              >
-                Finish Set
-              </Text>
-            </Pressable>
-          </View>
+              {isSetInProgress
+                ? `● Finish Set ${sets + 1} · ${Math.floor(setElapsedSeconds / 60)}:${(setElapsedSeconds % 60)
+                    .toString()
+                    .padStart(2, "0")}`
+                : `▶ Start Set ${sets + 1}`}
+            </Text>
+          </Pressable>
         ) : null}
 
         {isExerciseActive && (sets > 0 || isSetInProgress) ? (
@@ -724,23 +749,54 @@ export default function AddExercise({
           </View>
         ) : null}
 
-        <Pressable
-          onPress={() => setShowNote((v) => !v)}
-          style={{
-            alignSelf: "flex-start",
-            paddingVertical: 6,
-            paddingHorizontal: 10,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "#222",
-            backgroundColor: "#0f0f0f",
-            marginBottom: showNote ? 10 : 12,
-          }}
-        >
-          <Text style={{ color: accentColor, fontSize: 12 }}>
-            {showNote ? "Hide note" : "Add note"}
-          </Text>
-        </Pressable>
+        {/* Collapsed with text: the button itself previews the note (one line),
+            so it's obvious something was written and what. */}
+        {!showNote && note.trim() ? (
+          <Pressable
+            onPress={() => setShowNote(true)}
+            style={({ pressed }) => ({
+              alignSelf: "flex-start",
+              maxWidth: "100%",
+              flexDirection: "row",
+              alignItems: "center",
+              paddingVertical: 6,
+              paddingHorizontal: 10,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(255, 193, 7, 0.5)",
+              backgroundColor: "rgba(255, 193, 7, 0.10)",
+              marginBottom: 12,
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Text style={{ fontSize: 12 }}>📝 </Text>
+            <Text
+              numberOfLines={1}
+              style={{ color: "#f5e6b8", fontSize: 12, flexShrink: 1 }}
+            >
+              {note.trim()}
+            </Text>
+            <Text style={{ color: "#a08a4a", fontSize: 12 }}>  · edit</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={() => setShowNote((v) => !v)}
+            style={{
+              alignSelf: "flex-start",
+              paddingVertical: 6,
+              paddingHorizontal: 10,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "#222",
+              backgroundColor: "#0f0f0f",
+              marginBottom: showNote ? 10 : 12,
+            }}
+          >
+            <Text style={{ color: accentColor, fontSize: 12 }}>
+              {showNote ? (note.trim() ? "Done" : "Hide note") : "Add note"}
+            </Text>
+          </Pressable>
+        )}
 
         {showNote ? (
           <TextInput
@@ -788,34 +844,68 @@ export default function AddExercise({
           </Pressable>
         ) : (
           <Pressable
-            onPress={() => {
-              // If a set is mid-flight, treat Finish Exercise as "Finish Set + Finish Exercise"
-              // so the user doesn't silently lose the last set they just performed.
-              const autoSave = isSetInProgress;
-              if (autoSave) {
-                setIsSetInProgress(false);
-                setStartRef.current = null;
-                setSetNow(null);
-              }
-              onSave(autoSave);
-            }}
             disabled={!canFinish}
+            delayLongPress={HOLD_MS}
+            onPressIn={() => {
+              holdProgress.setValue(0);
+              Animated.timing(holdProgress, {
+                toValue: 1,
+                duration: HOLD_MS,
+                useNativeDriver: false,
+              }).start();
+            }}
+            onPressOut={() => {
+              holdProgress.stopAnimation();
+              holdProgress.setValue(0);
+            }}
+            onPress={() => {
+              // Released before HOLD_MS: just explain.
+              setHoldHint(true);
+              if (holdHintTimer.current) clearTimeout(holdHintTimer.current);
+              holdHintTimer.current = setTimeout(() => setHoldHint(false), 1500);
+            }}
+            onLongPress={finishExerciseNow}
             style={{
-              backgroundColor: !canFinish ? "#333" : "#222",
-              paddingVertical: 10,
+              alignSelf: "flex-end",
+              marginTop: 10,
+              minWidth: 200,
+              overflow: "hidden",
               borderRadius: 10,
+              borderWidth: 1,
+              borderColor: !canFinish ? "#2a2a2a" : "#444",
+              backgroundColor: "#161616",
+              paddingVertical: 10,
+              paddingHorizontal: 14,
               alignItems: "center",
-              opacity: !canFinish ? 0.6 : 1,
+              opacity: !canFinish ? 0.5 : 1,
             }}
           >
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: holdProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0%", "100%"],
+                }),
+                backgroundColor: "rgba(255,255,255,0.14)",
+              }}
+            />
             <Text
               style={{
-                color: !canFinish ? "#bbb" : "#fff",
-                fontSize: 14,
+                color: holdHint ? "#FFC107" : !canFinish ? "#777" : "#ddd",
+                fontSize: 13,
                 fontWeight: "600",
               }}
             >
-              {isSetInProgress ? `Finish Set ${sets + 1} & Exercise` : "Finish Exercise"}
+              {holdHint
+                ? "Keep holding to finish"
+                : isSetInProgress
+                  ? `Hold · finish set ${sets + 1} & exercise`
+                  : "Hold to finish exercise"}
             </Text>
           </Pressable>
         )}

@@ -33,6 +33,17 @@ export default function HomeScreen() {
   const bannerTranslate = useRef(new Animated.Value(20)).current;
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // After Finish Set / Finish Exercise / Undo, bring the session card's top
+  // (total time + rest ring) back into view.
+  const scrollRef = useRef<ScrollView>(null);
+  const activeTopRef = useRef(0);
+  const scrollToSessionTop = useCallback(() => {
+    // Next frame, so the rest ring that just appeared is laid out first.
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, activeTopRef.current - 8), animated: true });
+    });
+  }, []);
+
   const onTitlePress = useCallback(() => {
     setLang((l) => (l === "en" ? "sa" : "en"));
     if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
@@ -87,6 +98,7 @@ export default function HomeScreen() {
       }}
     >
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={{
           flexGrow: 1,
           justifyContent: "center",
@@ -177,11 +189,19 @@ export default function HomeScreen() {
         ) : null}
 
         {mode === "active" && activeSession && (
-          <ActiveMode
-            session={activeSession}
-            onEnd={() => setActiveSession(null)}
-            colors={{ text: colors.text, accent: colors.accent }}
-          />
+          <View
+            style={{ width: "100%" }}
+            onLayout={(e) => {
+              activeTopRef.current = e.nativeEvent.layout.y;
+            }}
+          >
+            <ActiveMode
+              session={activeSession}
+              onEnd={() => setActiveSession(null)}
+              colors={{ text: colors.text, accent: colors.accent }}
+              onScrollToTop={scrollToSessionTop}
+            />
+          </View>
         )}
 
         {mode === "pending" && pendingSession && (

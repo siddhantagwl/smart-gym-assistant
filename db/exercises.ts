@@ -81,6 +81,11 @@ export function updateExercise(id: string, edit: ExerciseEdit) {
   );
 }
 
+// Used by Undo after Finish Exercise.
+export function deleteExercise(id: string) {
+  db.runSync(`DELETE FROM exercises WHERE id = ?;`, [id]);
+}
+
 //todo: change the functio nn name to reflect that this is for all exercises, not just for a session
 export function getAllExercises(): StoredExercise[] {
   const rows = db.getAllSync(
