@@ -129,9 +129,20 @@ export default function SettingsScreen() {
         }}
       >
         <Text style={{ color: "#fff", fontSize: 18 }}>Settings</Text>
-        <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 15 }}>
-          v{Constants.expoConfig?.version ?? "—"}
-        </Text>
+        <View
+          style={{
+            paddingVertical: 3,
+            paddingHorizontal: 10,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "rgba(76,175,80,0.5)",
+            backgroundColor: "rgba(76,175,80,0.12)",
+          }}
+        >
+          <Text style={{ color: "#7bc47f", fontSize: 14, fontWeight: "600" }}>
+            v{Constants.expoConfig?.version ?? "—"}
+          </Text>
+        </View>
       </View>
 
       {!isSyncConfigured() && (
