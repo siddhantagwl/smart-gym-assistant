@@ -254,6 +254,8 @@ Logged but not in library (n)
 
 Every library row shows an all-time status line from `getExerciseLogSummaries()` (one `GROUP BY exercise_library_id` query, re-read on focus): `● Logged N× · 3d ago` or `○ Not done yet`. Logged rows show a `›` and tapping the row opens `/exercise-details` (same screen as from Session details). Keyed by `exercise_library_id`, same as `getExercisesByLibraryId`, so the count matches the history screen. Rows never logged aren't tappable.
 
+A filter icon next to the search bar opens two toggle chips — `○ Not done yet (n)` and `⏳ 2+ weeks ago (n)` — that narrow the list by that same summary (never logged / last logged ≥14 calendar days ago). They combine with the muscle filter and search; counts follow the selected muscle. "2+ weeks" sorts longest-neglected first. The icon shows a dot while a filter is on; with the panel closed, only the active chip stays visible (with ✕). Arriving from Home's Today's focus resets it to all.
+
 ### 3.8 Up Next Queue (Exercises tab → active session)
 
 While a session is open (`getActiveSession()` returns a row), every Exercises-tab row gets a ＋ button. Tapping it queues the library exercise for the session; tapping the `#n` badge again removes it. Exercises already logged this session show `✓ this session`; the one in the Home picker shows `NOW` (running) or `NEXT` (selected, not started).

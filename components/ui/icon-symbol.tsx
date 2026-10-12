@@ -21,6 +21,7 @@ const MAPPING = {
   'dumbbell': 'fitness-center',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'line.3.horizontal.decrease': 'filter-list',
 } as IconMapping;
 
 /**

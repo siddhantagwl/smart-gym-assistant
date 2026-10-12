@@ -10,6 +10,7 @@ import {
 } from "@/db/exercises";
 import { getActiveSession } from "@/db/sessions";
 import { addToUpNext, removeFromUpNext, useUpNext } from "@/hooks/use-up-next";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 const colors = {
   bg: "#000",
@@ -19,13 +20,24 @@ const colors = {
   border: "#222",
 };
 
-function timeAgo(iso: string): string {
+// Whole calendar days since `iso` (0 = today); null if unparseable.
+function daysSince(iso: string): number | null {
   const t = new Date(iso).getTime();
-  if (!iso || Number.isNaN(t)) return "";
+  if (!iso || Number.isNaN(t)) return null;
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  if (t >= startOfToday.getTime()) return "today";
-  const days = Math.ceil((startOfToday.getTime() - t) / 86_400_000);
+  if (t >= startOfToday.getTime()) return 0;
+  return Math.ceil((startOfToday.getTime() - t) / 86_400_000);
+}
+
+const STALE_DAYS = 14;
+
+type Recency = "all" | "new" | "stale";
+
+function timeAgo(iso: string): string {
+  const days = daysSince(iso);
+  if (days === null) return "";
+  if (days === 0) return "today";
   if (days === 1) return "yesterday";
   if (days < 14) return `${days}d ago`;
   if (days < 60) return `${Math.floor(days / 7)}w ago`;
@@ -46,12 +58,25 @@ export default function ExercisesScreen() {
     if (params.muscle) {
       setSelectedMuscle(params.muscle);
       setQuery("");
+      setRecency("all");
     }
   }, [params.muscle, params.t]);
 
   // All-time log summary per library id: drives the "Logged N× · 3d ago" /
   // "Not done yet" line and whether the row opens exercise history.
   const [logSummary, setLogSummary] = useState<Record<string, ExerciseLogSummary>>({});
+  // "Not done yet" / "2+ weeks" filter, opened from the filter icon next to
+  // search; combines with the muscle filter + search.
+  const [recency, setRecency] = useState<Recency>("all");
+  const [showFilters, setShowFilters] = useState(false);
+
+  const isNew = (e: ExerciseLibraryItem) => !logSummary[e.id];
+  const isStale = (e: ExerciseLibraryItem) => {
+    const s = logSummary[e.id];
+    if (!s) return false;
+    const d = daysSince(s.lastStartTime);
+    return d !== null && d >= STALE_DAYS;
+  };
 
   // Active-session mode: when a session is open, each row gets a ＋ that
   // queues the exercise into the session's "Up next" list on Home.
@@ -144,8 +169,16 @@ export default function ExercisesScreen() {
       );
     }
 
+    if (recency === "new") filtered = filtered.filter(isNew);
+    if (recency === "stale") filtered = filtered.filter(isStale);
+
+    // "2+ weeks" lists the longest-neglected first; otherwise alphabetical.
+    const gap = (e: ExerciseLibraryItem) =>
+      daysSince(logSummary[e.id]?.lastStartTime ?? "") ?? 0;
     const sorted = [...filtered].sort((a, b) =>
-      a.name.localeCompare(b.name)
+      recency === "stale"
+        ? gap(b) - gap(a) || a.name.localeCompare(b.name)
+        : a.name.localeCompare(b.name)
     );
 
     const map: Record<string, ExerciseLibraryItem[]> = {};
@@ -162,7 +195,18 @@ export default function ExercisesScreen() {
         title: muscle,
         data: map[muscle],
       }));
-  }, [query, exercises, selectedMuscle]);
+    // isNew/isStale only read logSummary, which is listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, exercises, selectedMuscle, recency, logSummary]);
+
+  // Counts follow the muscle filter so "Not done yet (3)" means "3 chest exercises".
+  const recencyCounts = useMemo(() => {
+    const pool = selectedMuscle
+      ? exercises.filter((e) => e.primaryMuscle === selectedMuscle)
+      : exercises;
+    return { new: pool.filter(isNew).length, stale: pool.filter(isStale).length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercises, selectedMuscle, logSummary]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, padding: 16, marginTop: 32 }}>
@@ -189,7 +233,8 @@ export default function ExercisesScreen() {
         </View>
       ) : null}
 
-      <View style={{ position: "relative", marginBottom: 12 }}>
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+      <View style={{ flex: 1, position: "relative" }}>
         <TextInput
           value={query}
           onChangeText={setQuery}
@@ -236,6 +281,85 @@ export default function ExercisesScreen() {
           </Pressable>
         </Animated.View>
       </View>
+
+        <Pressable
+          onPress={() => setShowFilters((v) => !v)}
+          hitSlop={4}
+          style={({ pressed }) => ({
+            width: 44,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: showFilters || recency !== "all" ? "#3a5eff" : colors.border,
+            backgroundColor: showFilters ? "rgba(58,94,255,0.15)" : colors.card,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <IconSymbol
+            name="line.3.horizontal.decrease"
+            size={22}
+            color={showFilters || recency !== "all" ? "#c9d4ff" : "#888"}
+          />
+          {recency !== "all" ? (
+            <View
+              style={{
+                position: "absolute",
+                top: 6,
+                right: 6,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: "#3a5eff",
+              }}
+            />
+          ) : null}
+        </Pressable>
+      </View>
+
+      {/* Filter panel from the icon. When closed, an active filter still shows
+          as one chip so a shortened list never looks mysterious. */}
+      {showFilters || recency !== "all" ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: -4, marginBottom: 12 }}>
+          {(
+            [
+              { key: "new", label: `○ Not done yet (${recencyCounts.new})` },
+              { key: "stale", label: `⏳ 2+ weeks ago (${recencyCounts.stale})` },
+            ] as const
+          )
+            .filter((f) => showFilters || recency === f.key)
+            .map((f) => {
+              const active = recency === f.key;
+              return (
+                <Pressable
+                  key={f.key}
+                  onPress={() => setRecency(active ? "all" : f.key)}
+                  hitSlop={4}
+                  style={({ pressed }) => ({
+                    borderWidth: 1,
+                    borderColor: active ? "#3a5eff" : "#2a2a2a",
+                    backgroundColor: active ? "rgba(58,94,255,0.15)" : "transparent",
+                    borderRadius: 16,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: active ? "#c9d4ff" : "#888",
+                      fontSize: 12,
+                      fontWeight: active ? "600" : "500",
+                    }}
+                  >
+                    {f.label}
+                    {active && !showFilters ? "  ✕" : ""}
+                  </Text>
+                </Pressable>
+              );
+            })}
+        </View>
+      ) : null}
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 12 }}>
         {muscles.map((muscleObj) => {
@@ -418,7 +542,11 @@ export default function ExercisesScreen() {
         }}
         ListEmptyComponent={
           <Text style={{ color: colors.sub, marginTop: 24, textAlign: "center" }}>
-            No exercises found
+            {recency === "new"
+              ? "You've done every exercise here 💪"
+              : recency === "stale"
+                ? "Nothing neglected — all done in the last 2 weeks"
+                : "No exercises found"}
           </Text>
         }
       />
