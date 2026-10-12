@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, TextInput, SectionList, Pressable, Linking, Animated } from "react-native";
 import { useFocusEffect } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { ExerciseLibraryItem, getAllLibraryExercises } from "@/db/exerciseLibrary";
+import { getExercisesForSession } from "@/db/exercises";
+import { getActiveSession } from "@/db/sessions";
+import { addToUpNext, removeFromUpNext, useUpNext } from "@/hooks/use-up-next";
 
 const colors = {
   bg: "#000",
@@ -17,6 +21,25 @@ export default function ExercisesScreen() {
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [exercises, setExercises] = useState<ExerciseLibraryItem[]>([]);
   const clearAnim = useState(new Animated.Value(0))[0];
+
+  // Active-session mode: when a session is open, each row gets a ＋ that
+  // queues the exercise into the session's "Up next" list on Home.
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [doneNames, setDoneNames] = useState<Set<string>>(new Set());
+  const upNext = useUpNext();
+  const queued = sessionId && upNext.sessionId === sessionId ? upNext.items : [];
+  const current = sessionId ? upNext.current : null;
+
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showToast(msg: string) {
+    setToast(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 2200);
+  }
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
 
   const muscles = useMemo(() => {
     const map: Record<string, number> = {};
@@ -37,8 +60,31 @@ export default function ExercisesScreen() {
   useFocusEffect(
     useCallback(() => {
       setExercises(getAllLibraryExercises());
+      const s = getActiveSession();
+      setSessionId(s?.id ?? null);
+      setDoneNames(
+        new Set(s ? getExercisesForSession(s.id).map((e) => e.name.toLowerCase()) : []),
+      );
     }, [])
   );
+
+  function toggleQueued(item: ExerciseLibraryItem) {
+    if (!sessionId) return;
+    Haptics.selectionAsync().catch(() => {});
+    if (queued.some((q) => q.name === item.name)) {
+      removeFromUpNext(sessionId, item.name);
+      showToast(`Removed ${item.name}`);
+      return;
+    }
+    addToUpNext(sessionId, { libraryId: item.id, name: item.name });
+    showToast(
+      current?.active
+        ? `Up next after ${current.name}`
+        : current
+          ? `Queued · #${queued.length + 1}`
+          : `${item.name} ready on Home`,
+    );
+  }
 
   useEffect(() => {
     Animated.timing(clearAnim, {
@@ -91,6 +137,25 @@ export default function ExercisesScreen() {
       <Text style={{ color: colors.text, fontSize: 20, fontWeight: "600", marginBottom: 12 }}>
         Exercises
       </Text>
+
+      {sessionId ? (
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "#2a3a7a",
+            backgroundColor: "rgba(58,94,255,0.08)",
+            borderRadius: 8,
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            marginBottom: 12,
+          }}
+        >
+          <Text style={{ color: "#c9d4ff", fontSize: 12 }}>
+            Session in progress · tap ＋ to add to Up next
+            {queued.length > 0 ? `  (${queued.length} queued)` : ""}
+          </Text>
+        </View>
+      ) : null}
 
       <View style={{ position: "relative", marginBottom: 12 }}>
         <TextInput
@@ -181,6 +246,7 @@ export default function ExercisesScreen() {
       <SectionList
         sections={sections}
         stickySectionHeadersEnabled
+        extraData={[queued, current, doneNames]}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
         renderSectionHeader={({ section }) => (
@@ -217,6 +283,9 @@ export default function ExercisesScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.text, fontSize: 17 }}>
                   {item.name}
+                  {sessionId && doneNames.has(item.name.toLowerCase()) ? (
+                    <Text style={{ color: "#4CAF50", fontSize: 12 }}>  ✓ done</Text>
+                  ) : null}
                 </Text>
 
                 <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}>
@@ -284,6 +353,8 @@ export default function ExercisesScreen() {
                   </View>
                 </Pressable>
               ) : null}
+
+              {sessionId ? renderQueueControl(item) : null}
             </View>
           </View>
         )}
@@ -293,6 +364,73 @@ export default function ExercisesScreen() {
           </Text>
         }
       />
+
+      {toast ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            bottom: 16,
+            alignSelf: "center",
+            paddingVertical: 8,
+            paddingHorizontal: 14,
+            borderRadius: 999,
+            backgroundColor: "#1a2240",
+            borderWidth: 1,
+            borderColor: "#3a5eff",
+          }}
+        >
+          <Text style={{ color: "#c9d4ff", fontSize: 13, fontWeight: "600" }}>{toast}</Text>
+        </View>
+      ) : null}
     </View>
   );
+
+  function renderQueueControl(item: ExerciseLibraryItem) {
+    const isCurrent = current && current.name.toLowerCase() === item.name.toLowerCase();
+    if (isCurrent) {
+      return (
+        <View style={{ ...queueBtn, borderColor: "#1f7a4d", backgroundColor: "#0f2e1f" }}>
+          <Text style={{ color: "#00ff99", fontSize: 11, fontWeight: "700" }}>
+            {current.active ? "NOW" : "NEXT"}
+          </Text>
+        </View>
+      );
+    }
+
+    const pos = queued.findIndex((q) => q.name === item.name);
+    return (
+      <Pressable
+        onPress={() => toggleQueued(item)}
+        hitSlop={6}
+        style={({ pressed }) => ({
+          ...queueBtn,
+          opacity: pressed ? 0.6 : 1,
+          borderColor: pos >= 0 ? "#3a5eff" : "#333",
+          backgroundColor: pos >= 0 ? "rgba(58,94,255,0.18)" : "rgba(255,255,255,0.04)",
+        })}
+      >
+        <Text
+          style={{
+            color: pos >= 0 ? "#c9d4ff" : "#fff",
+            fontSize: pos >= 0 ? 11 : 18,
+            fontWeight: "700",
+          }}
+        >
+          {pos >= 0 ? `#${pos + 1}` : "＋"}
+        </Text>
+      </Pressable>
+    );
+  }
 }
+
+const queueBtn = {
+  marginLeft: 8,
+  minWidth: 40,
+  height: 32,
+  paddingHorizontal: 6,
+  borderRadius: 8,
+  borderWidth: 1,
+  alignItems: "center" as const,
+  justifyContent: "center" as const,
+};

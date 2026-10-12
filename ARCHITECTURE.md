@@ -250,6 +250,16 @@ Logged but not in library (n)
 
 ---
 
+### 3.7 Up Next Queue (Exercises tab → active session)
+
+While a session is open (`getActiveSession()` returns a row), every Exercises-tab row gets a ＋ button. Tapping it queues the library exercise for the session; tapping the `#n` badge again removes it. Exercises already logged this session show `✓ done`; the one in the Home picker shows `NOW` (running) or `NEXT` (selected, not started).
+
+- **Store:** `hooks/use-up-next.ts` — module-level store read via `useSyncExternalStore`, keyed to the session id and persisted to AsyncStorage (`up_next_queue_v1`) so it survives Android killing the app. Cleared on Confirm & Save / Discard.
+- **Auto-load into the picker** (`ActiveSession.tsx`) happens only when (a) an exercise just finished, or (b) something was just queued — and only if no exercise is running and the picker is empty. It never starts an exercise, never overwrites a typed/picked name, and doesn't fire when the user clears the picker by hand. Rest/transition timers are untouched.
+- **Up next strip** on Home: chips under the Add exercise card. ✕ removes; tapping a chip between exercises swaps it into the picker (a not-yet-started library pick goes back to the front of the queue).
+
+---
+
 ## 4. Important Architectural Decisions
 
 ### 4.1 Offline-First Design

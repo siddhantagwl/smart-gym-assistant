@@ -25,6 +25,15 @@ import {
 } from "@/db/exercises";
 import { endSession } from "@/db/sessions";
 import { Session } from "@/domain/session";
+import {
+  clearUpNext,
+  pushFrontUpNext,
+  removeFromUpNext,
+  setUpNextCurrent,
+  takeUpNext,
+  UpNextItem,
+  useUpNextItems,
+} from "@/hooks/use-up-next";
 
 type Colors = {
   text: string;
@@ -282,6 +291,55 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
       setExerciseLibraryNames(allLibExercises.map((e) => e.name));
     }, [])
   );
+
+  // ----- Up next queue (filled from the Exercises tab) -----
+  const upNext = useUpNextItems(activeSession.id);
+
+  function loadIntoPicker(item: UpNextItem) {
+    setExerciseName(item.name);
+    setExerciseLibraryId(item.libraryId);
+    setExerciseNote("");
+  }
+
+  // Auto-load the head of the queue into the picker only at two moments: an
+  // exercise just finished, or something was just queued. Never while an
+  // exercise is running, and never over a name the user already picked/typed.
+  // Clearing the picker by hand doesn't trigger it (exerciseName isn't a dep).
+  // Starts at 0 so a queue that already exists when the session mounts
+  // (e.g. resumed after Android killed the app) loads its head too.
+  const prevUpNextLen = useRef(0);
+  const prevExerciseActiveForQueue = useRef(isExerciseActive);
+  useEffect(() => {
+    const grew = upNext.length > prevUpNextLen.current;
+    const justFinished = prevExerciseActiveForQueue.current && !isExerciseActive;
+    prevUpNextLen.current = upNext.length;
+    prevExerciseActiveForQueue.current = isExerciseActive;
+
+    if ((grew || justFinished) && !isExerciseActive && !exerciseName.trim()) {
+      const next = takeUpNext(activeSession.id);
+      if (next) loadIntoPicker(next);
+    }
+  }, [upNext, isExerciseActive]);
+
+  // Tapping a queued chip between exercises swaps it into the picker; a
+  // not-yet-started library pick goes back to the front of the queue.
+  function pickFromUpNext(item: UpNextItem) {
+    if (isExerciseActive) return;
+    const taken = takeUpNext(activeSession.id, item.name);
+    if (!taken) return;
+    const current = exerciseName.trim();
+    if (current && exerciseLibraryId) {
+      pushFrontUpNext(activeSession.id, { libraryId: exerciseLibraryId, name: current });
+    }
+    loadIntoPicker(taken);
+  }
+
+  // Let the Exercises tab label rows "Now" / "Next".
+  useEffect(() => {
+    const name = exerciseName.trim();
+    setUpNextCurrent(name ? { name, active: isExerciseActive } : null);
+  }, [exerciseName, isExerciseActive]);
+  useEffect(() => () => setUpNextCurrent(null), []);
 
   function formatDuration(totalSeconds: number) {
     const h = Math.floor(totalSeconds / 3600);
@@ -755,6 +813,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
           <Pressable
             onPress={() => {
               endSession(activeSession.id, new Date(), "__DISCARDED__", []);
+              clearUpNext();
               setSessionNote("");
               setShowLabelConfirm(false);
               onEnd();
@@ -784,6 +843,7 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
                 sessionNote,
                 selectedLabels,
               );
+              clearUpNext();
               setSessionNote("");
               setShowLabelConfirm(false);
               setShowCelebration(true);
@@ -1198,6 +1258,55 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
           }
         />
       </View>
+
+      {upNext.length > 0 ? (
+        <View style={{ width: "100%", paddingHorizontal: 12, marginTop: 4, marginBottom: 6 }}>
+          <Text
+            style={{
+              color: "#9bb0ff",
+              fontSize: 11,
+              fontWeight: "700",
+              letterSpacing: 0.6,
+              marginBottom: 6,
+            }}
+          >
+            UP NEXT ({upNext.length})
+            {isExerciseActive ? "" : "  ·  tap to swap in"}
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {upNext.map((item, i) => (
+              <View
+                key={item.name}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "#2a3a7a",
+                  backgroundColor: "rgba(58,94,255,0.10)",
+                }}
+              >
+                <Pressable
+                  onPress={() => pickFromUpNext(item)}
+                  disabled={isExerciseActive}
+                  style={{ paddingVertical: 5, paddingLeft: 10, paddingRight: 4 }}
+                >
+                  <Text style={{ color: "#c9d4ff", fontSize: 12 }}>
+                    {i + 1}. {item.name}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => removeFromUpNext(activeSession.id, item.name)}
+                  hitSlop={8}
+                  style={{ paddingVertical: 5, paddingLeft: 4, paddingRight: 10 }}
+                >
+                  <Text style={{ color: "#ff6b6b", fontSize: 12, fontWeight: "700" }}>✕</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       <View style={{ width: "100%" }}>
         {sessionExercises.length > 0 ? (
