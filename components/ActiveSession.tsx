@@ -19,6 +19,7 @@ const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
 import { ExerciseLibraryItem, getAllLibraryExercises, groupMovements } from "@/db/exerciseLibrary";
 import { suggestNext } from "@/domain/progression";
 import { DEFAULT_REST, restTargetFor } from "@/domain/restTarget";
+import { equipmentOf, isGymScoped, weightUnitSuffix } from "@/domain/movement";
 import {
   getExercisesForSession,
   getLatestExerciseByName,
@@ -334,6 +335,20 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     return () => clearTimeout(timer);
   }, [showCelebration]);
 
+  // Machine / cable / Smith numbers only mean something at the same gym, so
+  // Prev logged, Try today and PRs look at this gym's history for those
+  // (falling back to another gym, labelled, when there's none here).
+  // Free weights compare across all gyms. scopeGym = null → all gyms.
+  const currentLibraryItem = useMemo(
+    () =>
+      (exerciseLibraryId && exerciseLibrary.find((l) => l.id === exerciseLibraryId)) ||
+      exerciseLibrary.find((l) => l.name.toLowerCase() === exerciseName.trim().toLowerCase()) ||
+      null,
+    [exerciseLibraryId, exerciseName, exerciseLibrary],
+  );
+  const currentEquipment = currentLibraryItem ? currentLibraryItem.equipment : equipmentOf([]);
+  const scopeGym = isGymScoped(currentEquipment) && activeSession.gym ? activeSession.gym : null;
+
   useEffect(() => {
     const exerciseNameTrimmed = exerciseName.trim();
     if (!exerciseNameTrimmed) {
@@ -341,7 +356,9 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       return;
     }
 
-    const rec = getLatestExerciseByName(exerciseNameTrimmed);
+    const rec =
+      getLatestExerciseByName(exerciseNameTrimmed, scopeGym) ??
+      (scopeGym ? getLatestExerciseByName(exerciseNameTrimmed) : null);
     setLatest(rec);
 
     // Auto-fill reps/weight from previous session, but only before the
@@ -350,7 +367,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       setReps(rec.reps);
       setWeightKg(rec.weightKg);
     }
-  }, [exerciseName, isExerciseActive]);
+  }, [exerciseName, isExerciseActive, scopeGym]);
 
   useEffect(() => {
     const rows = getExercisesForSession(activeSession.id);
@@ -369,10 +386,17 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   // the exercise, display unit (kg/lb step) or this session's logs change.
   // Only shown + applied on tap; never overwrites reps/weight on its own.
   const suggestion = useMemo(
-    () => suggestNext(getRecentExerciseRows(exerciseName, 3), weightUnit),
+    () => {
+      const here = getRecentExerciseRows(exerciseName, 3, scopeGym);
+      if (!scopeGym || here.length > 0) return suggestNext(here, weightUnit);
+      const elsewhere = suggestNext(getRecentExerciseRows(exerciseName, 3), weightUnit);
+      return elsewhere
+        ? { ...elsewhere, reason: `Other gym's machine — ${elsewhere.reason.toLowerCase()}` }
+        : null;
+    },
     // sessionExercises isn't read, but a newly saved row changes the DB result.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [exerciseName, weightUnit, sessionExercises],
+    [exerciseName, weightUnit, sessionExercises, scopeGym],
   );
 
   // Refresh the in-memory library whenever this screen regains focus, so
@@ -1058,6 +1082,14 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     }
   }
 
+  // PR = beats the heaviest logged weight. For gym-scoped equipment only this
+  // gym's history counts, and a first time on this gym's machine isn't a PR.
+  function isNewPr(weight: number): boolean {
+    const max = getMaxWeightForExercise(exerciseName, scopeGym);
+    if (max === null) return !scopeGym;
+    return weight > max;
+  }
+
   function logSet(setStartedAt: Date | null | undefined) {
     setLogRef.current.push({
       reps,
@@ -1086,8 +1118,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     // PR check: fire once per exercise instance, when this set's weight
     // beats the historical max for this exercise name.
     if (!prFiredRef.current && weightKg > 0) {
-      const dbMax = getMaxWeightForExercise(exerciseName);
-      if (weightKg > dbMax) {
+      if (isNewPr(weightKg)) {
         prFiredRef.current = true;
         setPrBadge({ weight: weightKg });
       }
@@ -1133,8 +1164,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     // Mirror saveSet()'s PR check for the auto-saved set.
     if (autoSaveSetInProgress && !prFiredRef.current && weightKg > 0) {
-      const dbMax = getMaxWeightForExercise(exerciseName);
-      if (weightKg > dbMax) {
+      if (isNewPr(weightKg)) {
         prFiredRef.current = true;
         setPrBadge({ weight: weightKg });
       }
@@ -1569,9 +1599,12 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
                   weightKg: latest.weightKg,
                   sessionLabels: latest.sessionLabels,
                   sessionStartTime: String(latest.sessionStartTime),
+                  otherGym:
+                    scopeGym && latest.gym !== scopeGym ? latest.gym || "other gym" : null,
                 }
               : null
           }
+          weightSuffix={weightUnitSuffix(currentEquipment)}
         />
       </View>
 

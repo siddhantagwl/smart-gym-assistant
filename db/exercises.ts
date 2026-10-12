@@ -29,6 +29,7 @@ export type LatestExercise = {
   note: string;
   sessionStartTime: string;
   sessionLabels: string[];
+  gym: string; // gym of that session ('' = unknown)
 };
 
 function normaliseUnit(v: unknown): WeightUnit {
@@ -190,7 +191,12 @@ export function getExerciseCountForSession(sessionId: string): number {
   return row ? Number(row.c) : 0;
 }
 
-export function getLatestExerciseByName(exerciseName: string): LatestExercise | null {
+// `gym` (optional): only look at sessions from that gym — used for
+// gym-scoped equipment (machine/cable/smith, see domain/movement.ts).
+export function getLatestExerciseByName(
+  exerciseName: string,
+  gym?: string | null
+): LatestExercise | null {
   const trimmed = exerciseName.trim();
   if (!trimmed) return null;
 
@@ -204,14 +210,15 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
       e.weight_unit as weight_unit,
       e.note as note,
       s.start_time as session_start_time,
-      s.session_labels as session_labels
+      s.session_labels as session_labels,
+      s.gym as session_gym
     FROM exercises e
     JOIN sessions s ON s.id = e.session_id
-    WHERE LOWER(e.name) = LOWER(?)
+    WHERE LOWER(e.name) = LOWER(?)${gym ? " AND s.gym = ?" : ""}
     ORDER BY s.start_time DESC, e.rowid DESC
     LIMIT 1;
     `,
-    [trimmed]
+    gym ? [trimmed, gym] : [trimmed]
   ) as any;
 
   if (!row) return null;
@@ -225,6 +232,7 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
     note: row.note ? String(row.note) : "",
     sessionStartTime: String(row.session_start_time),
     sessionLabels: row.session_labels ? JSON.parse(row.session_labels) : [],
+    gym: row.session_gym ? String(row.session_gym) : "",
   };
 }
 
@@ -232,7 +240,8 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
 // suggestions. Discarded sessions are ignored, same as the PR check.
 export function getRecentExerciseRows(
   exerciseName: string,
-  limit: number = 3
+  limit: number = 3,
+  gym?: string | null
 ): { weightKg: number; reps: number }[] {
   const trimmed = exerciseName.trim();
   if (!trimmed) return [];
@@ -242,11 +251,11 @@ export function getRecentExerciseRows(
     SELECT e.weight_kg as weight_kg, e.reps as reps
     FROM exercises e
     JOIN sessions s ON s.id = e.session_id
-    WHERE LOWER(e.name) = LOWER(?) AND s.note != '__DISCARDED__'
+    WHERE LOWER(e.name) = LOWER(?) AND s.note != '__DISCARDED__'${gym ? " AND s.gym = ?" : ""}
     ORDER BY s.start_time DESC, e.rowid DESC
     LIMIT ?;
     `,
-    [trimmed, limit]
+    gym ? [trimmed, gym, limit] : [trimmed, limit]
   ) as { weight_kg: number; reps: number }[];
 
   return rows.map((r) => ({ weightKg: Number(r.weight_kg), reps: Number(r.reps) }));
@@ -274,21 +283,22 @@ export function getLastUsedVariant(libraryIds: string[], gym: string): string | 
   return anywhere ? String(anywhere.id) : null;
 }
 
-export function getMaxWeightForExercise(exerciseName: string): number {
+// Heaviest logged weight; null when there's no history (at `gym`, if given).
+export function getMaxWeightForExercise(exerciseName: string, gym?: string | null): number | null {
   const trimmed = exerciseName.trim();
-  if (!trimmed) return 0;
+  if (!trimmed) return null;
 
   const row = db.getFirstSync(
     `
     SELECT MAX(e.weight_kg) as max_w
     FROM exercises e
     JOIN sessions s ON s.id = e.session_id
-    WHERE LOWER(e.name) = LOWER(?) AND s.note != '__DISCARDED__';
+    WHERE LOWER(e.name) = LOWER(?) AND s.note != '__DISCARDED__'${gym ? " AND s.gym = ?" : ""};
     `,
-    [trimmed]
+    gym ? [trimmed, gym] : [trimmed]
   ) as { max_w: number | null } | undefined;
 
-  return row?.max_w ?? 0;
+  return row?.max_w ?? null;
 }
 
 export function insertExerciseRaw(row: any) {

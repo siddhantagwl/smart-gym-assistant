@@ -66,7 +66,11 @@ type AddExerciseProps = {
     weightKg: number;
     sessionLabels?: string[];
     sessionStartTime: string;
+    otherGym?: string | null; // set when "Prev logged" comes from another gym's machine
   } | null;
+
+  // "/db" for dumbbells (logged per dumbbell), else "".
+  weightSuffix?: string;
 
   // Live per-set breakdown under the set chips (reps × weight, rests between).
   setLog?: SetEntry[];
@@ -223,6 +227,7 @@ export default function AddExercise({
   suggestion,
   onApplySuggestion,
   restoreSetState,
+  weightSuffix = "",
   setLog,
   restPeriods,
 }: AddExerciseProps) {
@@ -557,6 +562,8 @@ export default function AddExercise({
                 <Text style={{ color: "#FFC107", fontSize: 12, fontWeight: "500" }}>
                   Prev logged · {lastTime.sets}×{lastTime.reps} ·{" "}
                   {isLb ? `${kgToLb(lastTime.weightKg)}lb` : `${lastTime.weightKg}kg`}
+                  {weightSuffix}
+                  {lastTime.otherGym ? ` · @ ${lastTime.otherGym}` : ""}
                 </Text>
               </View>
 
@@ -567,9 +574,9 @@ export default function AddExercise({
                 const w =
                   suggestion.weightKg <= 0
                     ? "BW"
-                    : isLb
-                      ? `${kgToLb(suggestion.weightKg)}lb`
-                      : `${suggestion.weightKg}kg`;
+                    : (isLb
+                        ? `${kgToLb(suggestion.weightKg)}lb`
+                        : `${suggestion.weightKg}kg`) + weightSuffix;
                 return (
                   <Pressable
                     disabled={onTarget || !onApplySuggestion}
@@ -669,6 +676,11 @@ export default function AddExercise({
                       </Pressable>
                     );
                   })}
+                  {weightSuffix ? (
+                    <Text style={{ color: "#888", fontSize: 11, alignSelf: "center" }}>
+                      per db
+                    </Text>
+                  ) : null}
                 </View>
               }
               value={displayedWeight}
