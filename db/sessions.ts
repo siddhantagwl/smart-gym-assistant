@@ -241,6 +241,53 @@ export function insertSessionRaw(row: any) {
   );
 }
 
+// Finished, non-discarded, non-sauna sessions (newest first) with the muscles
+// trained: the user-confirmed labels, or — for older/manual sessions saved
+// without labels — the library primary_muscle of each logged exercise.
+// Feeds "Today's focus" on Home (domain/todayFocus.ts).
+export function getTrainingLog(limit: number = 60): { startTime: string; muscles: string[] }[] {
+  const sessions = db.getAllSync(
+    `SELECT id, start_time, session_labels FROM sessions
+     WHERE end_time IS NOT NULL
+       AND note != '__DISCARDED__'
+       AND session_labels NOT LIKE '%"Sauna"%'
+     ORDER BY start_time DESC
+     LIMIT ?;`,
+    [limit]
+  ) as { id: string; start_time: string; session_labels: string | null }[];
+
+  if (sessions.length === 0) return [];
+
+  const inferred = db.getAllSync(
+    `SELECT e.session_id AS session_id, l.primary_muscle AS muscle
+     FROM exercises e
+     JOIN exercise_library l
+       ON l.id = e.exercise_library_id OR LOWER(l.name) = LOWER(e.name)
+     WHERE e.session_id IN (${sessions.map(() => "?").join(",")});`,
+    sessions.map((s) => s.id)
+  ) as { session_id: string; muscle: string }[];
+
+  const bySession = new Map<string, Set<string>>();
+  inferred.forEach((r) => {
+    if (!r.muscle) return;
+    const set = bySession.get(String(r.session_id)) ?? new Set<string>();
+    set.add(String(r.muscle));
+    bySession.set(String(r.session_id), set);
+  });
+
+  return sessions.map((s) => {
+    let labels: string[] = [];
+    try {
+      const parsed = JSON.parse(s.session_labels ?? "[]");
+      if (Array.isArray(parsed)) labels = parsed.map(String);
+    } catch {}
+    return {
+      startTime: String(s.start_time),
+      muscles: labels.length > 0 ? labels : Array.from(bySession.get(String(s.id)) ?? []),
+    };
+  });
+}
+
 export function getWorkoutStats(): { thisWeek: number; currentStreak: number } {
   // Exclude sauna sessions — they're recovery, not training, so they shouldn't
   // extend the strength-training streak or the weekly count. A day with both a

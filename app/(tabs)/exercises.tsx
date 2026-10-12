@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, TextInput, SectionList, Pressable, Linking, Animated } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ExerciseLibraryItem, getAllLibraryExercises } from "@/db/exerciseLibrary";
 import {
@@ -39,6 +39,15 @@ export default function ExercisesScreen() {
   const [exercises, setExercises] = useState<ExerciseLibraryItem[]>([]);
   const clearAnim = useState(new Animated.Value(0))[0];
   const router = useRouter();
+
+  // Home's "Today's focus" links here with ?muscle=…&t=… to pre-filter.
+  const params = useLocalSearchParams<{ muscle?: string; t?: string }>();
+  useEffect(() => {
+    if (params.muscle) {
+      setSelectedMuscle(params.muscle);
+      setQuery("");
+    }
+  }, [params.muscle, params.t]);
 
   // All-time log summary per library id: drives the "Logged N× · 3d ago" /
   // "Not done yet" line and whether the row opens exercise history.

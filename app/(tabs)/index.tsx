@@ -4,7 +4,8 @@ import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Session } from "@/domain/session";
-import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats } from "@/db/sessions";
+import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats, getTrainingLog } from "@/db/sessions";
+import { computeTodayFocus, TodayFocus } from "@/domain/todayFocus";
 
 import IdleMode from "@/components/home/IdleMode";
 import ActiveMode from "@/components/home/ActiveMode";
@@ -63,9 +64,12 @@ export default function HomeScreen() {
   // other screen) are reflected when the user returns to Home.
   const [stats, setStats] = useState<{ thisWeek: number; currentStreak: number } | null>(null);
 
+  const [todayFocus, setTodayFocus] = useState<TodayFocus | null>(null);
+
   useFocusEffect(
     useCallback(() => {
       setStats(activeSession ? null : getWorkoutStats());
+      setTodayFocus(activeSession ? null : computeTodayFocus(getTrainingLog()));
     }, [activeSession])
   );
 
@@ -212,6 +216,7 @@ export default function HomeScreen() {
         {mode === "idle" && (
           <IdleMode
             colors={{ text: colors.text, accent: colors.accent }}
+            todayFocus={todayFocus}
             onStart={(session: Session) => {
               insertSession({
                 id: session.id,

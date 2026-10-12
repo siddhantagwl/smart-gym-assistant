@@ -92,6 +92,8 @@ Within an active exercise, if `weightKg × reps` drops >10% from set 1 to the la
 
 ### 2.3 Frequency / consistency pattern
 
+> **Related, shipped (Oct 2026):** "Today's focus" on Home picks the next muscle groups from the user's own rotation, with a comeback note after long breaks — see ARCHITECTURE.md §3.10. The training-day nudge itself is not built.
+
 Detect the user's typical training days (e.g. Mon/Wed/Fri) from the past 4 weeks of `sessions.start_time`. Surface a soft nudge on Home if a usual day passes without a session: "Usually train Wednesday — light day?"
 
 **Touchpoints:**

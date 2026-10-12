@@ -1,4 +1,6 @@
 import { Session } from "@/domain/session";
+import { TodayFocus } from "@/domain/todayFocus";
+import TodayFocusCard from "@/components/home/TodayFocusCard";
 import { View, Text, Pressable } from "react-native";
 
 
@@ -6,11 +8,16 @@ export default function IdleMode(props: {
   colors: { text: string; accent: string };
   onStart: (session: Session) => void;
   onLogSauna: () => void;
+  todayFocus?: TodayFocus | null;
 }) {
-  const { colors, onStart, onLogSauna } = props;
+  const { colors, onStart, onLogSauna, todayFocus } = props;
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24 }}>
+      {todayFocus && todayFocus.focus.length > 0 ? (
+        <TodayFocusCard focus={todayFocus} />
+      ) : null}
+
       <Text
         style={{
           color: colors.text,

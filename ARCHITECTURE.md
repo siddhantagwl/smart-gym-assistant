@@ -269,6 +269,14 @@ When an exercise with history is picked, a 🎯 chip sits next to "Prev logged" 
 - Rules live in `domain/progression.ts` (`suggestNext`, pure) over the last 3 non-discarded logs (`getRecentExerciseRows` in `db/exercises.ts`): stalled 3× or held twice at the same weight → +2.5 kg (or +5 lb in lb mode); reps dipped at the same weight → repeat and hit the previous reps; new/heavier weight or a single log → +1 rep; bodyweight → +1 rep.
 - Limitation: the schema stores one weight × reps per exercise row, not per set, so "all sets hit target" can't be checked — rules compare whole sessions.
 
+### 3.10 Today's focus (Home, before Start session)
+
+A single pill above "Start session" — `🎯 Today: Back + Biceps ›` (`Next:` if already trained today, `⚠` if coming back from a break) — keeps Home uncluttered. Tapping it opens a bottom sheet (`components/home/TodayFocusCard.tsx`) with the reason ("Next in your rotation · last done 5 days ago"), the comeback note, and a chip per regularly-trained muscle with days since last trained (`recovering` if today/yesterday). Tapping a muscle opens the Exercises tab pre-filtered to it (`/exercises?muscle=…&t=…`).
+
+- Data: `getTrainingLog()` in `db/sessions.ts` — finished, non-discarded, non-sauna sessions with their confirmed `session_labels`, falling back to the logged exercises' library `primary_muscle` when a session has no labels.
+- Logic: `computeTodayFocus()` in `domain/todayFocus.ts` (pure, `now` injectable). Window = 8 weeks before the **last** session (not before today), so long breaks don't erase the pattern. **Split mode** when repeated muscle combos (≥2× each) cover ≥60% of the window → suggest the combo done longest ago whose muscles aren't recovering (continues the rotation). Otherwise **muscle mode** → longest-gap regular muscle + its most frequent partner. Cardio/Sauna ignored. Breaks of 7+ / 21+ days add a "go lighter / ease back in" note.
+- Shown only in idle mode; recomputed on Home focus and when a session ends.
+
 ---
 
 ## 4. Important Architectural Decisions
