@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
+import { useKeepAwake } from "expo-keep-awake";
 import {
   scheduleRestDoneNotification,
   cancelRestNotification,
@@ -127,6 +128,11 @@ function SessionExerciseList({
 }
 
 export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
+  // Screen stays on for the whole session so it doesn't lock between sets.
+  // Tied to this component's lifetime: it stays mounted while the user is on
+  // other tabs, and unmounts on save/discard, which releases the lock.
+  useKeepAwake("active-session");
+
   const [exerciseName, setExerciseName] = useState("");
   const [exerciseLibraryId, setExerciseLibraryId] = useState<string | null>(null);
   const [sets, setSets] = useState(0);

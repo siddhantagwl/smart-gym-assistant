@@ -308,6 +308,7 @@ This means the user can edit the library outside the app and have changes propag
 - Restore-from-Sheets flow (sessions/exercises only; library untouched)
 - Settings UX refresh: sectioned layout, three-button sync row, "Sync not configured" banner, "Open spreadsheet" link
 - Focus-based refresh of library data (Home active session, Settings, Exercises tab)
+- Screen kept awake for the whole active session (`useKeepAwake` in `ActiveSession.tsx`; released on save/discard)
 - Debugging system (used and removed)
 
 ### Stable Areas
@@ -351,7 +352,6 @@ This means the user can edit the library outside the app and have changes propag
 - Quick rest-time picker (60/90/120/180s) instead of fixed 90s/120s
 - Warmup-set toggle so warmups don't pollute PR / volume calculations
 - Plate calculator (target weight → bar load breakdown)
-- Keep screen awake during active session (`expo-keep-awake`)
 
 ### Performance
 
