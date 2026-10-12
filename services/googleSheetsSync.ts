@@ -28,7 +28,11 @@ export async function syncToGoogleSheets() {
     throw new Error("Google Sheets sync is not configured");
   }
 
-  const sessions = getAllSessions();
+  // Oldest first: the Apps Script appends rows in the order received, so this
+  // keeps the Sheet in date order. (getAllSessions() is newest-first for the UI.)
+  const sessions = [...getAllSessions()].sort(
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  );
   const exercises = getAllExercises();
 
   const payload = {

@@ -183,6 +183,7 @@ Pass 1 lets users log exercises with names not in the library; the session row s
 #### Behavior
 
 - App sends full SQLite snapshot
+- Sessions are sent oldest-first (sorted in `syncToGoogleSheets`; `getAllSessions()` itself stays newest-first for the UI) because the Apps Script appends in received order — before Oct 2026 multi-session pushes landed newest-first in the Sheet
 - Apps Script handles deduplication
 
 #### Deduplication
