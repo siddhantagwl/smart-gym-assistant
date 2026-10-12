@@ -305,6 +305,12 @@ The web-app script lives in the repo at `apps-script/Code.gs` (constants `SHARED
 - Known gap: `doGet` (restore + library) does not check the secret.
 - Before Oct 2026 (v10 and earlier) `weight_unit` was silently dropped by the positional append; rows pushed before v11 have no `weight_unit`/`rest_periods`/`set_log`.
 
+### 3.14 Data migrations + Oct 2026 library cleanup
+
+- `db/migrations.ts` holds one-time **data** fixes, run from `initDb()` after the schema/seed and tracked with `PRAGMA user_version` (each runs once per install, inside a transaction, and never re-applies over later edits). Schema changes still go through `ensureColumn` in `schema.ts`.
+- `user_version 1` — library cleanup: 13 exercises logged under names that weren't in the library are relinked (by exercise id) to their library entry. The Sheet side is `apps-script/Cleanup_2026_10.gs` (`cleanupLibrary_2026_10`, run once from the editor, `DRY_RUN` first); it also fixes Barbell Shrug → Traps, Deadlift → Back, adds `machine` to Seated Dip / Arm Extension, and adds 8 library entries (Cable Front Raise, Seated Cable Row (Narrow Grip), Cable Bicep Curl, Cable Wrist Curl, Cable Upright Row, Cable Shrug, Hack Squat Machine, Shoulder Press Machine). The two mappings must stay identical.
+- Library conventions: `id` lower_snake_case and **never changed** (history links to it); `name` Title Case with variants in brackets; `primary_muscle` one of Back, Chest, Shoulders, Biceps, Triceps, Legs, Core, Traps, Forearms, Cardio; `tags` = `[push|pull|core, muscle, compound|isolation, equipment, sub-muscles…]`.
+
 ---
 
 ## 4. Important Architectural Decisions

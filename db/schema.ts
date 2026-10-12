@@ -1,5 +1,6 @@
 import { db } from "./database";
 import { seedExerciseLibrary } from "./seedExercises";
+import { runDataMigrations } from "./migrations";
 
 export function initDb() {
 
@@ -68,6 +69,7 @@ export function initDb() {
     ensureColumn("exercises", "set_log", "TEXT NOT NULL DEFAULT '[]'");
 
     seedExerciseLibrary();
+    runDataMigrations();
 
 }
 
