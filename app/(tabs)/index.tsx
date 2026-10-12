@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Session } from "@/domain/session";
 import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats, getTrainingLog } from "@/db/sessions";
 import { computeTodayFocus, TodayFocus } from "@/domain/todayFocus";
+import { loadSelectedGym, saveSelectedGym } from "@/services/gymPreference";
 
 import IdleMode from "@/components/home/IdleMode";
 import ActiveMode from "@/components/home/ActiveMode";
@@ -76,6 +77,10 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<{ thisWeek: number; currentStreak: number } | null>(null);
 
   const [todayFocus, setTodayFocus] = useState<TodayFocus | null>(null);
+  const [gym, setGym] = useState("");
+  useEffect(() => {
+    loadSelectedGym().then(setGym);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -217,6 +222,7 @@ export default function HomeScreen() {
                 endTime: null,
                 sessionLabels: pendingSession?.sessionLabels ?? [],
                 note: pendingSession?.note ?? "",
+                gym: pendingSession?.gym ?? "",
               });
               setPendingSession(null);
             }}
@@ -237,6 +243,11 @@ export default function HomeScreen() {
           <IdleMode
             colors={{ text: colors.text, accent: colors.accent }}
             todayFocus={todayFocus}
+            gym={gym}
+            onGymChange={(g) => {
+              setGym(g);
+              saveSelectedGym(g);
+            }}
             onStart={(session: Session) => {
               insertSession({
                 id: session.id,
@@ -244,6 +255,7 @@ export default function HomeScreen() {
                 endTime: session.endTime,
                 sessionLabels: [],
                 note: "",
+                gym: session.gym ?? "",
               });
               setActiveSession(session);
             }}

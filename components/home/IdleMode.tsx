@@ -1,6 +1,7 @@
 import { Session } from "@/domain/session";
 import { TodayFocus } from "@/domain/todayFocus";
 import TodayFocusCard from "@/components/home/TodayFocusCard";
+import GymPicker from "@/components/home/GymPicker";
 import { View, Text, Pressable } from "react-native";
 
 
@@ -9,8 +10,10 @@ export default function IdleMode(props: {
   onStart: (session: Session) => void;
   onLogSauna: () => void;
   todayFocus?: TodayFocus | null;
+  gym: string;
+  onGymChange: (gym: string) => void;
 }) {
-  const { colors, onStart, onLogSauna, todayFocus } = props;
+  const { colors, onStart, onLogSauna, todayFocus, gym, onGymChange } = props;
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24 }}>
@@ -29,6 +32,8 @@ export default function IdleMode(props: {
         Ready to train
       </Text>
 
+      <GymPicker value={gym} onChange={onGymChange} />
+
       <Pressable
         onPress={() => {
           const session: Session = {
@@ -36,6 +41,7 @@ export default function IdleMode(props: {
             startTime: new Date(),
             endTime: null,
             sessionLabels: [],
+            gym,
           };
           onStart(session);
         }}

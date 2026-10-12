@@ -49,6 +49,7 @@ export default function SessionDetailsScreen() {
   const [sessionLabels, setSessionLabels] = useState<string[]>([]);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
+  const [sessionGym, setSessionGym] = useState("");
 
   // Long-press an exercise card to fix a typo'd name / sets / reps / weight / note.
   const [editing, setEditing] = useState<StoredExercise | null>(null);
@@ -148,6 +149,7 @@ export default function SessionDetailsScreen() {
     setSessionLabels(Array.isArray(s?.sessionLabels) ? s!.sessionLabels : []);
     setStartTime(s?.startTime ?? null);
     setEndTime(s?.endTime ?? null);
+    setSessionGym(s?.gym ?? "");
 
     if (!sessionId) {
       setExercises([]);
@@ -254,6 +256,12 @@ export default function SessionDetailsScreen() {
                   year: "numeric",
                 })}
               </Text>
+
+              {sessionGym ? (
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>
+                  📍 {sessionGym}
+                </Text>
+              ) : null}
 
               {endTime && (
                 <Text style={{ color: colors.muted, fontSize: 12 }}>

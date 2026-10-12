@@ -7,6 +7,7 @@ export type Session = {
   endTime: Date | null;
   sessionLabels: string[];
   note?: string;
+  gym?: string; // '' / undefined = unknown
 };
 
 export type RecentSession = {

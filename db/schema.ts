@@ -50,6 +50,8 @@ export function initDb() {
     ensureColumn("sessions", "session_labels", "TEXT NOT NULL DEFAULT '[]'");
     ensureColumn("sessions", "note", "TEXT NOT NULL DEFAULT ''");
     ensureColumn("sessions", "source", "TEXT NOT NULL DEFAULT 'live'");
+    // Which gym the session was at ('' = unknown / before gyms existed).
+    ensureColumn("sessions", "gym", "TEXT NOT NULL DEFAULT ''");
 
     ensureColumn("exercises", "weight_kg", "REAL NOT NULL DEFAULT 0");
     ensureColumn("exercises", "note", "TEXT NOT NULL DEFAULT ''");

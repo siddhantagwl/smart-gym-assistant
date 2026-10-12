@@ -10,13 +10,14 @@ export type StoredSession = {
   sessionLabels: string[];
   note: string;
   source: "live" | "manual";
+  gym: string; // '' = unknown
 };
 
 export function insertSession(session: Session) {
   db.runSync(
     `
-    INSERT INTO sessions (id, start_time, end_time, session_labels, note, source)
-    VALUES (?, ?, ?, ?, ?, ?);
+    INSERT INTO sessions (id, start_time, end_time, session_labels, note, source, gym)
+    VALUES (?, ?, ?, ?, ?, ?, ?);
     `,
     [
       session.id,
@@ -25,6 +26,7 @@ export function insertSession(session: Session) {
       JSON.stringify(session.sessionLabels ?? []),
       session.note ?? "",
       "live",
+      (session.gym ?? "").trim(),
     ]
   );
 }
@@ -32,7 +34,7 @@ export function insertSession(session: Session) {
 export function getAllSessions(): StoredSession[] {
   const rows = db.getAllSync(
     `
-    SELECT id, start_time, end_time, session_labels, note, source
+    SELECT id, start_time, end_time, session_labels, note, source, gym
     FROM sessions
     ORDER BY start_time DESC;
     `
@@ -45,13 +47,14 @@ export function getAllSessions(): StoredSession[] {
     sessionLabels: r.session_labels ? JSON.parse(r.session_labels) : [],
     note: r.note ? String(r.note) : "",
     source: (r.source as "live" | "manual") || "live",
+    gym: r.gym ? String(r.gym) : "",
   }));
 }
 
 export function getActiveSession(): StoredSession | null {
   const row = db.getFirstSync(
     `
-    SELECT id, start_time, end_time, session_labels, note, source
+    SELECT id, start_time, end_time, session_labels, note, source, gym
     FROM sessions
     WHERE end_time IS NULL
     LIMIT 1;
@@ -67,6 +70,7 @@ export function getActiveSession(): StoredSession | null {
     sessionLabels: row.session_labels ? JSON.parse(row.session_labels) : [],
     note: row.note ? String(row.note) : "",
     source: (row.source as "live" | "manual") || "live",
+    gym: row.gym ? String(row.gym) : "",
   };
 }
 
@@ -192,6 +196,7 @@ export function getRecentSessions(limit: number = 3): RecentSession[] {
     endTime: r.end_time ? String(r.end_time) : null,
     sessionLabels: r.session_labels ? JSON.parse(r.session_labels) : [],
     source: (r.source as "live" | "manual") || "live",
+    gym: r.gym ? String(r.gym) : "",
   }));
 }
 
@@ -227,8 +232,8 @@ export function insertSessionRaw(row: any) {
   db.runSync(
     `
     INSERT INTO sessions
-    (id, start_time, end_time, session_labels, note, source)
-    VALUES (?, ?, ?, ?, ?, ?)
+    (id, start_time, end_time, session_labels, note, source, gym)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
     [
       row.id,
@@ -237,6 +242,7 @@ export function insertSessionRaw(row: any) {
       row.session_labels,
       row.note || "",
       row.source || "live",
+      row.gym ? String(row.gym).trim() : "",
     ]
   );
 }
@@ -286,6 +292,25 @@ export function getTrainingLog(limit: number = 60): { startTime: string; muscles
       muscles: labels.length > 0 ? labels : Array.from(bySession.get(String(s.id)) ?? []),
     };
   });
+}
+
+// Gyms used so far, most recently used first.
+export function getKnownGyms(): string[] {
+  const rows = db.getAllSync(
+    `SELECT gym, MAX(start_time) AS last FROM sessions
+     WHERE gym != '' AND note != '__DISCARDED__'
+     GROUP BY gym
+     ORDER BY last DESC;`
+  ) as { gym: string }[];
+  return rows.map((r) => String(r.gym));
+}
+
+// Gym of a session ('' if unknown).
+export function getSessionGym(sessionId: string): string {
+  const row = db.getFirstSync(`SELECT gym FROM sessions WHERE id = ?;`, [sessionId]) as
+    | { gym: string }
+    | null;
+  return row?.gym ? String(row.gym) : "";
 }
 
 export function getWorkoutStats(): { thisWeek: number; currentStreak: number } {

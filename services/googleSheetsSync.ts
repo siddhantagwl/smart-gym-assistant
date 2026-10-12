@@ -45,6 +45,8 @@ export async function syncToGoogleSheets() {
       end_time: s.endTime,
       session_labels: s.sessionLabels ?? [],
       source: s.source,
+      // Stored by header in the Sheet (apps-script/Code.gs, EXTRA_SESSION_FIELDS).
+      gym: s.gym ?? "",
       note: s.note,
     })),
 

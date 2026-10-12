@@ -13,6 +13,9 @@
 // these round-trip without further changes.
 const EXTRA_EXERCISE_FIELDS = ["weight_unit", "rest_periods", "set_log"];
 const BASE_EXERCISE_COLUMNS = 11;
+// Same idea for sessions: the original 6 columns stay positional.
+const EXTRA_SESSION_FIELDS = ["gym"];
+const BASE_SESSION_COLUMNS = 6;
 
 function doPost(e) {
   try {
@@ -32,6 +35,11 @@ function doPost(e) {
       exercisesSheet,
       EXTRA_EXERCISE_FIELDS,
       BASE_EXERCISE_COLUMNS
+    );
+    const sessionHeaders = ensureHeaders(
+      sessionsSheet,
+      EXTRA_SESSION_FIELDS,
+      BASE_SESSION_COLUMNS
     );
 
     const debug = body.debug === true;
@@ -56,14 +64,19 @@ function doPost(e) {
       if (!sid) return;
       if (existingSessionIds.has(sid)) return;
 
-      sessionsSheet.appendRow([
+      const row = [
         sid,
         s.start_time,
         s.end_time || "",
         JSON.stringify(s.session_labels || []), // new structure
         s.source || "live",
         s.note || "",
-      ]);
+      ];
+      while (row.length < sessionHeaders.length) row.push("");
+      const gymCol = sessionHeaders.indexOf("gym");
+      if (gymCol >= 0) row[gymCol] = s.gym || "";
+
+      sessionsSheet.appendRow(row);
 
       existingSessionIds.add(sid);
       newSessions++;
