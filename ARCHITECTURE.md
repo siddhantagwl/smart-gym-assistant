@@ -286,14 +286,23 @@ A single pill above "Start session" — `🎯 Today: Back + Biceps ›` (`Next:`
 
 - **Target**: after Finish Set the countdown uses `restTargetFor(tags)` from `domain/restTarget.ts` — library tag `compound` → 2:30, `isolation` → 1:15, `cardio` → 1:00, else 1:30. The rest header reads e.g. `🧘 REST · 2:30 compound`, and the "Rest done" notification fires at that point. It is only a target: actual rest is still wall-clock, so going over/under never loses data. (Chosen over learning from the user's own history, Oct 2026.)
 - **Per-set rest log**: new column `exercises.rest_periods` (JSON array of seconds, default `"[]"`, added via `ensureColumn`). `stopRestTimer(true)` appends the elapsed rest only when it ends a between-set rest (next set started or Skip rest) and the running rest was a `"set"` rest (`restKindRef`). The trailing rest before Finish Exercise and the transition rest before an exercise are excluded. `rest_seconds` keeps its old meaning (total, which also includes the preceding transition rest).
-- Undo restores the log; Sheets push sends `rest_periods` (kept only if the exercises tab has a `rest_periods` header); restore parses it back via `parseRestPeriods`.
+- Undo restores the log; Sheets push sends `rest_periods` (the Apps Script writes it under its own header, see §3.13); restore parses it back via `parseRestPeriods`.
 
 ### 3.12 Per-set log (reps × weight per set)
 
 - New column `exercises.set_log` (JSON, default `"[]"`): one `{reps, weightKg, weightUnit, durationSec}` per set, captured at Finish Set from the steppers at that moment (`logSet` in `ActiveSession`; `AddExercise.onSaveSet(setStartedAt)` passes the set start for the duration). Hold-to-finish with a set in flight logs that set too. The row's `reps`/`weight_kg` keep their meaning (= last set), so PRs, charts and 🎯 Try today are unchanged.
 - **Live**: the `Set N` chips stay and show the set's duration (`Set 1 · 0:38`, from `durationSec`); each set is one column — chip, reps × weight under it, then the rest after that set in blue (`💤1:35`, `rest_periods[i]`). The strip is a single sideways-scrolling row that never wraps and auto-scrolls to the newest set. The running set shows the current stepper values under it. Shared pieces live in `components/SetBreakdown.tsx` (`SetColumn`, `RestGap`, `formatSetLoad`).
 - **Static** (`<SetBreakdown>` in Session details and exercise history): same layout, smaller. Hidden for older rows without a log, and for rows edited afterwards (set count differs, or last set ≠ row reps × weight).
-- Undo restores the log; Sheets push sends `set_log` (kept once the exercises tab has a `set_log` header); restore parses it back.
+- Undo restores the log; Sheets push sends `set_log` (written by header, see §3.13); restore parses it back.
+
+### 3.13 Apps Script (Sheets side) — `apps-script/Code.gs`
+
+The web-app script lives in the repo at `apps-script/Code.gs` (constants `SHARED_SECRET`, `SPREADSHEET_ID`, `SHEET_*` stay in a separate file in the Apps Script project — never commit them; the repo is public). Deploy by pasting it over `Code.gs` in the editor → Deploy → Manage deployments → ✏️ Edit → **New version** (keeps the same `/exec` URL the app has in `.env`).
+
+- `doPost` writes the original 11 exercise columns positionally (unchanged), and newer fields (`EXTRA_EXERCISE_FIELDS`: `weight_unit`, `rest_periods`, `set_log`) **by header** — `ensureHeaders()` creates any missing header after the last used column on the next push. To sync a new exercise field: add it to the app payload and to `EXTRA_EXERCISE_FIELDS`.
+- Append-only: existing rows are never rewritten, so edits/Undo/deletes after a push don't reach the Sheet.
+- Known gap: `doGet` (restore + library) does not check the secret.
+- Before Oct 2026 (v10 and earlier) `weight_unit` was silently dropped by the positional append; rows pushed before v11 have no `weight_unit`/`rest_periods`/`set_log`.
 
 ---
 
