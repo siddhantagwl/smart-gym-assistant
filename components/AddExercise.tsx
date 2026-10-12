@@ -526,15 +526,15 @@ export default function AddExercise({
                 paddingVertical: 10,
                 borderRadius: 10,
                 alignItems: "center",
-                backgroundColor: isSetInProgress ? "#2a2a2a" : "#0f2e1f",
+                backgroundColor: isSetInProgress ? "#2a2a2a" : "#0f1f2e",
                 borderWidth: 1,
-                borderColor: isSetInProgress ? "#2a2a2a" : "#1f7a4d",
+                borderColor: isSetInProgress ? "#2a2a2a" : "#1f4d7a",
                 opacity: isSetInProgress ? 0.6 : 1,
               }}
             >
               <Text
                 style={{
-                  color: isSetInProgress ? "#aaa" : "#00ff99",
+                  color: isSetInProgress ? "#aaa" : "#0099ff",
                   fontSize: 14,
                   fontWeight: "600",
                 }}
@@ -598,9 +598,9 @@ export default function AddExercise({
                       paddingVertical: 4,
                       paddingHorizontal: 10,
                       borderRadius: 999,
-                      backgroundColor: "rgba(0, 150, 255, 0.12)",
+                      backgroundColor: "rgba(0, 255, 150, 0.12)",
                       borderWidth: 1,
-                      borderColor: "rgba(0, 150, 255, 0.5)",
+                      borderColor: "rgba(0, 255, 150, 0.5)",
                     },
                     isLast && {
                       transform: [{ scale: lastChipScale }],
@@ -609,7 +609,7 @@ export default function AddExercise({
                 >
                   <Text
                     style={{
-                      color: "#4da6ff",
+                      color: "#4dffa6",
                       fontSize: 12,
                       fontWeight: "600",
                     }}

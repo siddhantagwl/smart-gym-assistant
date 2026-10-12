@@ -56,6 +56,31 @@ export function insertExercise(exercise: Exercise) {
   );
 }
 
+export type ExerciseEdit = Pick<
+  StoredExercise,
+  "name" | "exerciseLibraryId" | "sets" | "reps" | "weightKg" | "weightUnit" | "note"
+>;
+
+export function updateExercise(id: string, edit: ExerciseEdit) {
+  db.runSync(
+    `
+    UPDATE exercises
+    SET name = ?, exercise_library_id = ?, sets = ?, reps = ?, weight_kg = ?, weight_unit = ?, note = ?
+    WHERE id = ?;
+    `,
+    [
+      edit.name,
+      edit.exerciseLibraryId,
+      edit.sets,
+      edit.reps,
+      edit.weightKg,
+      edit.weightUnit,
+      edit.note,
+      id,
+    ]
+  );
+}
+
 //todo: change the functio nn name to reflect that this is for all exercises, not just for a session
 export function getAllExercises(): StoredExercise[] {
   const rows = db.getAllSync(

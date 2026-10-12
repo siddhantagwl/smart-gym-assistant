@@ -1,14 +1,29 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, Pressable, Text, View, Animated } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  Animated,
+} from "react-native";
 
+import { WeightUnit } from "@/domain/exercise";
+import { getAllLibraryExercises } from "@/db/exerciseLibrary";
 import {
   getAllExercises,
   getExercisesForSession,
   StoredExercise,
+  updateExercise,
 } from "@/db/exercises";
 import { deleteSession, getAllSessions } from "@/db/sessions";
 import Svg, { Polyline } from "react-native-svg";
+
+const LB_TO_KG = 0.45359237;
 
 const colors = {
   background: "#0F0F0F",
@@ -33,6 +48,75 @@ export default function SessionDetailsScreen() {
   const [sessionLabels, setSessionLabels] = useState<string[]>([]);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
+
+  // Long-press an exercise card to fix a typo'd name / sets / reps / weight / note.
+  const [editing, setEditing] = useState<StoredExercise | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSets, setEditSets] = useState("");
+  const [editReps, setEditReps] = useState("");
+  const [editWeight, setEditWeight] = useState("");
+  const [editUnit, setEditUnit] = useState<WeightUnit>("kg");
+  const [editNote, setEditNote] = useState("");
+
+  function openEditor(item: StoredExercise) {
+    setEditing(item);
+    setEditName(item.name);
+    setEditSets(String(item.sets));
+    setEditReps(String(item.reps));
+    setEditUnit(item.weightUnit);
+    setEditWeight(
+      item.weightUnit === "lb"
+        ? String(Math.round((item.weightKg / LB_TO_KG) * 10) / 10)
+        : String(item.weightKg),
+    );
+    setEditNote(item.note ?? "");
+  }
+
+  // Converts the typed value so the field always shows the weight in the active unit.
+  function toggleEditUnit() {
+    const w = parseFloat(editWeight) || 0;
+    if (editUnit === "kg") {
+      setEditWeight(String(Math.round((w / LB_TO_KG) * 10) / 10));
+      setEditUnit("lb");
+    } else {
+      setEditWeight(String(Math.round(w * LB_TO_KG * 10) / 10));
+      setEditUnit("kg");
+    }
+  }
+
+  function saveEdit() {
+    if (!editing) return;
+
+    const name = editName.trim() || editing.name;
+    const sets = Math.max(0, parseInt(editSets, 10) || 0);
+    const reps = Math.max(0, parseInt(editReps, 10) || 0);
+    const weight = Math.max(0, parseFloat(editWeight) || 0);
+    const weightKg =
+      editUnit === "lb" ? Math.round(weight * LB_TO_KG * 10) / 10 : weight;
+
+    // Renaming re-links the row to the matching library entry (if any) so
+    // exercise history and PRs follow the corrected name.
+    let exerciseLibraryId = editing.exerciseLibraryId;
+    if (name !== editing.name) {
+      const match = getAllLibraryExercises().find(
+        (l) => l.name.trim().toLowerCase() === name.toLowerCase(),
+      );
+      exerciseLibraryId = match ? match.id : name;
+    }
+
+    updateExercise(editing.id, {
+      name,
+      exerciseLibraryId,
+      sets,
+      reps,
+      weightKg,
+      weightUnit: editUnit,
+      note: editNote.trim(),
+    });
+
+    setExercises(getExercisesForSession(sessionId));
+    setEditing(null);
+  }
 
   function handleDeleteSession() {
     if (!sessionId) return;
@@ -342,6 +426,7 @@ export default function SessionDetailsScreen() {
                       },
                     })
                   }
+                  onLongPress={() => openEditor(item)}
                   style={({ pressed }) => ({
                     backgroundColor: colors.card,
                     borderRadius: 10,
@@ -566,6 +651,160 @@ export default function SessionDetailsScreen() {
           </Text>
         </Pressable>
       </View>
+
+      <Modal
+        visible={editing !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditing(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.65)",
+            justifyContent: "center",
+            paddingHorizontal: 20,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: colors.card,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: colors.border,
+              padding: 18,
+            }}
+          >
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: 18,
+                fontWeight: "700",
+                marginBottom: 14,
+              }}
+            >
+              Edit exercise
+            </Text>
+
+            <Text style={styles.label}>Name</Text>
+            <TextInput
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Exercise name"
+              placeholderTextColor="#666"
+              style={styles.input}
+            />
+
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Sets</Text>
+                <TextInput
+                  value={editSets}
+                  onChangeText={setEditSets}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Reps</Text>
+                <TextInput
+                  value={editReps}
+                  onChangeText={setEditReps}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.label}>Weight</Text>
+            <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+              <TextInput
+                value={editWeight}
+                onChangeText={setEditWeight}
+                keyboardType="decimal-pad"
+                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+              />
+              <Pressable
+                onPress={toggleEditUnit}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: "#333",
+                  backgroundColor: "#1a1a1a",
+                }}
+              >
+                <Text style={{ color: colors.text, fontWeight: "700" }}>
+                  {editUnit}
+                </Text>
+              </Pressable>
+            </View>
+
+            <Text style={[styles.label, { marginTop: 12 }]}>Note</Text>
+            <TextInput
+              value={editNote}
+              onChangeText={setEditNote}
+              placeholder="optional"
+              placeholderTextColor="#666"
+              multiline
+              style={[styles.input, { minHeight: 44, textAlignVertical: "top" }]}
+            />
+
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+              <Pressable
+                onPress={() => setEditing(null)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: "#333",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: colors.muted, fontWeight: "700" }}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={saveEdit}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  backgroundColor: "#0f2e1f",
+                  borderWidth: 1,
+                  borderColor: "#1f7a4d",
+                }}
+              >
+                <Text style={{ color: "#00ff99", fontWeight: "700" }}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  label: {
+    color: colors.muted,
+    fontSize: 12,
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  input: {
+    backgroundColor: "#0f0f0f",
+    borderWidth: 1,
+    borderColor: "#333",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    color: "#fff",
+    fontSize: 15,
+    marginBottom: 4,
+  },
+});
