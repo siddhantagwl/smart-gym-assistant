@@ -86,17 +86,20 @@ export default function SettingsScreen() {
 
     Alert.alert(
       "Restore workout history",
-      "This wipes local sessions and exercises and re-imports them from Google Sheets. Your exercise library is not affected. Continue?",
+      "Adds sessions and exercises from Google Sheets that aren't on this phone, and copies gyms filled in the Sheet onto your sessions. Nothing on the phone is deleted. Continue?",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Restore",
-          style: "destructive",
           onPress: async () => {
             try {
               setRestoring(true);
-              await restoreFromGoogleSheets();
-              Alert.alert("Restore complete", "Database restored successfully.");
+              const r = await restoreFromGoogleSheets();
+              Alert.alert(
+                "Restore complete",
+                `Added ${r.newSessions} sessions and ${r.newExercises} exercises.\n` +
+                  `Gym set on ${r.gymsUpdated} session${r.gymsUpdated === 1 ? "" : "s"}.`,
+              );
             } catch (e) {
               Alert.alert("Restore failed", String(e));
             } finally {

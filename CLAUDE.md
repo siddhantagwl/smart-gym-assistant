@@ -104,7 +104,7 @@ All SQL lives under `db/` — never inline `db.runSync` in components. Conventio
 
 Two sync flows, both in `services/googleSheetsSync.ts`:
 
-- **Sessions + exercises** (SQLite → Sheets, `syncToGoogleSheets`): full snapshot POST; the Apps Script handles dedup by ID. Restore (`restoreFromGoogleSheets`, GET no-param) wipes local sessions/exercises and re-inserts from Sheets via `insertSessionRaw` / `insertExerciseRaw`. Restore does **not** touch `exercise_library`.
+- **Sessions + exercises** (SQLite → Sheets, `syncToGoogleSheets`): full snapshot POST; the Apps Script handles dedup by ID. Restore (`restoreFromGoogleSheets`, GET no-param) is a non-destructive merge: inserts Sheet sessions/exercises whose ids aren't on the phone (`insertSessionRaw` / `insertExerciseRaw`) and copies the Sheet's `gym` onto matching sessions; it never deletes or otherwise overwrites phone rows. Restore does **not** touch `exercise_library`.
 - **Exercise library** (Sheets → SQLite, `syncExerciseLibrary`): GET `?type=library`, full-replace inside a transaction (`replaceExerciseLibrary` in `db/exerciseLibrary.ts`). Sheet is authoritative; locally added entries are wiped on next sync. The hardcoded seed in `db/seedExercises.ts` only fills the table on first install via `INSERT OR IGNORE` — once the user runs library sync, they're effectively replacing the seed.
 
 Both sync flows require `EXPO_PUBLIC_GSHEETS_WEBHOOK_URL` + `EXPO_PUBLIC_GSHEETS_SECRET`.

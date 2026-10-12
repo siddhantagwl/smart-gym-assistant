@@ -123,6 +123,11 @@ export function updateExercise(id: string, edit: ExerciseEdit) {
   );
 }
 
+export function getExerciseIds(): Set<string> {
+  const rows = db.getAllSync(`SELECT id FROM exercises;`) as { id: string }[];
+  return new Set(rows.map((r) => String(r.id)));
+}
+
 // Used by Undo after Finish Exercise.
 export function deleteExercise(id: string) {
   db.runSync(`DELETE FROM exercises WHERE id = ?;`, [id]);

@@ -242,7 +242,7 @@ Logged but not in library (n)
 - **Export** — write a local JSON backup file (works with no env vars).
 - **Share** — same export, then share-sheet via `expo-sharing`.
 - **Push history** (`syncToGoogleSheets`) — POST sessions + exercises snapshot to Apps Script.
-- **Restore history** (`restoreFromGoogleSheets`) — destructive. Wipes local sessions/exercises, re-imports from Sheets. `exercise_library` left intact. Confirmation alert before running.
+- **Restore history** (`restoreFromGoogleSheets`) — non-destructive merge (Oct 2026): adds Sheet sessions/exercises missing on the phone (by id), copies the Sheet's `gym` onto matching sessions (Sheet wins), never deletes or otherwise overwrites phone rows. Returns counts shown in the alert. `exercise_library` left intact. (It used to wipe and re-import, which lost anything the Sheet lacked.)
 - **Pull library** (`syncExerciseLibrary`) — GET `?type=library`, full-replace local `exercise_library`.
 - **Open spreadsheet** — `Linking.openURL` to `EXPO_PUBLIC_GSHEETS_SPREADSHEET_URL`. Only renders if the env var is set.
 - **Logged but not in library** — passive list from `getLoggedExercisesNotInLibrary()`. Surfaces names typed into a session that don't match any library row, prompting the user to add them to their Sheet manually then pull.
@@ -351,7 +351,7 @@ This means the user can edit the library outside the app and have changes propag
 ### 4.4 Fail-Safe Sync
 
 - Sheets sync is a single POST; failure leaves local DB untouched.
-- Restore wipes local sessions/exercises before re-inserting (`wipeDatabase()` then `insertSessionRaw` / `insertExerciseRaw` per row). The `exercise_library` table is left intact during restore.
+- Restore merges inside one transaction: `insertSessionRaw` / `insertExerciseRaw` only for ids not on the phone, `setSessionGym` for Sheet gyms; nothing is deleted. The `exercise_library` table is left intact.
 
 ---
 
@@ -658,7 +658,7 @@ sequenceDiagram
   participant Sheets as Google Sheets
   participant SQLite as SQLite
   User->>SettingsUI: Tap Restore history
-  SettingsUI->>User: "wipes sessions/exercises, library untouched" alert
+  SettingsUI->>User: "adds what's missing + gyms, deletes nothing" alert
   User->>SettingsUI: Confirm
   SettingsUI->>SyncService: restoreFromGoogleSheets()
   SyncService->>AppsScript: GET WEBHOOK_URL (no params)
@@ -667,7 +667,7 @@ sequenceDiagram
   Sheets-->>AppsScript: rows
   AppsScript-->>SyncService: { sessions, exercises, exerciseLib }
   Note over SyncService: only sessions + exercises are used; exerciseLib is ignored here<br/>(library is managed via the dedicated Pull library action)
-  SyncService->>SQLite: wipeDatabase() — DELETE FROM sessions, exercises<br/>(exercise_library left intact)
+  SyncService->>SQLite: merge in one transaction — insert missing ids,<br/>copy Sheet gyms (nothing deleted, library untouched)
   loop sessions
     SyncService->>SQLite: insertSessionRaw(row)
   end

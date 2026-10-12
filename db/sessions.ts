@@ -294,6 +294,21 @@ export function getTrainingLog(limit: number = 60): { startTime: string; muscles
   });
 }
 
+export function getSessionIds(): Set<string> {
+  const rows = db.getAllSync(`SELECT id FROM sessions;`) as { id: string }[];
+  return new Set(rows.map((r) => String(r.id)));
+}
+
+// Sets a session's gym; returns true if it changed.
+export function setSessionGym(sessionId: string, gym: string): boolean {
+  const res = db.runSync(`UPDATE sessions SET gym = ? WHERE id = ? AND gym != ?;`, [
+    gym,
+    sessionId,
+    gym,
+  ]);
+  return res.changes > 0;
+}
+
 // Gyms used so far, most recently used first.
 export function getKnownGyms(): string[] {
   const rows = db.getAllSync(

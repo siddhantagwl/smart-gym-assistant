@@ -86,9 +86,3 @@ function ensureColumn(table: string, columnName: string, columnDef: string) {
     if (cols.some((c) => c.name === columnName)) return;
     db.execSync(`ALTER TABLE ${table} ADD COLUMN ${columnName} ${columnDef};`);
 }
-
-export function wipeDatabase() {
-  db.execSync("DELETE FROM exercises;");
-  db.execSync("DELETE FROM sessions;");
-  console.log("Database wiped completely.");
-}

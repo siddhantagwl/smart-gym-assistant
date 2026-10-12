@@ -72,7 +72,7 @@ If I forget to log live, I can add a session by hand. Pick the date, type in the
 The sheet is both my backup and where I edit the exercise library:
 
 * **Sync to Sheets** sends every session and exercise to the sheet. Re-running is safe.
-* **Restore from Sheets** wipes my local sessions and re-imports from the sheet. Doesn't touch the exercise library.
+* **Restore from Sheets** merges: adds sessions/exercises from the sheet that aren't on the phone and copies gyms filled in the sheet. Nothing on the phone is deleted. Doesn't touch the exercise library.
 * **Sync Library** pulls the exercise list from the sheet and replaces the local one.
 * **Open Spreadsheet** is just a link to open the sheet in my browser.
 

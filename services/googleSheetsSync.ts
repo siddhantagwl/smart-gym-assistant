@@ -1,7 +1,12 @@
-import { getAllExercises, insertExerciseRaw } from "@/db/exercises";
+import { db } from "@/db/database";
+import { getAllExercises, getExerciseIds, insertExerciseRaw } from "@/db/exercises";
 import { replaceExerciseLibrary } from "@/db/exerciseLibrary";
-import { wipeDatabase } from "@/db/schema";
-import { getAllSessions, insertSessionRaw } from "@/db/sessions";
+import {
+  getAllSessions,
+  getSessionIds,
+  insertSessionRaw,
+  setSessionGym,
+} from "@/db/sessions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const WEBHOOK_URL = process.env.EXPO_PUBLIC_GSHEETS_WEBHOOK_URL!;
@@ -91,16 +96,63 @@ export async function getLastGoogleSheetsSync(): Promise<string | null> {
   return AsyncStorage.getItem(LAST_SYNC_KEY);
 }
 
-export async function restoreFromGoogleSheets() {
+// "Restore history" — a non-destructive merge from the Sheet (it used to wipe
+// the phone and re-import, which lost anything the Sheet didn't have, e.g.
+// per-set logs pushed before the script stored them):
+// - sessions / exercises in the Sheet but not on the phone are added (by id),
+//   so a new or reset phone still gets everything;
+// - a gym filled in the Sheet is copied onto the matching session (Sheet wins,
+//   so gyms can be filled in / corrected there);
+// - nothing on the phone is deleted, and existing rows aren't otherwise changed.
+export async function restoreFromGoogleSheets(): Promise<{
+  newSessions: number;
+  newExercises: number;
+  gymsUpdated: number; // sessions whose gym was set/changed (not distinct gyms)
+}> {
   const res = await fetch(WEBHOOK_URL);
   const data = await res.json();
 
   const { sessions, exercises } = data;
+  if (!Array.isArray(sessions) || !Array.isArray(exercises)) {
+    throw new Error("Unexpected response from Google Sheets");
+  }
 
-  wipeDatabase();
+  const sessionIds = getSessionIds();
+  const exerciseIds = getExerciseIds();
+  let newSessions = 0;
+  let newExercises = 0;
+  let gymsUpdated = 0;
 
-  sessions.forEach((s: any) => insertSessionRaw(s));
-  exercises.forEach((e: any) => insertExerciseRaw(e));
+  db.execSync("BEGIN;");
+  try {
+    sessions.forEach((s: any) => {
+      const id = String(s.id ?? "").trim();
+      if (!id) return;
+      if (!sessionIds.has(id)) {
+        insertSessionRaw(s);
+        sessionIds.add(id);
+        newSessions++;
+        return;
+      }
+      const gym = String(s.gym ?? "").trim();
+      if (gym && setSessionGym(id, gym)) gymsUpdated++;
+    });
+
+    exercises.forEach((e: any) => {
+      const id = String(e.id ?? "").trim();
+      if (!id || exerciseIds.has(id)) return;
+      insertExerciseRaw(e);
+      exerciseIds.add(id);
+      newExercises++;
+    });
+
+    db.execSync("COMMIT;");
+  } catch (err) {
+    db.execSync("ROLLBACK;");
+    throw err;
+  }
+
+  return { newSessions, newExercises, gymsUpdated };
 }
 
 // Pull the exercise library from the Sheet (?type=library) and full-replace
