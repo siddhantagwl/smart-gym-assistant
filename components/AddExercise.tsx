@@ -55,6 +55,10 @@ type AddExerciseProps = {
     sessionStartTime: string;
   } | null;
 
+  // "Try today" target (domain/progression.ts). Opt-in: tapping applies it.
+  suggestion?: { weightKg: number; reps: number; reason: string } | null;
+  onApplySuggestion?: () => void;
+
   mode?: "live" | "manual";
 };
 
@@ -191,6 +195,8 @@ export default function AddExercise({
   onRepsCommit,
   onWeightCommit,
   lastTime,
+  suggestion,
+  onApplySuggestion,
 }: AddExerciseProps) {
   const isLb = weightUnit === "lb";
   const displayedWeight = isLb ? kgToLb(weightKg) : weightKg;
@@ -411,22 +417,72 @@ export default function AddExercise({
         </View>
 
         {mode === "live" && exerciseName.trim() && lastTime ? (
-          <View
-            style={{
-              alignSelf: "flex-start",
-              marginBottom: 10,
-              paddingVertical: 4,
-              paddingHorizontal: 10,
-              borderRadius: 999,
-              backgroundColor: "rgba(255, 193, 7, 0.12)",
-              borderWidth: 1,
-              borderColor: "rgba(255, 193, 7, 0.5)",
-            }}
-          >
-            <Text style={{ color: "#FFC107", fontSize: 12, fontWeight: "500" }}>
-              Prev logged · {lastTime.sets}×{lastTime.reps} ·{" "}
-              {isLb ? `${kgToLb(lastTime.weightKg)}lb` : `${lastTime.weightKg}kg`}
-            </Text>
+          <View style={{ marginBottom: 10 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              <View
+                style={{
+                  paddingVertical: 4,
+                  paddingHorizontal: 10,
+                  borderRadius: 999,
+                  backgroundColor: "rgba(255, 193, 7, 0.12)",
+                  borderWidth: 1,
+                  borderColor: "rgba(255, 193, 7, 0.5)",
+                }}
+              >
+                <Text style={{ color: "#FFC107", fontSize: 12, fontWeight: "500" }}>
+                  Prev logged · {lastTime.sets}×{lastTime.reps} ·{" "}
+                  {isLb ? `${kgToLb(lastTime.weightKg)}lb` : `${lastTime.weightKg}kg`}
+                </Text>
+              </View>
+
+              {suggestion ? (() => {
+                const onTarget =
+                  reps === suggestion.reps &&
+                  Math.abs(weightKg - suggestion.weightKg) < 0.05;
+                const w =
+                  suggestion.weightKg <= 0
+                    ? "BW"
+                    : isLb
+                      ? `${kgToLb(suggestion.weightKg)}lb`
+                      : `${suggestion.weightKg}kg`;
+                return (
+                  <Pressable
+                    disabled={onTarget || !onApplySuggestion}
+                    onPress={onApplySuggestion}
+                    hitSlop={4}
+                    style={({ pressed }) => ({
+                      paddingVertical: 4,
+                      paddingHorizontal: 10,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: onTarget ? "#1f7a4d" : "#3a5eff",
+                      backgroundColor: onTarget
+                        ? "rgba(0, 255, 150, 0.10)"
+                        : "rgba(58, 94, 255, 0.14)",
+                      opacity: pressed ? 0.6 : 1,
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color: onTarget ? "#4dffa6" : "#c9d4ff",
+                        fontSize: 12,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {onTarget
+                        ? `🎯 On target · ${suggestion.reps}×${w}`
+                        : `🎯 Try ${suggestion.reps}×${w} · tap`}
+                    </Text>
+                  </Pressable>
+                );
+              })() : null}
+            </View>
+
+            {suggestion ? (
+              <Text style={{ color: "#888", fontSize: 11, marginTop: 4 }}>
+                {suggestion.reason}
+              </Text>
+            ) : null}
           </View>
         ) : (
           <View style={{ height: 8 }} />

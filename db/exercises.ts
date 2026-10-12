@@ -179,6 +179,30 @@ export function getLatestExerciseByName(exerciseName: string): LatestExercise | 
   };
 }
 
+// Last few logged rows of an exercise (newest first) for progression
+// suggestions. Discarded sessions are ignored, same as the PR check.
+export function getRecentExerciseRows(
+  exerciseName: string,
+  limit: number = 3
+): { weightKg: number; reps: number }[] {
+  const trimmed = exerciseName.trim();
+  if (!trimmed) return [];
+
+  const rows = db.getAllSync(
+    `
+    SELECT e.weight_kg as weight_kg, e.reps as reps
+    FROM exercises e
+    JOIN sessions s ON s.id = e.session_id
+    WHERE LOWER(e.name) = LOWER(?) AND s.note != '__DISCARDED__'
+    ORDER BY s.start_time DESC, e.rowid DESC
+    LIMIT ?;
+    `,
+    [trimmed, limit]
+  ) as { weight_kg: number; reps: number }[];
+
+  return rows.map((r) => ({ weightKg: Number(r.weight_kg), reps: Number(r.reps) }));
+}
+
 export function getMaxWeightForExercise(exerciseName: string): number {
   const trimmed = exerciseName.trim();
   if (!trimmed) return 0;

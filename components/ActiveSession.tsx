@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
 import {
@@ -17,10 +17,12 @@ const REST_RING_STROKE = 8;
 const REST_RING_RADIUS = (REST_RING_SIZE - REST_RING_STROKE) / 2;
 const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
 import { getAllLibraryExercises } from "@/db/exerciseLibrary";
+import { suggestNext } from "@/domain/progression";
 import {
   getExercisesForSession,
   getLatestExerciseByName,
   getMaxWeightForExercise,
+  getRecentExerciseRows,
   insertExercise,
   LatestExercise,
 } from "@/db/exercises";
@@ -287,6 +289,16 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
     const rows = getExercisesForSession(activeSession.id);
     setSessionExercises(rows);
   }, [activeSession.id]);
+
+  // "Try today" target from the last 3 logs of this exercise. Recomputed when
+  // the exercise, display unit (kg/lb step) or this session's logs change.
+  // Only shown + applied on tap; never overwrites reps/weight on its own.
+  const suggestion = useMemo(
+    () => suggestNext(getRecentExerciseRows(exerciseName, 3), weightUnit),
+    // sessionExercises isn't read, but a newly saved row changes the DB result.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [exerciseName, weightUnit, sessionExercises],
+  );
 
   // Refresh the in-memory library whenever this screen regains focus, so
   // suggestion chips reflect new entries pulled by Settings → Sync library.
@@ -1251,6 +1263,12 @@ export default function ActiveSession({ activeSession, onEnd, colors }: Props) {
           onSaveSet={saveSet}
           onStartSet={handleStartSet}
           isExerciseActive={isExerciseActive}
+          suggestion={suggestion}
+          onApplySuggestion={() => {
+            if (!suggestion) return;
+            setReps(suggestion.reps);
+            setWeightKg(suggestion.weightKg);
+          }}
           lastTime={
             latest
               ? {

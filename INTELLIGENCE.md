@@ -12,6 +12,8 @@ No LLM. Deterministic. Fits the offline-first design (no network dependency). Th
 
 ### 1.1 Progressive overload suggestions
 
+> **Status: shipped (Oct 2026)** as the 🎯 "Try today" chip — see ARCHITECTURE.md §3.9. Rules adapted to the one-row-per-exercise schema.
+
 When the user picks an exercise, instead of only showing the "Prev logged" chip (current behavior, see `components/AddExercise.tsx`), also show a *suggestion* for today's session.
 
 **Rule (linear progression):**
@@ -28,6 +30,8 @@ When the user picks an exercise, instead of only showing the "Prev logged" chip 
 **Why it matters:** transforms the app from a logbook into something that tells you what to do today. Standard intermediate-lifter programming, baked into the UI.
 
 ### 1.2 Estimated 1RM trend per exercise
+
+> **Status: shipped (Oct 2026)** — stat tiles + weight / e1RM / volume chart on exercise-details (`components/ExerciseProgress.tsx`).
 
 Epley formula: `e1RM = weight × (1 + reps / 30)`.
 

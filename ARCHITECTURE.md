@@ -262,6 +262,13 @@ While a session is open (`getActiveSession()` returns a row), every Exercises-ta
 - **Auto-load into the picker** (`ActiveSession.tsx`) happens only when (a) an exercise just finished, or (b) something was just queued — and only if no exercise is running and the picker is empty. It never starts an exercise, never overwrites a typed/picked name, and doesn't fire when the user clears the picker by hand. Rest/transition timers are untouched.
 - **Up next strip** on Home: chips under the Add exercise card. ✕ removes; tapping a chip between exercises swaps it into the picker (a not-yet-started library pick goes back to the front of the queue).
 
+### 3.9 "Try today" progression target
+
+When an exercise with history is picked, a 🎯 chip sits next to "Prev logged" in `AddExercise` (live mode only): `🎯 Try 8×62.5kg · tap`, with a one-line reason under it. Tapping applies the reps/weight; it never overwrites them on its own. Once the steppers match, it flips to `🎯 On target`.
+
+- Rules live in `domain/progression.ts` (`suggestNext`, pure) over the last 3 non-discarded logs (`getRecentExerciseRows` in `db/exercises.ts`): stalled 3× or held twice at the same weight → +2.5 kg (or +5 lb in lb mode); reps dipped at the same weight → repeat and hit the previous reps; new/heavier weight or a single log → +1 rep; bodyweight → +1 rep.
+- Limitation: the schema stores one weight × reps per exercise row, not per set, so "all sets hit target" can't be checked — rules compare whole sessions.
+
 ---
 
 ## 4. Important Architectural Decisions
