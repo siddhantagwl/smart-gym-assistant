@@ -64,6 +64,12 @@ export function initDb() {
     // Each rest between sets, in seconds, as a JSON array (e.g. "[95,140,160]").
     // rest_seconds stays the exercise's total; older rows default to "[]".
     ensureColumn("exercises", "rest_periods", "TEXT NOT NULL DEFAULT '[]'");
+    // Movement grouping from the Sheet library (see domain/movement.ts). Empty
+    // means "its own single-variant movement".
+    ensureColumn("exercise_library", "movement", "TEXT NOT NULL DEFAULT ''");
+    ensureColumn("exercise_library", "movement_name", "TEXT NOT NULL DEFAULT ''");
+    ensureColumn("exercise_library", "variant", "TEXT NOT NULL DEFAULT ''");
+
     // Each set as logged at Finish Set: [{reps, weightKg, weightUnit, durationSec}].
     // The row's reps/weight_kg stay the last set's values (summary for PRs/charts).
     ensureColumn("exercises", "set_log", "TEXT NOT NULL DEFAULT '[]'");

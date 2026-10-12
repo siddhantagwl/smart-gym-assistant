@@ -1,33 +1,73 @@
 // read exercise library from db
 
 import { db } from "./database";
+import { Equipment, equipmentLabel, equipmentOf } from "@/domain/movement";
 
+// One library row = one variant of a movement (domain/movement.ts).
 export type ExerciseLibraryItem = {
   id: string;
   name: string;
   videoUrl: string;
   primaryMuscle: string;
   tags: string[];
+  movement: string; // falls back to id
+  movementName: string; // falls back to name
+  variant: string; // chip label; falls back to the equipment label
+  equipment: Equipment;
+};
+
+export type Movement = {
+  movement: string;
+  name: string;
+  primaryMuscle: string;
+  variants: ExerciseLibraryItem[];
 };
 
 export function getAllLibraryExercises(): ExerciseLibraryItem[] {
   const rows = db.getAllSync(
-    `SELECT id, name, video_url, primary_muscle, tags FROM exercise_library;`
+    `SELECT id, name, video_url, primary_muscle, tags, movement, movement_name, variant
+     FROM exercise_library;`
   ) as any[];
 
-  return rows.map((r) => ({
-    id: String(r.id),
-    name: String(r.name),
-    videoUrl: String(r.video_url),
-    primaryMuscle: String(r.primary_muscle),
-    tags: (() => {
+  return rows.map((r) => {
+    const tags: string[] = (() => {
       try {
-        return JSON.parse(r.tags ?? "[]");
+        const parsed = JSON.parse(r.tags ?? "[]");
+        return Array.isArray(parsed) ? parsed.map(String) : [];
       } catch {
         return [];
       }
-    })(),
-  }));
+    })();
+    const equipment = equipmentOf(tags);
+    return {
+      id: String(r.id),
+      name: String(r.name),
+      videoUrl: String(r.video_url ?? ""),
+      primaryMuscle: String(r.primary_muscle),
+      tags,
+      movement: String(r.movement ?? "").trim() || String(r.id),
+      movementName: String(r.movement_name ?? "").trim() || String(r.name),
+      variant: String(r.variant ?? "").trim() || equipmentLabel(equipment),
+      equipment,
+    };
+  });
+}
+
+// Library rows grouped into movements, alphabetical; variants keep sheet order.
+export function groupMovements(items: ExerciseLibraryItem[]): Movement[] {
+  const map = new Map<string, Movement>();
+  items.forEach((it) => {
+    const m = map.get(it.movement);
+    if (m) m.variants.push(it);
+    else
+      map.set(it.movement, {
+        movement: it.movement,
+        name: it.movementName,
+        primaryMuscle: it.primaryMuscle,
+        variants: [it],
+      });
+  });
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Full-replace the exercise_library table from rows fetched via Apps Script
@@ -56,14 +96,17 @@ export function replaceExerciseLibrary(rows: any[]) {
       }
 
       db.runSync(
-        `INSERT INTO exercise_library (id, name, video_url, primary_muscle, tags)
-         VALUES (?, ?, ?, ?, ?);`,
+        `INSERT INTO exercise_library (id, name, video_url, primary_muscle, tags, movement, movement_name, variant)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
         [
           id,
           String(r.name ?? ""),
           r.video_url ? String(r.video_url) : "",
           String(r.primary_muscle ?? ""),
           tags,
+          String(r.movement ?? "").trim(),
+          String(r.movement_name ?? "").trim(),
+          String(r.variant ?? "").trim(),
         ]
       );
     });
