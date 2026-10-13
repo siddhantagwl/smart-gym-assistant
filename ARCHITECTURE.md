@@ -352,6 +352,12 @@ Goal: when a muscle is trained twice a week, the two sessions should cover diffe
 - Data: `getLogEntriesSince(120)` (library id, start, gym, sets of non-discarded sessions) + the library; computed on Home focus and when the gym changes.
 - UI: "Suggested session" section in the 🎯 sheet ("Suggested next session" once you've trained today — it counts today's work too): ✕/↺ per item, "▶ Start session with these (N)" starts a session at the selected gym and fills Up next with the exact variants (first one auto-loads into the picker). The plain Start session button is unchanged.
 
+Bottom sheets (`components/ui/BottomSheet.tsx`) can be swiped down to close: a PanResponder on the sheet captures clear downward drags when the content is scrolled to the top (otherwise the ScrollView keeps the gesture); > 110 px or a fast flick closes, a short drag springs back; disabled while `raised`.
+
+### 3.20 Home layout (idle), Oct 2026
+
+Kept to five rows: title + tagline · one quiet line "🔥 3-day streak · 📅 4 this week" (was two chips) · the 🎯 Today's focus pill · one row with the Start session button and, beside it, a separate 📍 gym button (`GymPicker` with a custom `renderTrigger`) — kept apart so changing the gym can't start a session by accident · a small "+ log sauna" link. "Ready to train" was removed. Recent sessions follow.
+
 ---
 
 ## 4. Important Architectural Decisions
