@@ -1,7 +1,7 @@
 // 📍 pill above Start session. Tap → bottom sheet with your gyms (history,
 // most recent first, then saved ones), "＋ New gym", and "Not set".
 // Long-press a gym you haven't trained at yet to remove it.
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { Alert, Pressable, Text, TextInput, View } from "react-native";
 
 import BottomSheet from "@/components/ui/BottomSheet";
@@ -11,9 +11,13 @@ import { addSavedGym, loadGymList, removeSavedGym } from "@/services/gymPreferen
 export default function GymPicker({
   value,
   onChange,
+  renderTrigger,
 }: {
   value: string;
   onChange: (gym: string) => void;
+  // Custom trigger (e.g. the "at EVO fitness · change" line inside the Start
+  // button); defaults to the 📍 pill.
+  renderTrigger?: (openSheet: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -66,6 +70,9 @@ export default function GymPicker({
 
   return (
     <>
+      {renderTrigger ? (
+        renderTrigger(openSheet)
+      ) : (
       <Pressable
         onPress={openSheet}
         hitSlop={6}
@@ -92,6 +99,7 @@ export default function GymPicker({
         </Text>
         <Text style={{ color: "#888", fontSize: 12, marginLeft: 6 }}>▾</Text>
       </Pressable>
+      )}
 
       {/* Typing a new gym moves the sheet to the top, clear of the keyboard. */}
       <BottomSheet visible={open} onClose={() => setOpen(false)} raised={adding}>

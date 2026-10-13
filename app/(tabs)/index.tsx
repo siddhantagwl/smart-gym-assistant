@@ -175,48 +175,18 @@ export default function HomeScreen() {
           </Text>
         </Pressable>
 
+        {/* Streak + week as one quiet line (was two chips). */}
         {stats && (stats.currentStreak > 0 || stats.thisWeek > 0) ? (
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 8,
-              marginBottom: 20,
-            }}
-          >
-            {stats.currentStreak > 0 ? (
-              <View
-                style={{
-                  paddingVertical: 6,
-                  paddingHorizontal: 12,
-                  borderRadius: 999,
-                  backgroundColor: "rgba(255,107,53,0.15)",
-                  borderWidth: 1,
-                  borderColor: "rgba(255,107,53,0.5)",
-                }}
-              >
-                <Text style={{ color: "#FF6B35", fontSize: 13, fontWeight: "600" }}>
-                  🔥 {stats.currentStreak} day{stats.currentStreak === 1 ? "" : "s"} streak
-                </Text>
-              </View>
-            ) : null}
-
-            {stats.thisWeek > 0 ? (
-              <View
-                style={{
-                  paddingVertical: 6,
-                  paddingHorizontal: 12,
-                  borderRadius: 999,
-                  backgroundColor: "rgba(76,175,80,0.12)",
-                  borderWidth: 1,
-                  borderColor: "rgba(76,175,80,0.5)",
-                }}
-              >
-                <Text style={{ color: "#4CAF50", fontSize: 13, fontWeight: "600" }}>
-                  📅 {stats.thisWeek} this week
-                </Text>
-              </View>
-            ) : null}
-          </View>
+          <Text style={{ color: "#999", fontSize: 13, marginTop: -12, marginBottom: 18 }}>
+            {[
+              stats.currentStreak > 0
+                ? `🔥 ${stats.currentStreak}-day streak`
+                : null,
+              stats.thisWeek > 0 ? `📅 ${stats.thisWeek} this week` : null,
+            ]
+              .filter(Boolean)
+              .join("  ·  ")}
+          </Text>
         ) : null}
 
         {mode === "active" && activeSession && (
