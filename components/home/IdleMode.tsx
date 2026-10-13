@@ -1,5 +1,6 @@
 import { Session } from "@/domain/session";
 import { TodayFocus } from "@/domain/todayFocus";
+import { MuscleVolume } from "@/domain/weeklyVolume";
 import TodayFocusCard from "@/components/home/TodayFocusCard";
 import GymPicker from "@/components/home/GymPicker";
 import { View, Text, Pressable } from "react-native";
@@ -10,15 +11,16 @@ export default function IdleMode(props: {
   onStart: (session: Session) => void;
   onLogSauna: () => void;
   todayFocus?: TodayFocus | null;
+  weekly?: MuscleVolume[];
   gym: string;
   onGymChange: (gym: string) => void;
 }) {
-  const { colors, onStart, onLogSauna, todayFocus, gym, onGymChange } = props;
+  const { colors, onStart, onLogSauna, todayFocus, weekly, gym, onGymChange } = props;
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24 }}>
       {todayFocus && todayFocus.focus.length > 0 ? (
-        <TodayFocusCard focus={todayFocus} />
+        <TodayFocusCard focus={todayFocus} weekly={weekly ?? []} />
       ) : null}
 
       <Text

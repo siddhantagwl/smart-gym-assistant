@@ -340,6 +340,10 @@ An audit of logs vs library (all rows linked; no orphans/duplicates/impossible v
 - **Session labels**: legacy Quadriceps / Hamstrings / Glutes / Calves → Legs, and muscles trained but not labelled are added (`cleanSessionLabels` in `domain/muscles.ts`; labels are only added, never removed; Sauna untouched). `getTrainingLog()` (Today's focus) now always uses labels ∪ logged muscles through the same rule.
 - **Weight conventions**: dumbbells per dumbbell (`kg/db`), iso-lateral machines (tag `iso-lateral`) per side (`kg/side`, "per side" next to the kg/lb toggle) — `weightUnitSuffix()` in `domain/movement.ts`. Historic per-side vs total entries were not rewritten.
 
+### 3.18 Weekly sets per muscle (Oct 2026)
+
+The 🎯 Today's focus sheet has a "Sets this week (last 7 days) · target 10–20" section: one bar per muscle (green inside 10–20; amber + the word "low"/"high" outside, so it's never colour-only), a faint 10–20 band behind the bars, and muscles you train regularly listed even at 0. Tap a muscle → Exercises tab filtered to it. Data: `getSetsByMuscleSince(7)` in `db/sessions.ts` (sum of `sets` by library `primary_muscle`, discarded/sauna excluded); shaping/zones in `domain/weeklyVolume.ts`. Nothing new on Home itself.
+
 ---
 
 ## 4. Important Architectural Decisions

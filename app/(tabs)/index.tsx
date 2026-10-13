@@ -4,8 +4,9 @@ import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Session } from "@/domain/session";
-import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats, getTrainingLog } from "@/db/sessions";
+import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats, getTrainingLog, getSetsByMuscleSince } from "@/db/sessions";
 import { computeTodayFocus, TodayFocus } from "@/domain/todayFocus";
+import { MuscleVolume, weeklyVolume } from "@/domain/weeklyVolume";
 import { loadSelectedGym, saveSelectedGym } from "@/services/gymPreference";
 
 import IdleMode from "@/components/home/IdleMode";
@@ -77,6 +78,7 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<{ thisWeek: number; currentStreak: number } | null>(null);
 
   const [todayFocus, setTodayFocus] = useState<TodayFocus | null>(null);
+  const [weekly, setWeekly] = useState<MuscleVolume[]>([]);
   const [gym, setGym] = useState("");
   useEffect(() => {
     loadSelectedGym().then(setGym);
@@ -85,7 +87,13 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       setStats(activeSession ? null : getWorkoutStats());
-      setTodayFocus(activeSession ? null : computeTodayFocus(getTrainingLog()));
+      const focus = activeSession ? null : computeTodayFocus(getTrainingLog());
+      setTodayFocus(focus);
+      setWeekly(
+        activeSession
+          ? []
+          : weeklyVolume(getSetsByMuscleSince(7), focus?.muscles.map((m) => m.muscle) ?? []),
+      );
     }, [activeSession])
   );
 
@@ -243,6 +251,7 @@ export default function HomeScreen() {
           <IdleMode
             colors={{ text: colors.text, accent: colors.accent }}
             todayFocus={todayFocus}
+            weekly={weekly}
             gym={gym}
             onGymChange={(g) => {
               setGym(g);

@@ -1,6 +1,7 @@
 // Home (idle): one-line "🎯 Today: Back + Biceps ›" pill. Tapping it opens a
-// bottom sheet with the reason, per-muscle days-since, and links to the
-// Exercises tab filtered by muscle. Logic lives in domain/todayFocus.ts.
+// bottom sheet with the reason, sets per muscle over the last 7 days,
+// per-muscle days-since, and links to the Exercises tab filtered by muscle.
+// Logic lives in domain/todayFocus.ts and domain/weeklyVolume.ts.
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
@@ -8,8 +9,18 @@ import BottomSheet from "@/components/ui/BottomSheet";
 import { useRouter } from "expo-router";
 
 import { TodayFocus } from "@/domain/todayFocus";
+import { MuscleVolume, WEEKLY_SET_TARGET } from "@/domain/weeklyVolume";
 
-export default function TodayFocusCard({ focus }: { focus: TodayFocus }) {
+const BAR_TARGET = "#43a047"; // validated (dataviz) on the #111 sheet
+const BAR_OFF = "#FFC107"; // low / high — always labelled in text too
+
+export default function TodayFocusCard({
+  focus,
+  weekly,
+}: {
+  focus: TodayFocus;
+  weekly: MuscleVolume[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -72,6 +83,70 @@ export default function TodayFocusCard({ focus }: { focus: TodayFocus }) {
           <Text style={{ color: "#FFC107", fontSize: 13, marginTop: 8 }}>
             ⚠ {focus.comeback.daysOff} days off · {focus.comeback.note}
           </Text>
+        ) : null}
+
+        {weekly.length > 0 ? (
+          <View style={{ marginTop: 14 }}>
+            <Text style={{ color: "#777", fontSize: 11, marginBottom: 6 }}>
+              Sets this week (last 7 days) · target {WEEKLY_SET_TARGET.low}–{WEEKLY_SET_TARGET.high}
+            </Text>
+            {weekly.map((w) => {
+              const scale = Math.max(WEEKLY_SET_TARGET.high + 4, ...weekly.map((x) => x.sets));
+              return (
+                <Pressable
+                  key={w.muscle}
+                  onPress={() => openMuscle(w.muscle)}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingVertical: 3,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Text style={{ color: "#ccc", fontSize: 12, width: 78 }} numberOfLines={1}>
+                    {w.muscle}
+                  </Text>
+                  <View style={{ flex: 1, height: 8, justifyContent: "center" }}>
+                    {/* target band 10–20 as a faint track */}
+                    <View
+                      style={{
+                        position: "absolute",
+                        left: `${(WEEKLY_SET_TARGET.low / scale) * 100}%`,
+                        width: `${((WEEKLY_SET_TARGET.high - WEEKLY_SET_TARGET.low) / scale) * 100}%`,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: "rgba(67,160,71,0.12)",
+                      }}
+                    />
+                    {w.sets > 0 ? (
+                      <View
+                        style={{
+                          width: `${(w.sets / scale) * 100}%`,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: w.zone === "target" ? BAR_TARGET : BAR_OFF,
+                        }}
+                      />
+                    ) : null}
+                  </View>
+                  <Text
+                    style={{
+                      color: "#ddd",
+                      fontSize: 12,
+                      width: 64,
+                      textAlign: "right",
+                      fontVariant: ["tabular-nums"],
+                    }}
+                  >
+                    {w.sets}
+                    {w.zone !== "target" ? (
+                      <Text style={{ color: "#999", fontSize: 10 }}> {w.zone}</Text>
+                    ) : null}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         ) : null}
 
         {focus.muscles.length > 0 ? (

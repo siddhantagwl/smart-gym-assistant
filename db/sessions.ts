@@ -312,6 +312,29 @@ export function setSessionGym(sessionId: string, gym: string): boolean {
   return res.changes > 0;
 }
 
+// Working sets per library muscle for exercises started in the last `days`
+// days (finished or running sessions; discarded and sauna excluded).
+export function getSetsByMuscleSince(days: number = 7): Record<string, number> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const rows = db.getAllSync(
+    `SELECT l.primary_muscle AS muscle, SUM(e.sets) AS sets
+     FROM exercises e
+     JOIN sessions s ON s.id = e.session_id
+     JOIN exercise_library l ON l.id = e.exercise_library_id
+     WHERE e.start_time >= ?
+       AND s.note != '__DISCARDED__'
+       AND s.session_labels NOT LIKE '%"Sauna"%'
+     GROUP BY l.primary_muscle;`,
+    [since]
+  ) as { muscle: string; sets: number }[];
+
+  const out: Record<string, number> = {};
+  rows.forEach((r) => {
+    out[String(r.muscle)] = Number(r.sets) || 0;
+  });
+  return out;
+}
+
 // Gyms used so far, most recently used first.
 export function getKnownGyms(): string[] {
   const rows = db.getAllSync(
