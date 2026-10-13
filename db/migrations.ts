@@ -91,6 +91,31 @@ function cleanAllSessionLabels() {
   });
 }
 
+// Follow-up clarified by the user: exercise row id → fields to set.
+// Mirrors NOTES2_FIXES in apps-script/FixNotes2_2026_10.gs.
+const NOTES2_FIXES_2026_10: Record<
+  string,
+  { weight_kg?: number; note?: string; exercise_library_id?: string; name?: string }
+> = {
+  // 6 Jul Lat Pulldown on a different ("dual") machine: weight estimated for
+  // the regular pulldown from the sessions around it.
+  "1783338839560": {
+    weight_kg: 42.5,
+    note: "dual machine; logged 50 kg, estimated 42.5 kg on the regular pulldown",
+  },
+  // 17 May "switch this with row machine".
+  "1779023171200": {
+    exercise_library_id: "iso_lateral_row_machine",
+    name: "Iso-Lateral Row Machine",
+  },
+};
+
+// Last clean-ups confirmed by the user: 15 Feb lateral raise was both
+// dumbbells (20 → 10 per dumbbell; also in FixNotes2_2026_10.gs), and the
+// 9 Jul session had no chest work (label removed by hand in the Sheet).
+const LATERAL_RAISE_FIX = { id: "1771168514228", weightKg: 10, note: "logged 20 kg = both dumbbells; 10 per dumbbell" };
+const DROP_LABEL = { sessionId: "1783595515984", label: "Chest" };
+
 export function runDataMigrations() {
   const row = db.getFirstSync(`PRAGMA user_version;`) as { user_version: number } | null;
   const version = row?.user_version ?? 0;
@@ -132,6 +157,53 @@ export function runDataMigrations() {
       });
       cleanAllSessionLabels();
       db.execSync(`PRAGMA user_version = 2;`);
+      db.execSync("COMMIT;");
+    } catch (err) {
+      db.execSync("ROLLBACK;");
+      throw err;
+    }
+  }
+
+  if (version < 3) {
+    db.execSync("BEGIN;");
+    try {
+      Object.entries(NOTES2_FIXES_2026_10).forEach(([id, fields]) => {
+        Object.entries(fields).forEach(([column, value]) => {
+          // Column names come from the constant above, never from data.
+          db.runSync(`UPDATE exercises SET ${column} = ? WHERE id = ?;`, [value, id]);
+        });
+      });
+      db.execSync(`PRAGMA user_version = 3;`);
+      db.execSync("COMMIT;");
+    } catch (err) {
+      db.execSync("ROLLBACK;");
+      throw err;
+    }
+  }
+
+  if (version < 4) {
+    db.execSync("BEGIN;");
+    try {
+      db.runSync(`UPDATE exercises SET weight_kg = ?, note = ? WHERE id = ?;`, [
+        LATERAL_RAISE_FIX.weightKg,
+        LATERAL_RAISE_FIX.note,
+        LATERAL_RAISE_FIX.id,
+      ]);
+      const row = db.getFirstSync(`SELECT session_labels FROM sessions WHERE id = ?;`, [
+        DROP_LABEL.sessionId,
+      ]) as { session_labels: string | null } | null;
+      if (row) {
+        try {
+          const labels = JSON.parse(row.session_labels ?? "[]");
+          if (Array.isArray(labels) && labels.includes(DROP_LABEL.label)) {
+            db.runSync(`UPDATE sessions SET session_labels = ? WHERE id = ?;`, [
+              JSON.stringify(labels.filter((l: string) => l !== DROP_LABEL.label)),
+              DROP_LABEL.sessionId,
+            ]);
+          }
+        } catch {}
+      }
+      db.execSync(`PRAGMA user_version = 4;`);
       db.execSync("COMMIT;");
     } catch (err) {
       db.execSync("ROLLBACK;");
