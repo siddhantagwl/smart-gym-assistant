@@ -254,6 +254,36 @@ export function getLatestExerciseByName(
   };
 }
 
+// Newest non-empty note written on this exercise (seat height, grip, pain…),
+// even if the last time had no note. `gym` as in getLatestExerciseByName.
+export function getLastNoteByName(
+  exerciseName: string,
+  gym?: string | null
+): { note: string; startTime: string; gym: string } | null {
+  const trimmed = exerciseName.trim();
+  if (!trimmed) return null;
+
+  const row = db.getFirstSync(
+    `
+    SELECT e.note as note, s.start_time as start_time, s.gym as gym
+    FROM exercises e
+    JOIN sessions s ON s.id = e.session_id
+    WHERE LOWER(e.name) = LOWER(?) AND TRIM(COALESCE(e.note, '')) != ''
+      AND s.note != '__DISCARDED__'${gym ? " AND s.gym = ?" : ""}
+    ORDER BY s.start_time DESC, e.rowid DESC
+    LIMIT 1;
+    `,
+    gym ? [trimmed, gym] : [trimmed]
+  ) as any;
+
+  if (!row) return null;
+  return {
+    note: String(row.note).trim(),
+    startTime: String(row.start_time),
+    gym: row.gym ? String(row.gym) : "",
+  };
+}
+
 // Last few logged rows of an exercise (newest first) for progression
 // suggestions. Discarded sessions are ignored, same as the PR check.
 export function getRecentExerciseRows(

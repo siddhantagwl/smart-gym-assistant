@@ -72,6 +72,9 @@ type AddExerciseProps = {
     otherGym?: string | null; // set when "Prev logged" comes from another gym's machine
   } | null;
 
+  // Newest note written on this exercise, even if not from last time.
+  lastNote?: { note: string; startTime: string; otherGym?: string | null } | null;
+
   // "/db" (per dumbbell) or "/side" (iso-lateral machine), else "".
   weightSuffix?: string;
 
@@ -228,6 +231,7 @@ export default function AddExercise({
   onRepsCommit,
   onWeightCommit,
   lastTime,
+  lastNote,
   suggestion,
   onApplySuggestion,
   restoreSetState,
@@ -624,6 +628,20 @@ export default function AddExercise({
             {suggestion ? (
               <Text style={{ color: "#888", fontSize: 12, marginTop: 4 }}>
                 {suggestion.reason}
+              </Text>
+            ) : null}
+
+            {lastNote ? (
+              <Text numberOfLines={2} style={{ color: "#bbb", fontSize: 12, marginTop: 4 }}>
+                📝 {lastNote.note}
+                <Text style={{ color: "#888" }}>
+                  {"  · "}
+                  {new Date(lastNote.startTime).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                  {lastNote.otherGym ? ` @ ${lastNote.otherGym}` : ""}
+                </Text>
               </Text>
             ) : null}
           </View>

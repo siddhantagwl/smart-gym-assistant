@@ -365,6 +365,7 @@ Kept to five rows: title + tagline · one quiet line "🔥 3-day streak · 📅 
 - **Readability:** no text below 12 pt, greys lightened (`#555/#666 → #888`, `#777 → #999`), bigger tap areas on small buttons.
 - **Session saved screen** shows a summary: minutes · exercises · sets, the muscles you confirmed, and up to 3 PRs hit this session (tracked in `sessionPrsRef` when the PR badge fires).
 - **History:** month headings (SectionList), discarded sessions hidden (still in the DB/Sheet), each card shows the 📍 gym, a 12-week consistency grid pinned above the list (`components/ConsistencyDots.tsx`: a column per week, M–S labels down the side; a day with a workout is green, brighter for more sets (< 12 · 12–17 · 18–22 · 23+, from `getSetTotalsBySession`); sauna-only days don't count. Tap a day → one line under the grid with muscles · sets · minutes · gym (or "rest day"); otherwise that line shows the shade legend. Stats: days in 12 weeks, weeks with 3+ days out of 12, days this week).
+- **Last note:** under Prev logged / Try today, `📝 <note> · <date>` shows the newest non-empty note written on that exercise (`getLastNoteByName`), even if the last session had none — for machine settings, grips, pain. Gym-scoped equipment looks at this gym first, then any gym (labelled `@ gym`). Hidden when there's no note.
 - **Resume screen** (`PendingMode`) shows how long ago the session started and what's already logged (`N exercises · N sets: names…`).
 
 ---

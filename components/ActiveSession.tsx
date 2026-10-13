@@ -24,6 +24,7 @@ import { equipmentOf, isGymScoped, weightUnitSuffix } from "@/domain/movement";
 import { overlapHint, sessionCoverage } from "@/domain/patternCoverage";
 import {
   getExercisesForSession,
+  getLastNoteByName,
   getLatestExerciseByName,
   getMaxWeightForExercise,
   getRecentExerciseRows,
@@ -191,6 +192,10 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   const [exerciseNote, setExerciseNote] = useState("");
   const [sessionNote, setSessionNote] = useState("");
   const [latest, setLatest] = useState<LatestExercise | null>(null);
+  // Newest note on this exercise (machine settings, pain…), shown under Prev logged.
+  const [lastNote, setLastNote] = useState<{ note: string; startTime: string; gym: string } | null>(
+    null,
+  );
 
   const [isExerciseActive, setIsExerciseActive] = useState(false);
   const [currentExerciseStart, setCurrentExerciseStart] = useState<Date | null>(
@@ -372,6 +377,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     const exerciseNameTrimmed = exerciseName.trim();
     if (!exerciseNameTrimmed) {
       setLatest(null);
+      setLastNote(null);
       return;
     }
 
@@ -379,6 +385,10 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       getLatestExerciseByName(exerciseNameTrimmed, scopeGym) ??
       (scopeGym ? getLatestExerciseByName(exerciseNameTrimmed) : null);
     setLatest(rec);
+    setLastNote(
+      getLastNoteByName(exerciseNameTrimmed, scopeGym) ??
+        (scopeGym ? getLastNoteByName(exerciseNameTrimmed) : null),
+    );
 
     // Auto-fill reps/weight from previous session, but only before the
     // user starts the exercise — never overwrite mid-workout adjustments.
@@ -1710,6 +1720,16 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
                   sessionStartTime: String(latest.sessionStartTime),
                   otherGym:
                     scopeGym && latest.gym !== scopeGym ? latest.gym || "other gym" : null,
+                }
+              : null
+          }
+          lastNote={
+            lastNote
+              ? {
+                  note: lastNote.note,
+                  startTime: lastNote.startTime,
+                  otherGym:
+                    scopeGym && lastNote.gym !== scopeGym ? lastNote.gym || "other gym" : null,
                 }
               : null
           }
