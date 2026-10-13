@@ -441,7 +441,7 @@ export default function AddExercise({
                 onExerciseNameChange(text);
               }}
               placeholder="Type exercise name"
-              placeholderTextColor="#666"
+              placeholderTextColor="#808080"
               onFocus={() => setIsNameFocused(true)}
               onBlur={() => setIsNameFocused(false)}
               style={{
@@ -501,7 +501,7 @@ export default function AddExercise({
                 >
                   <Text style={{ color: "#ddd", fontSize: 12 }}>
                     {s.label}
-                    {s.count > 1 ? <Text style={{ color: "#777" }}>{`  ·${s.count}`}</Text> : null}
+                    {s.count > 1 ? <Text style={{ color: "#999" }}>{`  ·${s.count}`}</Text> : null}
                   </Text>
                 </Pressable>
               ))}
@@ -517,7 +517,7 @@ export default function AddExercise({
                   <Pressable
                     key={v.id}
                     onPress={() => onSelectVariant?.(v.id)}
-                    hitSlop={4}
+                    hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
                     style={({ pressed }) => ({
                       paddingVertical: 5,
                       paddingHorizontal: 11,
@@ -538,7 +538,7 @@ export default function AddExercise({
           ) : null}
 
           {!isExerciseActive && overlapHint ? (
-            <Text style={{ color: "#FFC107", fontSize: 11, marginTop: 8, lineHeight: 16 }}>
+            <Text style={{ color: "#FFC107", fontSize: 12, marginTop: 8, lineHeight: 16 }}>
               {overlapHint}
             </Text>
           ) : null}
@@ -547,7 +547,7 @@ export default function AddExercise({
             <Text
               style={{
                 color: "#888",
-                fontSize: 11,
+                fontSize: 12,
                 marginTop: 8,
                 fontStyle: "italic",
               }}
@@ -592,7 +592,7 @@ export default function AddExercise({
                   <Pressable
                     disabled={onTarget || !onApplySuggestion}
                     onPress={onApplySuggestion}
-                    hitSlop={4}
+                    hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
                     style={({ pressed }) => ({
                       paddingVertical: 4,
                       paddingHorizontal: 10,
@@ -622,7 +622,7 @@ export default function AddExercise({
             </View>
 
             {suggestion ? (
-              <Text style={{ color: "#888", fontSize: 11, marginTop: 4 }}>
+              <Text style={{ color: "#888", fontSize: 12, marginTop: 4 }}>
                 {suggestion.reason}
               </Text>
             ) : null}
@@ -677,7 +677,7 @@ export default function AddExercise({
                         <Text
                           style={{
                             color: active ? "#4CAF50" : "#777",
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: active ? "700" : "500",
                             letterSpacing: 0.4,
                           }}
@@ -688,7 +688,7 @@ export default function AddExercise({
                     );
                   })}
                   {weightSuffix ? (
-                    <Text style={{ color: "#888", fontSize: 11, alignSelf: "center" }}>
+                    <Text style={{ color: "#888", fontSize: 12, alignSelf: "center" }}>
                       {weightSuffix === "/side" ? "per side" : "per db"}
                     </Text>
                   ) : null}
@@ -900,7 +900,7 @@ export default function AddExercise({
             value={note}
             onChangeText={onNoteChange}
             placeholder="How did it feel?"
-            placeholderTextColor="#666"
+            placeholderTextColor="#808080"
             style={{
               borderWidth: 1,
               borderColor: "#222",

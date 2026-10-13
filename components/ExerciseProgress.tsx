@@ -15,7 +15,7 @@ const UP = "#7bc47f";
 const DOWN = "#ff6b6b";
 
 const CHART_H = 150;
-const PAD = { top: 14, right: 40, bottom: 20, left: 38 };
+const PAD = { top: 16, right: 40, bottom: 22, left: 44 };
 
 type Metric = "weight" | "e1rm" | "volume";
 const METRICS: { key: Metric; label: string; unit: string }[] = [
@@ -178,7 +178,7 @@ export default function ExerciseProgress({
                   <Pressable
                     key={m.key}
                     onPress={() => setMetric(m.key)}
-                    hitSlop={4}
+                    hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
                     style={{
                       paddingVertical: 3,
                       paddingHorizontal: 8,
@@ -191,7 +191,7 @@ export default function ExerciseProgress({
                     <Text
                       style={{
                         color: on ? INK : INK_3,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: "600",
                       }}
                     >
@@ -237,7 +237,7 @@ function StatTile({
         paddingHorizontal: 12,
       }}
     >
-      <Text style={{ color: INK_3, fontSize: 11, fontWeight: "600" }}>
+      <Text style={{ color: INK_3, fontSize: 12, fontWeight: "600" }}>
         {label}
       </Text>
       <Text
@@ -253,7 +253,7 @@ function StatTile({
         {value}
       </Text>
       <Text
-        style={{ color: INK_2, fontSize: 11, marginTop: 2 }}
+        style={{ color: INK_2, fontSize: 12, marginTop: 2 }}
         numberOfLines={1}
       >
         {sub}
@@ -440,7 +440,7 @@ function ProgressChart({
                     top: g.y - 7,
                     textAlign: "right",
                     color: INK_3,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontVariant: ["tabular-nums"],
                   }}
                 >
@@ -453,15 +453,15 @@ function ProgressChart({
                 <Text
                   style={{
                     position: "absolute",
-                    left: Math.min(
-                      geo.xy[geo.maxIdx][0] - 30,
-                      width - PAD.right - 30,
+                    left: Math.max(
+                      0,
+                      Math.min(geo.xy[geo.maxIdx][0] - 40, width - PAD.right - 40),
                     ),
-                    width: 60,
-                    top: Math.max(0, geo.xy[geo.maxIdx][1] - 18),
+                    width: 80,
+                    top: Math.max(0, geo.xy[geo.maxIdx][1] - 20),
                     textAlign: "center",
                     color: INK_2,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: "600",
                   }}
                 >
@@ -475,7 +475,7 @@ function ProgressChart({
                   left: PAD.left,
                   bottom: 0,
                   color: INK_3,
-                  fontSize: 10,
+                  fontSize: 12,
                 }}
               >
                 {shortDate(points[0].startTime, true)}
@@ -486,7 +486,7 @@ function ProgressChart({
                   right: PAD.right - 8,
                   bottom: 0,
                   color: INK_3,
-                  fontSize: 10,
+                  fontSize: 12,
                 }}
               >
                 {shortDate(points[last].startTime, true)}

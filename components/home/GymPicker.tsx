@@ -127,7 +127,7 @@ export default function GymPicker({
         ))}
 
         {gyms.some((g) => !g.usedInHistory) ? (
-          <Text style={{ color: "#555", fontSize: 11, marginTop: 6 }}>
+          <Text style={{ color: "#888", fontSize: 12, marginTop: 6 }}>
             Long-press a gym you haven&apos;t trained at to remove it
           </Text>
         ) : null}
@@ -138,7 +138,7 @@ export default function GymPicker({
               value={draft}
               onChangeText={setDraft}
               placeholder="Gym name"
-              placeholderTextColor="#666"
+              placeholderTextColor="#808080"
               autoFocus
               onSubmitEditing={() => draft.trim() && addAndPick()}
               style={{

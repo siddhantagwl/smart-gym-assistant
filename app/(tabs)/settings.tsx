@@ -202,7 +202,7 @@ export default function SettingsScreen() {
           <Text style={{ color: "#000", fontSize: 13, fontWeight: "600" }}>
             Export
           </Text>
-          <Text style={{ color: "rgba(0,0,0,0.6)", fontSize: 10, marginTop: 2 }}>
+          <Text style={{ color: "rgba(0,0,0,0.6)", fontSize: 12, marginTop: 2 }}>
             save JSON
           </Text>
         </Pressable>
@@ -221,7 +221,7 @@ export default function SettingsScreen() {
           <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
             Share
           </Text>
-          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2 }}>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 2 }}>
             send backup
           </Text>
         </Pressable>
@@ -273,7 +273,7 @@ export default function SettingsScreen() {
           >
             {syncing ? "Pushing…" : "Push history"}
           </Text>
-          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2 }}>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 2 }}>
             {syncing ? "↑ to Sheets" : hasUnpushed ? "↑ to Sheets" : "up to date"}
           </Text>
         </Pressable>
@@ -293,7 +293,7 @@ export default function SettingsScreen() {
           <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
             {restoring ? "Restoring…" : "Restore history"}
           </Text>
-          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2 }}>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 2 }}>
             ↓ from Sheets
           </Text>
         </Pressable>
@@ -328,7 +328,7 @@ export default function SettingsScreen() {
           <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>
             {librarySyncing ? "Syncing…" : "Pull library"}
           </Text>
-          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 2 }}>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 2 }}>
             ↓ from Sheets
           </Text>
         </Pressable>
@@ -337,12 +337,12 @@ export default function SettingsScreen() {
       {(lastSync || lastLibrarySync) && (
         <View style={{ marginTop: 10 }}>
           {lastSync && (
-            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
               History last pushed: {formatDateTime(lastSync)}
             </Text>
           )}
           {lastLibrarySync && (
-            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 2 }}>
+            <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 2 }}>
               Library last pulled: {formatDateTime(lastLibrarySync)}
             </Text>
           )}
@@ -377,7 +377,7 @@ export default function SettingsScreen() {
           <Text
             style={{
               color: "rgba(255,255,255,0.5)",
-              fontSize: 11,
+              fontSize: 12,
               marginBottom: 8,
             }}
           >
@@ -423,7 +423,7 @@ export default function SettingsScreen() {
           </Pressable>
 
           {showSessions && (
-            <Text style={{ color: "#aaa", fontSize: 11 }}>
+            <Text style={{ color: "#aaa", fontSize: 12 }}>
               {JSON.stringify(sessions, null, 2)}
             </Text>
           )}
@@ -440,7 +440,7 @@ export default function SettingsScreen() {
           </Pressable>
 
           {showExercises && (
-            <Text style={{ color: "#aaa", fontSize: 11 }}>
+            <Text style={{ color: "#aaa", fontSize: 12 }}>
               {JSON.stringify(exercises, null, 2)}
             </Text>
           )}
@@ -453,7 +453,7 @@ export default function SettingsScreen() {
         <Text
           style={{
             color: "rgba(255,255,255,0.3)",
-            fontSize: 11,
+            fontSize: 12,
             textAlign: "center",
             lineHeight: 16,
             maxWidth: 280,

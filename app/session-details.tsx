@@ -335,7 +335,7 @@ export default function SessionDetailsScreen() {
                     <Text
                       style={{
                         color: isSauna ? "rgba(255,178,102,0.98)" : "#39FF14",
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: "700",
                         letterSpacing: 0.3,
                       }}
@@ -494,7 +494,7 @@ export default function SessionDetailsScreen() {
                             <Text
                               style={{
                                 color: "#FFD700",
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: "800",
                               }}
                             >
@@ -522,7 +522,7 @@ export default function SessionDetailsScreen() {
                       <Text
                         style={{
                           color: "#FFD700",
-                          fontSize: 11,
+                          fontSize: 12,
                           marginTop: 4,
                           fontWeight: "600",
                         }}
@@ -547,7 +547,7 @@ export default function SessionDetailsScreen() {
                         <Text
                           style={{
                             color: colors.muted,
-                            fontSize: 9,
+                            fontSize: 12,
                             fontWeight: "700",
                             marginRight: 4,
                             letterSpacing: 0.5,
@@ -558,7 +558,7 @@ export default function SessionDetailsScreen() {
                         <Text
                           style={{
                             color: "#FFFFFF",
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: "700",
                           }}
                         >
@@ -581,7 +581,7 @@ export default function SessionDetailsScreen() {
                         <Text
                           style={{
                             color: colors.muted,
-                            fontSize: 9,
+                            fontSize: 12,
                             fontWeight: "700",
                             marginRight: 4,
                             letterSpacing: 0.5,
@@ -592,7 +592,7 @@ export default function SessionDetailsScreen() {
                         <Text
                           style={{
                             color: "#6CB4FF",
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: "600",
                           }}
                         >
@@ -613,7 +613,7 @@ export default function SessionDetailsScreen() {
                   </View>
 
                   <View style={{ position: "absolute", right: 10, top: 18 }}>
-                    <Text style={{ color: "#555", fontSize: 16 }}>›</Text>
+                    <Text style={{ color: "#888", fontSize: 16 }}>›</Text>
                   </View>
 
                   {sparkPoints && (
@@ -718,7 +718,7 @@ export default function SessionDetailsScreen() {
               value={editName}
               onChangeText={setEditName}
               placeholder="Exercise name"
-              placeholderTextColor="#666"
+              placeholderTextColor="#808080"
               style={styles.input}
             />
 
@@ -773,7 +773,7 @@ export default function SessionDetailsScreen() {
               value={editNote}
               onChangeText={setEditNote}
               placeholder="optional"
-              placeholderTextColor="#666"
+              placeholderTextColor="#808080"
               multiline
               style={[styles.input, { minHeight: 44, textAlignVertical: "top" }]}
             />

@@ -69,7 +69,7 @@ export default function IdleMode(props: {
           renderTrigger={(openGym) => (
             <Pressable
               onPress={openGym}
-              hitSlop={4}
+              hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
               style={({ pressed }) => ({
                 maxWidth: 140,
                 flexDirection: "row",

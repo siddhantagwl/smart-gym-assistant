@@ -115,7 +115,7 @@ export default function RecentSessions(props: { limit?: number }) {
                       <Text
                         style={{
                           color: "rgba(255,255,255,0.7)",
-                          fontSize: 11,
+                          fontSize: 12,
                         }}
                       >
                         {formatDuration(s.startTime, s.endTime)}
@@ -192,7 +192,7 @@ export default function RecentSessions(props: { limit?: number }) {
                     backgroundColor: "rgba(255,255,255,0.04)",
                   }}
                 >
-                  <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>
+                  <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
                     Session
                   </Text>
                 </View>

@@ -76,7 +76,7 @@ export default function TodayFocusCard({
 
       <BottomSheet visible={open} onClose={() => setOpen(false)}>
 
-        <Text style={{ color: "#7bc47f", fontSize: 11, fontWeight: "700", letterSpacing: 0.8 }}>
+        <Text style={{ color: "#7bc47f", fontSize: 12, fontWeight: "700", letterSpacing: 0.8 }}>
           {focus.trainedToday ? "NEXT UP" : "TODAY'S FOCUS"}
         </Text>
         <Text style={{ color: "#fff", fontSize: 20, fontWeight: "700", marginTop: 4 }}>
@@ -98,7 +98,7 @@ export default function TodayFocusCard({
 
         {plan.length > 0 ? (
           <View style={{ marginTop: 14 }}>
-            <Text style={{ color: "#777", fontSize: 11, marginBottom: 6 }}>
+            <Text style={{ color: "#999", fontSize: 12, marginBottom: 6 }}>
               {focus.trainedToday ? "Suggested next session" : "Suggested session"} · covers what
               you haven&apos;t done this week
             </Text>
@@ -113,7 +113,7 @@ export default function TodayFocusCard({
                     <Text style={{ color: "#eee", fontSize: 13 }} numberOfLines={1}>
                       {i + 1}. {p.name}
                     </Text>
-                    <Text style={{ color: "#888", fontSize: 11 }} numberOfLines={1}>
+                    <Text style={{ color: "#888", fontSize: 12 }} numberOfLines={1}>
                       {p.reason}
                     </Text>
                   </View>
@@ -162,7 +162,7 @@ export default function TodayFocusCard({
 
         {weekly.length > 0 ? (
           <View style={{ marginTop: 14 }}>
-            <Text style={{ color: "#777", fontSize: 11, marginBottom: 6 }}>
+            <Text style={{ color: "#999", fontSize: 12, marginBottom: 6 }}>
               Sets this week (last 7 days) · target {WEEKLY_SET_TARGET.low}–{WEEKLY_SET_TARGET.high}
             </Text>
             {weekly.map((w) => {
@@ -208,14 +208,14 @@ export default function TodayFocusCard({
                     style={{
                       color: "#ddd",
                       fontSize: 12,
-                      width: 64,
+                      width: 72,
                       textAlign: "right",
                       fontVariant: ["tabular-nums"],
                     }}
                   >
                     {w.sets}
                     {w.zone !== "target" ? (
-                      <Text style={{ color: "#999", fontSize: 10 }}> {w.zone}</Text>
+                      <Text style={{ color: "#999", fontSize: 12 }}> {w.zone}</Text>
                     ) : null}
                   </Text>
                 </Pressable>
@@ -226,7 +226,7 @@ export default function TodayFocusCard({
 
         {focus.muscles.length > 0 ? (
           <>
-            <Text style={{ color: "#777", fontSize: 11, marginTop: 14, marginBottom: 6 }}>
+            <Text style={{ color: "#999", fontSize: 12, marginTop: 14, marginBottom: 6 }}>
               Days since trained · tap to see exercises
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>

@@ -305,7 +305,7 @@ export default function HistoryScreen() {
                     <Text
                       style={{
                         color: "#e53935",
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: "700",
                         letterSpacing: 0.3,
                       }}
@@ -363,7 +363,7 @@ export default function HistoryScreen() {
                           <Text
                             style={{
                               color: isSauna ? "rgba(255,178,102,0.98)" : "#3BAF75",
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: "800",
                               letterSpacing: 0.2,
                             }}

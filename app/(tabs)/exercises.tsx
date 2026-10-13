@@ -298,7 +298,7 @@ export default function ExercisesScreen() {
           value={query}
           onChangeText={setQuery}
           placeholder={`Search ${movements.length} exercises · ${exercises.length} variants`}
-          placeholderTextColor="#666"
+          placeholderTextColor="#808080"
           style={{
             backgroundColor: colors.card,
             color: colors.text,
@@ -343,7 +343,7 @@ export default function ExercisesScreen() {
 
         <Pressable
           onPress={() => setShowFilters((v) => !v)}
-          hitSlop={4}
+          hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
           style={({ pressed }) => ({
             width: 44,
             borderRadius: 8,
@@ -393,7 +393,7 @@ export default function ExercisesScreen() {
                 <Pressable
                   key={f.key}
                   onPress={() => setRecency(active ? "all" : f.key)}
-                  hitSlop={4}
+                  hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
                   style={({ pressed }) => ({
                     borderWidth: 1,
                     borderColor: active ? "#3a5eff" : "#2a2a2a",
@@ -418,7 +418,7 @@ export default function ExercisesScreen() {
               );
             })}
           {showFilters && !selectedMuscle ? (
-            <Text style={{ color: "#666", fontSize: 11, alignSelf: "center" }}>
+            <Text style={{ color: "#888", fontSize: 12, alignSelf: "center" }}>
               Pick a muscle below to filter by pattern
             </Text>
           ) : null}
@@ -476,7 +476,7 @@ export default function ExercisesScreen() {
                 <Pressable
                   key={p.pattern}
                   onPress={() => setSelectedPattern(active ? null : p.pattern)}
-                  hitSlop={4}
+                  hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
                   style={({ pressed }) => ({
                     borderWidth: 1,
                     borderColor: active ? "#3a5eff" : "#2a2a2a",
@@ -539,7 +539,7 @@ export default function ExercisesScreen() {
             <Text
               style={{
                 color: "#6b8f73",
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: "700",
                 letterSpacing: 0.8,
                 marginTop: index === 0 ? 2 : 12,
@@ -577,7 +577,7 @@ export default function ExercisesScreen() {
                     {timeAgo(summary.lastStartTime) ? ` · ${timeAgo(summary.lastStartTime)}` : ""}
                   </Text>
                 ) : (
-                  <Text style={{ color: "#666", fontSize: 12, marginTop: 3 }}>
+                  <Text style={{ color: "#888", fontSize: 12, marginTop: 3 }}>
                     ○ Not done yet
                   </Text>
                 )}
@@ -595,7 +595,7 @@ export default function ExercisesScreen() {
                       marginBottom: 4,
                     }}
                   >
-                    <Text style={{ color: "#7bed9f", fontSize: 11, fontWeight: "500" }}>
+                    <Text style={{ color: "#7bed9f", fontSize: 12, fontWeight: "500" }}>
                       {m.primaryMuscle}
                     </Text>
                   </View>
@@ -615,7 +615,7 @@ export default function ExercisesScreen() {
                             marginBottom: 4,
                           }}
                         >
-                          <Text style={{ color: "#aaa", fontSize: 11 }}>{tag}</Text>
+                          <Text style={{ color: "#aaa", fontSize: 12 }}>{tag}</Text>
                         </View>
                       ))
                     : m.variants.map((v) => {
@@ -627,7 +627,7 @@ export default function ExercisesScreen() {
                             key={v.id}
                             disabled={!vs}
                             onPress={() => openHistory(m, v.id)}
-                            hitSlop={4}
+                            hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
                             style={({ pressed }) => ({
                               borderWidth: 1,
                               borderColor: vs ? "#3a5a7a" : "#262626",
@@ -640,7 +640,7 @@ export default function ExercisesScreen() {
                               opacity: pressed ? 0.6 : 1,
                             })}
                           >
-                            <Text style={{ color: vs ? "#b9dcff" : "#666", fontSize: 11 }}>
+                            <Text style={{ color: vs ? "#b9dcff" : "#666", fontSize: 12 }}>
                               {v.variant}
                               {vs ? ` ·${vs.count}` : ""}
                             </Text>
@@ -669,7 +669,7 @@ export default function ExercisesScreen() {
                       paddingVertical: 2,
                     }}
                   >
-                    <Text style={{ color: "#9bb0ff", fontSize: 11, fontWeight: "500" }}>
+                    <Text style={{ color: "#9bb0ff", fontSize: 12, fontWeight: "500" }}>
                       ▶ video ↗
                     </Text>
                   </View>
@@ -679,7 +679,7 @@ export default function ExercisesScreen() {
               {sessionId ? renderQueueControl(m) : null}
 
               {summary ? (
-                <Text style={{ color: "#555", fontSize: 20, marginLeft: 10 }}>›</Text>
+                <Text style={{ color: "#888", fontSize: 20, marginLeft: 10 }}>›</Text>
               ) : null}
             </View>
           </Pressable>
@@ -706,7 +706,7 @@ export default function ExercisesScreen() {
     if (isCurrent) {
       return (
         <View style={{ ...queueBtn, borderColor: "#1f7a4d", backgroundColor: "#0f2e1f" }}>
-          <Text style={{ color: "#00ff99", fontSize: 11, fontWeight: "700" }}>
+          <Text style={{ color: "#00ff99", fontSize: 12, fontWeight: "700" }}>
             {current.active ? "NOW" : "NEXT"}
           </Text>
         </View>

@@ -47,7 +47,7 @@ export function SetColumn({
         <Text
           style={{
             color: "#ddd",
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: "600",
             marginTop: 3,
             fontVariant: ["tabular-nums"],
@@ -60,7 +60,7 @@ export function SetColumn({
         <Text
           style={{
             color: "#6CB4FF",
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: "600",
             marginTop: 2,
             fontVariant: ["tabular-nums"],

@@ -93,7 +93,7 @@ export default function ManualSessionScreen() {
           value={sessionLabel}
           onChangeText={setSessionLabel}
           placeholder="e.g. Legs + Shoulders, Cardio, Evening workout"
-          placeholderTextColor="#666"
+          placeholderTextColor="#808080"
           style={{
             borderWidth: 1,
             borderColor: colors.border,
@@ -114,7 +114,7 @@ export default function ManualSessionScreen() {
           value={sessionNote}
           onChangeText={setSessionNote}
           placeholder="Anything to remember about this session"
-          placeholderTextColor="#666"
+          placeholderTextColor="#808080"
           style={{
             borderWidth: 1,
             borderColor: colors.border,
@@ -194,7 +194,7 @@ export default function ManualSessionScreen() {
               value={exName}
               onChangeText={setExName}
               placeholder="e.g. Bench press"
-              placeholderTextColor="#666"
+              placeholderTextColor="#808080"
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,
@@ -260,7 +260,7 @@ export default function ManualSessionScreen() {
               value={exNote}
               onChangeText={setExNote}
               placeholder="Optional"
-              placeholderTextColor="#666"
+              placeholderTextColor="#808080"
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,

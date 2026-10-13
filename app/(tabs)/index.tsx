@@ -164,7 +164,7 @@ export default function HomeScreen() {
           <Text
             style={{
               color: "rgba(255,255,255,0.45)",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: "500",
               letterSpacing: 4,
               marginTop: 10,

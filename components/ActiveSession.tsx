@@ -139,7 +139,7 @@ function SessionExerciseList({
                     opacity: pressed ? 0.6 : 1,
                   })}
                 >
-                  <Text style={{ color: "#4dffa6", fontSize: 11, fontWeight: "700" }}>
+                  <Text style={{ color: "#4dffa6", fontSize: 12, fontWeight: "700" }}>
                     ↩ Undo
                   </Text>
                 </Pressable>
@@ -153,7 +153,7 @@ function SessionExerciseList({
                 : ""}
             </Text>
 
-            <Text style={{ color: "#777", fontSize: 11, marginTop: 2 }}>
+            <Text style={{ color: "#999", fontSize: 12, marginTop: 2 }}>
               ⏱ {totalMinutes} min
             </Text>
 
@@ -1006,7 +1006,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
           value={sessionNote}
           onChangeText={setSessionNote}
           placeholder="Sleep, energy, pain, PR"
-          placeholderTextColor="#666"
+          placeholderTextColor="#808080"
           style={{
             width: "100%",
             borderWidth: 1,
@@ -1653,7 +1653,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
           <Text
             style={{
               color: "#9bb0ff",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: "700",
               letterSpacing: 0.6,
               marginBottom: 6,
@@ -1704,7 +1704,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
         // Per muscle trained today: patterns done (✓), doubled (✓2) or open (○).
         <View style={{ width: "100%", paddingHorizontal: 24, marginTop: 6, marginBottom: 2, gap: 3 }}>
           {coverage.map((c) => (
-            <Text key={c.muscle} style={{ fontSize: 11, lineHeight: 16 }}>
+            <Text key={c.muscle} style={{ fontSize: 12, lineHeight: 16 }}>
               <Text style={{ color: "#ddd", fontWeight: "700" }}>{c.muscle}  </Text>
               {c.patterns.map((p, i) => (
                 <Text
@@ -1737,7 +1737,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
             <Text style={{ color: "#aaa", fontSize: 13 }}>
               🏋 Exercises this session ({sessionExercises.length})
             </Text>
-            <Text style={{ color: "#777", fontSize: 19 }}>
+            <Text style={{ color: "#999", fontSize: 19 }}>
               {showExercises ? "▾" : "▸"}
             </Text>
           </Pressable>

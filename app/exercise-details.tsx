@@ -124,7 +124,7 @@ export default function ExerciseDetailsScreen() {
         </Text>
 
         {selected === "all" && showTabs ? (
-          <Text style={{ color: "#666", fontSize: 12, marginBottom: 14 }}>
+          <Text style={{ color: "#888", fontSize: 12, marginBottom: 14 }}>
             Stats and chart are per equipment — pick a tab above.
           </Text>
         ) : (
@@ -195,7 +195,7 @@ export default function ExerciseDetailsScreen() {
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: "#ccc", fontSize: 11 }}>
+                  <Text style={{ color: "#ccc", fontSize: 12 }}>
                     DUR {minutes}m {seconds}s
                   </Text>
                 </View>
@@ -208,14 +208,14 @@ export default function ExerciseDetailsScreen() {
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: "#4da6ff", fontSize: 11 }}>
+                  <Text style={{ color: "#4da6ff", fontSize: 12 }}>
                     REST {item.restSeconds}s
                   </Text>
                 </View>
               </View>
 
               {item.note ? (
-                <Text style={{ color: "#777", marginTop: 8 }}>
+                <Text style={{ color: "#999", marginTop: 8 }}>
                   {item.note}
                 </Text>
               ) : null}
