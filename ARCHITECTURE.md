@@ -344,6 +344,14 @@ An audit of logs vs library (all rows linked; no orphans/duplicates/impossible v
 
 The 🎯 Today's focus sheet has a "Sets this week (last 7 days) · target 10–20" section: one bar per muscle (green inside 10–20; amber + the word "low"/"high" outside, so it's never colour-only), a faint 10–20 band behind the bars, and muscles you train regularly listed even at 0. Tap a muscle → Exercises tab filtered to it. Data: `getSetsByMuscleSince(7)` in `db/sessions.ts` (sum of `sets` by library `primary_muscle`, discarded/sauna excluded); shaping/zones in `domain/weeklyVolume.ts`. Nothing new on Home itself.
 
+### 3.19 Build today's session (Oct 2026)
+
+Goal: when a muscle is trained twice a week, the two sessions should cover different patterns (like a coach's strength/hypertrophy split) instead of repeating the same rows.
+
+- `domain/sessionBuilder.ts` `buildSession(muscles, library, log, gym, now)` — for each Today's focus muscle, ranks its patterns (isometric holds always last; then not done in the last 7 days first; compound before isolation; fewest weekly sets) and takes 3 for Back/Chest/Legs/Shoulders, 2 for smaller muscles. Per pattern it picks a variant not used this week if possible, scoring + used at this gym, + used before, + days since last used. Each pick carries a one-line reason ("hinge · not done this week", "row · Cable this week → Machine").
+- Data: `getLogEntriesSince(120)` (library id, start, gym, sets of non-discarded sessions) + the library; computed on Home focus and when the gym changes.
+- UI: "Suggested session" section in the 🎯 sheet ("Suggested next session" once you've trained today — it counts today's work too): ✕/↺ per item, "▶ Start session with these (N)" starts a session at the selected gym and fills Up next with the exact variants (first one auto-loads into the picker). The plain Start session button is unchanged.
+
 ---
 
 ## 4. Important Architectural Decisions

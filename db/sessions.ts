@@ -335,6 +335,27 @@ export function getSetsByMuscleSince(days: number = 7): Record<string, number> {
   return out;
 }
 
+// Logged exercises from the last `days` days (non-discarded sessions) with
+// their session gym — input for domain/sessionBuilder.ts.
+export function getLogEntriesSince(
+  days: number = 120
+): { libraryId: string; startTime: string; gym: string; sets: number }[] {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const rows = db.getAllSync(
+    `SELECT e.exercise_library_id AS library_id, e.start_time AS start_time, e.sets AS sets, s.gym AS gym
+     FROM exercises e
+     JOIN sessions s ON s.id = e.session_id
+     WHERE e.start_time >= ? AND s.note != '__DISCARDED__';`,
+    [since]
+  ) as { library_id: string; start_time: string; sets: number; gym: string | null }[];
+  return rows.map((r) => ({
+    libraryId: String(r.library_id),
+    startTime: String(r.start_time),
+    gym: r.gym ? String(r.gym) : "",
+    sets: Number(r.sets) || 0,
+  }));
+}
+
 // Gyms used so far, most recently used first.
 export function getKnownGyms(): string[] {
   const rows = db.getAllSync(

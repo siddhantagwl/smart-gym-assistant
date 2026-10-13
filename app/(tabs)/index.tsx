@@ -1,10 +1,12 @@
 import { View, Text, ScrollView, Pressable, Animated } from "react-native";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Session } from "@/domain/session";
-import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats, getTrainingLog, getSetsByMuscleSince } from "@/db/sessions";
+import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats, getTrainingLog, getSetsByMuscleSince, getLogEntriesSince } from "@/db/sessions";
+import { getAllLibraryExercises } from "@/db/exerciseLibrary";
+import { buildSession, BuilderLibraryItem, BuilderLogEntry } from "@/domain/sessionBuilder";
 import { computeTodayFocus, TodayFocus } from "@/domain/todayFocus";
 import { MuscleVolume, weeklyVolume } from "@/domain/weeklyVolume";
 import { loadSelectedGym, saveSelectedGym } from "@/services/gymPreference";
@@ -79,6 +81,9 @@ export default function HomeScreen() {
 
   const [todayFocus, setTodayFocus] = useState<TodayFocus | null>(null);
   const [weekly, setWeekly] = useState<MuscleVolume[]>([]);
+  // Inputs for "Build today's session" (domain/sessionBuilder.ts).
+  const [builderLibrary, setBuilderLibrary] = useState<BuilderLibraryItem[]>([]);
+  const [builderLog, setBuilderLog] = useState<BuilderLogEntry[]>([]);
   const [gym, setGym] = useState("");
   useEffect(() => {
     loadSelectedGym().then(setGym);
@@ -94,7 +99,20 @@ export default function HomeScreen() {
           ? []
           : weeklyVolume(getSetsByMuscleSince(7), focus?.muscles.map((m) => m.muscle) ?? []),
       );
+      if (!activeSession) {
+        setBuilderLibrary(getAllLibraryExercises());
+        setBuilderLog(getLogEntriesSince(120));
+      }
     }, [activeSession])
+  );
+
+  // Suggested session for Today's focus muscles at the selected gym.
+  const plan = useMemo(
+    () =>
+      todayFocus && todayFocus.focus.length > 0
+        ? buildSession(todayFocus.focus, builderLibrary, builderLog, gym)
+        : [],
+    [todayFocus, builderLibrary, builderLog, gym],
   );
 
   useEffect(() => {
@@ -252,6 +270,7 @@ export default function HomeScreen() {
             colors={{ text: colors.text, accent: colors.accent }}
             todayFocus={todayFocus}
             weekly={weekly}
+            plan={plan}
             gym={gym}
             onGymChange={(g) => {
               setGym(g);

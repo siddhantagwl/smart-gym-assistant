@@ -10,6 +10,7 @@ import { useRouter } from "expo-router";
 
 import { TodayFocus } from "@/domain/todayFocus";
 import { MuscleVolume, WEEKLY_SET_TARGET } from "@/domain/weeklyVolume";
+import { PlannedExercise } from "@/domain/sessionBuilder";
 
 const BAR_TARGET = "#43a047"; // validated (dataviz) on the #111 sheet
 const BAR_OFF = "#FFC107"; // low / high — always labelled in text too
@@ -17,10 +18,17 @@ const BAR_OFF = "#FFC107"; // low / high — always labelled in text too
 export default function TodayFocusCard({
   focus,
   weekly,
+  plan,
+  onStartPlan,
 }: {
   focus: TodayFocus;
   weekly: MuscleVolume[];
+  plan: PlannedExercise[];
+  onStartPlan: (items: PlannedExercise[]) => void;
 }) {
+  // Suggestions you ✕'d out of today's plan (reset each time the sheet opens).
+  const [dropped, setDropped] = useState<Set<string>>(new Set());
+  const kept = plan.filter((p) => !dropped.has(p.libraryId));
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -36,7 +44,10 @@ export default function TodayFocusCard({
   return (
     <>
       <Pressable
-        onPress={() => setOpen(true)}
+        onPress={() => {
+          setDropped(new Set());
+          setOpen(true);
+        }}
         hitSlop={6}
         style={({ pressed }) => ({
           alignSelf: "center",
@@ -83,6 +94,70 @@ export default function TodayFocusCard({
           <Text style={{ color: "#FFC107", fontSize: 13, marginTop: 8 }}>
             ⚠ {focus.comeback.daysOff} days off · {focus.comeback.note}
           </Text>
+        ) : null}
+
+        {plan.length > 0 ? (
+          <View style={{ marginTop: 14 }}>
+            <Text style={{ color: "#777", fontSize: 11, marginBottom: 6 }}>
+              {focus.trainedToday ? "Suggested next session" : "Suggested session"} · covers what
+              you haven&apos;t done this week
+            </Text>
+            {plan.map((p, i) => {
+              const off = dropped.has(p.libraryId);
+              return (
+                <View
+                  key={p.libraryId}
+                  style={{ flexDirection: "row", alignItems: "center", paddingVertical: 4, opacity: off ? 0.35 : 1 }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#eee", fontSize: 13 }} numberOfLines={1}>
+                      {i + 1}. {p.name}
+                    </Text>
+                    <Text style={{ color: "#888", fontSize: 11 }} numberOfLines={1}>
+                      {p.reason}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() =>
+                      setDropped((d) => {
+                        const next = new Set(d);
+                        if (next.has(p.libraryId)) next.delete(p.libraryId);
+                        else next.add(p.libraryId);
+                        return next;
+                      })
+                    }
+                    hitSlop={8}
+                    style={{ paddingHorizontal: 8 }}
+                  >
+                    <Text style={{ color: off ? "#7bc47f" : "#ff6b6b", fontSize: 14, fontWeight: "700" }}>
+                      {off ? "↺" : "✕"}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+            <Pressable
+              disabled={kept.length === 0}
+              onPress={() => {
+                setOpen(false);
+                onStartPlan(kept);
+              }}
+              style={({ pressed }) => ({
+                marginTop: 8,
+                paddingVertical: 11,
+                borderRadius: 10,
+                alignItems: "center",
+                backgroundColor: kept.length ? "#0f2e1f" : "#1a1a1a",
+                borderWidth: 1,
+                borderColor: kept.length ? "#1f7a4d" : "#333",
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Text style={{ color: kept.length ? "#00ff99" : "#666", fontWeight: "700", fontSize: 14 }}>
+                ▶ Start session with these ({kept.length})
+              </Text>
+            </Pressable>
+          </View>
         ) : null}
 
         {weekly.length > 0 ? (

@@ -1,6 +1,8 @@
 import { Session } from "@/domain/session";
 import { TodayFocus } from "@/domain/todayFocus";
 import { MuscleVolume } from "@/domain/weeklyVolume";
+import { PlannedExercise } from "@/domain/sessionBuilder";
+import { addToUpNext } from "@/hooks/use-up-next";
 import TodayFocusCard from "@/components/home/TodayFocusCard";
 import GymPicker from "@/components/home/GymPicker";
 import { View, Text, Pressable } from "react-native";
@@ -12,15 +14,35 @@ export default function IdleMode(props: {
   onLogSauna: () => void;
   todayFocus?: TodayFocus | null;
   weekly?: MuscleVolume[];
+  plan?: PlannedExercise[];
   gym: string;
   onGymChange: (gym: string) => void;
 }) {
-  const { colors, onStart, onLogSauna, todayFocus, weekly, gym, onGymChange } = props;
+  const { colors, onStart, onLogSauna, todayFocus, weekly, plan, gym, onGymChange } = props;
+
+  // Starts a session; with a plan, its exercises go into Up next in order
+  // (the first one loads into the picker as soon as the session mounts).
+  function startSession(planned: PlannedExercise[] = []) {
+    const session: Session = {
+      id: Date.now().toString(),
+      startTime: new Date(),
+      endTime: null,
+      sessionLabels: [],
+      gym,
+    };
+    onStart(session);
+    planned.forEach((p) => addToUpNext(session.id, { libraryId: p.libraryId, name: p.name }));
+  }
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24 }}>
       {todayFocus && todayFocus.focus.length > 0 ? (
-        <TodayFocusCard focus={todayFocus} weekly={weekly ?? []} />
+        <TodayFocusCard
+          focus={todayFocus}
+          weekly={weekly ?? []}
+          plan={plan ?? []}
+          onStartPlan={(items) => startSession(items)}
+        />
       ) : null}
 
       <Text
@@ -37,16 +59,7 @@ export default function IdleMode(props: {
       <GymPicker value={gym} onChange={onGymChange} />
 
       <Pressable
-        onPress={() => {
-          const session: Session = {
-            id: Date.now().toString(),
-            startTime: new Date(),
-            endTime: null,
-            sessionLabels: [],
-            gym,
-          };
-          onStart(session);
-        }}
+        onPress={() => startSession()}
         style={{
           backgroundColor: colors.accent,
           paddingVertical: 14,
