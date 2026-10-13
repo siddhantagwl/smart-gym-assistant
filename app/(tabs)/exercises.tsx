@@ -62,6 +62,7 @@ export default function ExercisesScreen() {
   useEffect(() => {
     if (params.muscle) {
       setSelectedMuscle(params.muscle);
+      setSelectedPattern(null);
       setQuery("");
       setRecency("all");
     }
@@ -74,6 +75,9 @@ export default function ExercisesScreen() {
   // search; combines with the muscle filter + search.
   const [recency, setRecency] = useState<Recency>("all");
   const [showFilters, setShowFilters] = useState(false);
+  // Pattern filter (in the same panel): only for the selected muscle.
+  const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
+  const filterActive = recency !== "all" || selectedPattern !== null;
 
   // One row per movement; its log summary combines all equipment variants.
   const movements = useMemo(() => groupMovements(exercises), [exercises]);
@@ -217,6 +221,8 @@ export default function ExercisesScreen() {
       );
     }
 
+    if (selectedPattern) filtered = filtered.filter((m) => m.pattern === selectedPattern);
+
     if (recency === "new") filtered = filtered.filter(isNew);
     if (recency === "stale") filtered = filtered.filter(isStale);
 
@@ -245,7 +251,19 @@ export default function ExercisesScreen() {
       }));
     // isNew/isStale only read logSummary, which is listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, movements, selectedMuscle, recency, logSummary]);
+  }, [query, movements, selectedMuscle, selectedPattern, recency, logSummary]);
+
+  // Patterns of the selected muscle, with how many movements each has.
+  const musclePatterns = useMemo(() => {
+    if (!selectedMuscle) return [];
+    const counts = new Map<string, number>();
+    movements
+      .filter((m) => m.primaryMuscle === selectedMuscle)
+      .forEach((m) => counts.set(m.pattern, (counts.get(m.pattern) ?? 0) + 1));
+    return [...counts.entries()]
+      .map(([pattern, count]) => ({ pattern, count }))
+      .sort((a, b) => a.pattern.localeCompare(b.pattern));
+  }, [movements, selectedMuscle]);
 
   // Counts follow the muscle filter so "Not done yet (3)" means "3 chest exercises".
   const recencyCounts = useMemo(() => {
@@ -337,7 +355,7 @@ export default function ExercisesScreen() {
             width: 44,
             borderRadius: 8,
             borderWidth: 1,
-            borderColor: showFilters || recency !== "all" ? "#3a5eff" : colors.border,
+            borderColor: showFilters || filterActive ? "#3a5eff" : colors.border,
             backgroundColor: showFilters ? "rgba(58,94,255,0.15)" : colors.card,
             alignItems: "center",
             justifyContent: "center",
@@ -347,9 +365,9 @@ export default function ExercisesScreen() {
           <IconSymbol
             name="line.3.horizontal.decrease"
             size={22}
-            color={showFilters || recency !== "all" ? "#c9d4ff" : "#888"}
+            color={showFilters || filterActive ? "#c9d4ff" : "#888"}
           />
-          {recency !== "all" ? (
+          {filterActive ? (
             <View
               style={{
                 position: "absolute",
@@ -406,6 +424,11 @@ export default function ExercisesScreen() {
                 </Pressable>
               );
             })}
+          {showFilters && !selectedMuscle ? (
+            <Text style={{ color: "#666", fontSize: 11, alignSelf: "center" }}>
+              Pick a muscle below to filter by pattern
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -415,9 +438,10 @@ export default function ExercisesScreen() {
           return (
             <Pressable
               key={muscleObj.name}
-              onPress={() =>
-                setSelectedMuscle(active ? null : muscleObj.name)
-              }
+              onPress={() => {
+                setSelectedMuscle(active ? null : muscleObj.name);
+                setSelectedPattern(null);
+              }}
               style={{ marginRight: 8, marginBottom: 8 }}
             >
               <View
@@ -446,6 +470,39 @@ export default function ExercisesScreen() {
           );
         })}
       </View>
+
+      {/* Pattern chips for the selected muscle: shown while the filter panel is
+          open; when closed, an active pattern stays visible as one chip. */}
+      {selectedMuscle && musclePatterns.length > 1 && (showFilters || selectedPattern) ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: -4, marginBottom: 12 }}>
+          {musclePatterns
+            .filter((p) => showFilters || p.pattern === selectedPattern)
+            .map((p) => {
+              const active = p.pattern === selectedPattern;
+              return (
+                <Pressable
+                  key={p.pattern}
+                  onPress={() => setSelectedPattern(active ? null : p.pattern)}
+                  hitSlop={4}
+                  style={({ pressed }) => ({
+                    borderWidth: 1,
+                    borderColor: active ? "#3a5eff" : "#2a2a2a",
+                    backgroundColor: active ? "rgba(58,94,255,0.15)" : "transparent",
+                    borderRadius: 16,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Text style={{ color: active ? "#c9d4ff" : "#888", fontSize: 12, fontWeight: active ? "600" : "500" }}>
+                    {p.pattern} ({p.count})
+                    {active && !showFilters ? "  ✕" : ""}
+                  </Text>
+                </Pressable>
+              );
+            })}
+        </View>
+      ) : null}
 
       <SectionList
         sections={sections}

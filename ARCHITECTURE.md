@@ -330,6 +330,7 @@ Logs showed 18/50 sessions with two different movements doing the same job (e.g.
 - `domain/patternCoverage.ts`: `sessionCoverage()` (per muscle trained this session: each library pattern with how often it was hit) and `overlapHint()` (picked exercise repeats a pattern already done). Cardio ignored. Hints only — nothing is blocked.
 - Active session: an amber line under the picked exercise ("⚠ Horizontal row already done today (Seated Row) · Not done yet: Lat isolation · …") and a coverage line per muscle (✓ done, ✓2 doubled in amber, ○ open) above "Exercises this session".
 - Exercises tab: within each muscle, movements are grouped under a pattern sub-header (not when sorting by "2+ weeks ago").
+- Pattern filter: with a muscle selected, the ☰ filter panel shows that muscle's patterns as chips (`Horizontal row (4)`); one tap shows only that pattern. Resets when the muscle changes; while the panel is closed an active pattern stays visible as one chip with ✕, and the filter icon shows its dot.
 
 ---
 
