@@ -5,7 +5,8 @@ import {
   scheduleRestDoneNotification,
   cancelRestNotification,
 } from "@/services/notifications";
-import { Animated, Pressable, Text, TextInput, View } from "react-native";
+import { Animated, LayoutAnimation, Pressable, Text, TextInput, View } from "react-native";
+import * as Haptics from "expo-haptics";
 import Svg, { Circle } from "react-native-svg";
 
 import AddExercise from "@/components/AddExercise";
@@ -56,6 +57,13 @@ type Props = {
   // Home scrolls back up so the timers are visible after Finish Set / Finish Exercise / Undo.
   onScrollToTop?: () => void;
 };
+
+// Rest countdown colour: amber, orange in the last 10 s, red once over time.
+function restColor(secondsLeft: number): string {
+  if (secondsLeft <= 0) return "#e53935";
+  if (secondsLeft <= 10) return "#FF8A00";
+  return "#FFC107";
+}
 
 function SessionExerciseList({
   exercises,
@@ -272,6 +280,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
   useEffect(() => {
     if (!prBadge) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
     prBadgeScale.setValue(0);
     prBadgeOpacity.setValue(0);
@@ -497,6 +506,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     prevExerciseActiveForQueue.current = isExerciseActive;
 
     if ((grew || justFinished) && !isExerciseActive && !exerciseName.trim()) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       const next = takeUpNext(activeSession.id);
       if (next) loadIntoPicker(next);
     }
@@ -622,6 +632,9 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     restStartRef.current = startedAt;
     restKindRef.current = kind;
+    // Buzz once when the countdown reaches 0 while the app is open (a resumed
+    // rest that's already past 0 doesn't buzz again).
+    let buzzed = remaining <= 0;
     setRestSeconds(remaining);
     setRestTotalSeconds(duration);
     restOpacity.setValue(1);
@@ -641,6 +654,10 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       if (restStartRef.current === null) return;
       const elapsed = secondsBetween(new Date(), restStartRef.current);
       setRestSeconds(duration - elapsed);
+      if (!buzzed && duration - elapsed <= 0) {
+        buzzed = true;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      }
     }, 1000);
   }
 
@@ -1215,6 +1232,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     });
 
     const rows = getExercisesForSession(activeSession.id);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSessionExercises(rows);
 
     // Start transition rest after finishing exercise
@@ -1282,6 +1300,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       setRestType(null);
     }
 
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSessionExercises(getExercisesForSession(activeSession.id));
     onScrollToTop?.();
   }
@@ -1474,7 +1493,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
                 cx={REST_RING_SIZE / 2}
                 cy={REST_RING_SIZE / 2}
                 r={REST_RING_RADIUS}
-                stroke={restSeconds < 0 ? "#e53935" : "#FFC107"}
+                stroke={restColor(restSeconds)}
                 strokeWidth={REST_RING_STROKE}
                 fill="none"
                 strokeDasharray={`${REST_RING_CIRCUMFERENCE} ${REST_RING_CIRCUMFERENCE}`}
@@ -1507,7 +1526,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
           <Text
             style={{
-              color: restSeconds < 0 ? "#e53935" : "#FFC107",
+              color: restColor(restSeconds),
               fontSize: 18,
               fontWeight: "600",
               fontVariant: ["tabular-nums"],
@@ -1666,7 +1685,10 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
                   </Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => removeFromUpNext(activeSession.id, item.name)}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    removeFromUpNext(activeSession.id, item.name);
+                  }}
                   hitSlop={8}
                   style={{ paddingVertical: 5, paddingLeft: 4, paddingRight: 10 }}
                 >

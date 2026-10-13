@@ -374,6 +374,7 @@ export default function AddExercise({
     const now = Date.now();
     if (now - lastSetTapRef.current < 700) return;
     lastSetTapRef.current = now;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
     if (isSetInProgress) {
       onSaveSet(setStartRef.current);
