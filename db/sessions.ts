@@ -1,5 +1,6 @@
 import { RecentSession, Session } from "@/domain/session";
 import { db } from "./database";
+import { cleanSessionLabels } from "@/domain/muscles";
 
 // StoredSession is the shape of session data as stored in the database.
 // its not a domain model, since it uses strings for dates and has some DB specific fields like 'source'.
@@ -248,8 +249,8 @@ export function insertSessionRaw(row: any) {
 }
 
 // Finished, non-discarded, non-sauna sessions (newest first) with the muscles
-// trained: the user-confirmed labels, or — for older/manual sessions saved
-// without labels — the library primary_muscle of each logged exercise.
+// trained: the user-confirmed labels plus the library primary_muscle of each
+// logged exercise.
 // Feeds "Today's focus" on Home (domain/todayFocus.ts).
 export function getTrainingLog(limit: number = 60): { startTime: string; muscles: string[] }[] {
   const sessions = db.getAllSync(
@@ -287,9 +288,11 @@ export function getTrainingLog(limit: number = 60): { startTime: string; muscles
       const parsed = JSON.parse(s.session_labels ?? "[]");
       if (Array.isArray(parsed)) labels = parsed.map(String);
     } catch {}
+    // Labels ∪ muscles of the exercises actually logged (legacy leg names →
+    // Legs), so a muscle trained but not labelled still counts.
     return {
       startTime: String(s.start_time),
-      muscles: labels.length > 0 ? labels : Array.from(bySession.get(String(s.id)) ?? []),
+      muscles: cleanSessionLabels(labels, Array.from(bySession.get(String(s.id)) ?? [])),
     };
   });
 }
