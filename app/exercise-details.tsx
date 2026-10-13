@@ -140,7 +140,7 @@ export default function ExerciseDetailsScreen() {
           const minutes = Math.floor(durationSeconds / 60);
           const seconds = Math.floor(durationSeconds % 60);
           const v = variantOf(item.exerciseLibraryId);
-          const suffix = v ? weightUnitSuffix(v.equipment) : "";
+          const suffix = v ? weightUnitSuffix(v) : "";
 
           return (
             <View

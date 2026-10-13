@@ -1625,7 +1625,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
                 }
               : null
           }
-          weightSuffix={weightUnitSuffix(currentEquipment)}
+          weightSuffix={currentLibraryItem ? weightUnitSuffix(currentLibraryItem) : ""}
         />
       </View>
 

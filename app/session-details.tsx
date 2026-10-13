@@ -51,11 +51,11 @@ export default function SessionDetailsScreen() {
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
   const [sessionGym, setSessionGym] = useState("");
-  // "/db" for dumbbell variants (weights are per dumbbell).
+  // "/db" for dumbbells, "/side" for iso-lateral machines.
   const weightSuffixById = useMemo(() => {
     const map: Record<string, string> = {};
     getAllLibraryExercises().forEach((l) => {
-      map[l.id] = weightUnitSuffix(l.equipment);
+      map[l.id] = weightUnitSuffix(l);
     });
     return map;
   }, []);

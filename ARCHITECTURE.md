@@ -332,6 +332,14 @@ Logs showed 18/50 sessions with two different movements doing the same job (e.g.
 - Exercises tab: within each muscle, movements are grouped under a pattern sub-header (not when sorting by "2+ weeks ago").
 - Pattern filter: with a muscle selected, the ☰ filter panel shows that muscle's patterns as chips (`Horizontal row (4)`); one tap shows only that pattern. Resets when the muscle changes; while the panel is closed an active pattern stays visible as one chip with ✕, and the filter icon shows its dot.
 
+### 3.17 Data audit fixes + weight conventions (Oct 2026)
+
+An audit of logs vs library (all rows linked; no orphans/duplicates/impossible values) found three kinds of drift, fixed by `apps-script/FixFromNotes_2026_10.gs` on the Sheet and `user_version 2` in `db/migrations.ts` on the phone (identical mappings; verified to give the same 52 session labels and 333 exercise rows):
+
+- **Wrong equipment, per the exercise's own note** ("dumbbell", "with cables", "seated dip", "barbell, total 40"…): 9 rows relinked to the right variant (one also gets weight 40), 3 variants added to the library (Decline Press · Barbell, Overhead Triceps Extension · Cable Straight Bar, Front Raise · Barbell); 2 rows named "dips" → "Dips".
+- **Session labels**: legacy Quadriceps / Hamstrings / Glutes / Calves → Legs, and muscles trained but not labelled are added (`cleanSessionLabels` in `domain/muscles.ts`; labels are only added, never removed; Sauna untouched). `getTrainingLog()` (Today's focus) now always uses labels ∪ logged muscles through the same rule.
+- **Weight conventions**: dumbbells per dumbbell (`kg/db`), iso-lateral machines (tag `iso-lateral`) per side (`kg/side`, "per side" next to the kg/lb toggle) — `weightUnitSuffix()` in `domain/movement.ts`. Historic per-side vs total entries were not rewritten.
+
 ---
 
 ## 4. Important Architectural Decisions

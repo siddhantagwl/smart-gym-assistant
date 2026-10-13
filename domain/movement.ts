@@ -52,7 +52,10 @@ export function isGymScoped(e: Equipment): boolean {
   return e === "machine" || e === "cable" || e === "smith";
 }
 
-// Dumbbell weights are logged per dumbbell.
-export function weightUnitSuffix(e: Equipment): string {
-  return e === "dumbbell" ? "/db" : "";
+// Dumbbells are logged per dumbbell, iso-lateral machines (separate weight
+// each side) per side — shown as kg/db and kg/side.
+export function weightUnitSuffix(item: { equipment: Equipment; tags: string[] }): string {
+  if (item.equipment === "dumbbell") return "/db";
+  if (item.tags.some((t) => t.trim().toLowerCase() === "iso-lateral")) return "/side";
+  return "";
 }

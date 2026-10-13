@@ -72,7 +72,7 @@ type AddExerciseProps = {
     otherGym?: string | null; // set when "Prev logged" comes from another gym's machine
   } | null;
 
-  // "/db" for dumbbells (logged per dumbbell), else "".
+  // "/db" (per dumbbell) or "/side" (iso-lateral machine), else "".
   weightSuffix?: string;
 
   // Live per-set breakdown under the set chips (reps × weight, rests between).
@@ -688,7 +688,7 @@ export default function AddExercise({
                   })}
                   {weightSuffix ? (
                     <Text style={{ color: "#888", fontSize: 11, alignSelf: "center" }}>
-                      per db
+                      {weightSuffix === "/side" ? "per side" : "per db"}
                     </Text>
                   ) : null}
                 </View>
