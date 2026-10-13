@@ -7,8 +7,10 @@
  */
 
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pressable, SectionList, Text, View } from "react-native";
+
+import ConsistencyDots, { dayKey } from "@/components/ConsistencyDots";
 
 import { getExerciseCountForSession } from "@/db/exercises";
 import { getAllSessions, StoredSession } from "@/db/sessions";
@@ -52,7 +54,9 @@ export default function HistoryScreen() {
   const load = useCallback(() => {
     const sessions = getAllSessions();
 
+    // Discarded sessions stay in the database (and the Sheet) but aren't shown.
     const enriched = sessions
+      .filter((s) => s.note !== "__DISCARDED__")
       .map((s) => ({
         ...s,
         exerciseCount: getExerciseCountForSession(s.id),
@@ -65,6 +69,31 @@ export default function HistoryScreen() {
 
     setRows(enriched);
   }, []);
+
+  // Newest month first; rows are already newest-first.
+  const sections = useMemo(() => {
+    const out: { title: string; data: Row[] }[] = [];
+    rows.forEach((r) => {
+      const title = new Date(r.startTime)
+        .toLocaleDateString("en-GB", { month: "long", year: "numeric" })
+        .toUpperCase();
+      const last = out[out.length - 1];
+      if (last && last.title === title) last.data.push(r);
+      else out.push({ title, data: [r] });
+    });
+    return out;
+  }, [rows]);
+
+  // Days with a workout (sauna-only sessions don't count).
+  const trainedDays = useMemo(
+    () =>
+      new Set(
+        rows
+          .filter((r) => r.exerciseCount > 0 || r.sessionLabels.some((l) => l !== "Sauna"))
+          .map((r) => dayKey(new Date(r.startTime))),
+      ),
+    [rows],
+  );
 
   // render historyscreen for fisrt time.
   // load will query db and update rows state, which will
@@ -160,14 +189,29 @@ export default function HistoryScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={rows}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+          stickySectionHeadersEnabled={false}
+          ListHeaderComponent={<ConsistencyDots trainedDays={trainedDays} />}
+          renderSectionHeader={({ section }) => (
+            <Text
+              style={{
+                color: "#999",
+                fontSize: 12,
+                fontWeight: "700",
+                letterSpacing: 0.6,
+                marginTop: 6,
+                marginBottom: 8,
+              }}
+            >
+              {section.title} · {section.data.length}
+            </Text>
+          )}
           renderItem={({ item }) => {
             const start = new Date(item.startTime);
             const end = item.endTime ? new Date(item.endTime) : null;
-            const isDiscarded = item.note === "__DISCARDED__";
 
             return (
               <Pressable
@@ -181,10 +225,9 @@ export default function HistoryScreen() {
                   backgroundColor: colors.card,
                   borderRadius: 10,
                   borderWidth: 1,
-                  borderColor: isDiscarded ? "#3a1f1f" : colors.border,
+                  borderColor: colors.border,
                   padding: 14,
                   marginBottom: 12,
-                  opacity: isDiscarded ? 0.55 : 1,
                 }}
               >
                 <View
@@ -289,32 +332,6 @@ export default function HistoryScreen() {
                   </View>
                 </View>
 
-                {isDiscarded && (
-                  <View
-                    style={{
-                      paddingVertical: 4,
-                      paddingHorizontal: 10,
-                      borderRadius: 999,
-                      backgroundColor: "rgba(229,57,53,0.15)",
-                      borderWidth: 1,
-                      borderColor: "#e53935",
-                      alignSelf: "flex-start",
-                      marginBottom: 6,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "#e53935",
-                        fontSize: 12,
-                        fontWeight: "700",
-                        letterSpacing: 0.3,
-                      }}
-                    >
-                      DISCARDED
-                    </Text>
-                  </View>
-                )}
-
                 <Text
                   style={{
                     color: colors.muted,
@@ -325,7 +342,7 @@ export default function HistoryScreen() {
                   {end ? ` to ${formatTime(end)}` : ""}
                 </Text>
 
-                {item.note && !isDiscarded ? (
+                {item.note ? (
                   <Text
                     style={{ color: colors.muted, marginBottom: 10 }}
                     numberOfLines={2}

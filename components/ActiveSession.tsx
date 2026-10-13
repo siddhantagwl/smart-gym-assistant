@@ -274,6 +274,15 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   const celebSparkle = useRef(new Animated.Value(0)).current;
 
   const [prBadge, setPrBadge] = useState<{ weight: number } | null>(null);
+  // PRs hit this session, for the summary on the "Session saved" screen.
+  const sessionPrsRef = useRef<{ name: string; weight: number }[]>([]);
+  const [summary, setSummary] = useState<{
+    minutes: number;
+    exercises: number;
+    sets: number;
+    prs: { name: string; weight: number }[];
+    muscles: string[];
+  } | null>(null);
   const prFiredRef = useRef(false);
   const prBadgeScale = useRef(new Animated.Value(0)).current;
   const prBadgeOpacity = useRef(new Animated.Value(0)).current;
@@ -868,6 +877,49 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
           Session saved!
         </Animated.Text>
 
+        {summary && (
+          <Animated.View
+            style={{
+              marginTop: 16,
+              marginHorizontal: 32,
+              paddingVertical: 12,
+              paddingHorizontal: 18,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: "#222",
+              backgroundColor: "#0d0d0d",
+              alignItems: "center",
+              maxWidth: 340,
+              opacity: celebOpacity,
+            }}
+          >
+            <Text style={{ color: "#eee", fontSize: 16, fontWeight: "600" }}>
+              {summary.minutes} min · {summary.exercises}{" "}
+              {summary.exercises === 1 ? "exercise" : "exercises"} · {summary.sets}{" "}
+              {summary.sets === 1 ? "set" : "sets"}
+            </Text>
+            {summary.muscles.length > 0 && (
+              <Text numberOfLines={2} style={{ color: "#999", fontSize: 13, marginTop: 6, textAlign: "center" }}>
+                {summary.muscles.join(" · ")}
+              </Text>
+            )}
+            {summary.prs.slice(0, 3).map((p) => (
+              <Text
+                key={p.name}
+                numberOfLines={1}
+                style={{ color: "#FFD54F", fontSize: 13, marginTop: 6 }}
+              >
+                🏆 {p.name} · {p.weight} kg
+              </Text>
+            ))}
+            {summary.prs.length > 3 && (
+              <Text style={{ color: "#FFD54F", fontSize: 12, marginTop: 4 }}>
+                +{summary.prs.length - 3} more PRs
+              </Text>
+            )}
+          </Animated.View>
+        )}
+
         <Animated.Text
           style={{
             color: "rgba(255,255,255,0.4)",
@@ -1061,6 +1113,16 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
               );
               clearUpNext();
               setSessionNote("");
+              setSummary({
+                minutes: Math.max(
+                  1,
+                  Math.round((Date.now() - activeSession.startTime.getTime()) / 60000),
+                ),
+                exercises: sessionExercises.length,
+                sets: sessionExercises.reduce((n, e) => n + (e.sets || 0), 0),
+                prs: sessionPrsRef.current,
+                muscles: selectedLabels,
+              });
               setShowLabelConfirm(false);
               setShowCelebration(true);
             }}
@@ -1137,6 +1199,11 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     setSetLogView([...setLogRef.current]);
   }
 
+  function notePr(name: string, weight: number) {
+    const list = sessionPrsRef.current.filter((p) => p.name !== name);
+    sessionPrsRef.current = [...list, { name, weight }];
+  }
+
   // 💪 Save Set
   function saveSet(setStartedAt?: Date | null) {
     if (!isExerciseActive) return;
@@ -1158,6 +1225,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       if (isNewPr(weightKg)) {
         prFiredRef.current = true;
         setPrBadge({ weight: weightKg });
+        notePr(exerciseName, weightKg);
       }
     }
   }
@@ -1204,6 +1272,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       if (isNewPr(weightKg)) {
         prFiredRef.current = true;
         setPrBadge({ weight: weightKg });
+        notePr(exerciseName, weightKg);
       }
     }
 

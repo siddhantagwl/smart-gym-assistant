@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import { View, Text, Pressable } from "react-native";
+import { getExercisesForSession } from "../../db/exercises";
 
 export type PendingSessionUI = {
   id: string;
@@ -13,6 +15,23 @@ export default function PendingMode(props: {
   colors: { text: string; accent: string };
 }) {
   const { session, onResume, onDiscard, colors } = props;
+
+  // What's already logged, so you can tell whether it's worth resuming.
+  const done = useMemo(() => {
+    try {
+      return getExercisesForSession(session.id);
+    } catch {
+      return [];
+    }
+  }, [session.id]);
+  const minsAgo = Math.max(0, Math.round((Date.now() - new Date(session.startTime).getTime()) / 60000));
+  const ago =
+    minsAgo < 60
+      ? `${minsAgo} min ago`
+      : minsAgo < 48 * 60
+        ? `${Math.round(minsAgo / 60)} h ago`
+        : `${Math.round(minsAgo / 1440)} days ago`;
+  const sets = done.reduce((n, e) => n + (e.sets || 0), 0);
 
   return (
     <View style={{ width: "100%", paddingHorizontal: 24 }}>
@@ -37,7 +56,15 @@ export default function PendingMode(props: {
             hour: "2-digit",
             minute: "2-digit",
           })}
+          {` · ${ago}`}
           {session.sessionLabel ? ` · ${session.sessionLabel}` : ""}
+        </Text>
+        <Text numberOfLines={2} style={{ color: "#999", fontSize: 13, marginTop: -6, marginBottom: 12 }}>
+          {done.length === 0
+            ? "No exercises logged yet"
+            : `${done.length} ${done.length === 1 ? "exercise" : "exercises"} · ${sets} sets: ${done
+                .map((e) => e.name)
+                .join(", ")}`}
         </Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>

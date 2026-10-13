@@ -358,6 +358,15 @@ Bottom sheets (`components/ui/BottomSheet.tsx`) can be swiped down to close: a P
 
 Kept to five rows: title + tagline · one quiet line "🔥 3-day streak · 📅 4 this week" (was two chips) · the 🎯 Today's focus pill · one row with the Start session button and, beside it, a separate 📍 gym button (`GymPicker` with a custom `renderTrigger`) — kept apart so changing the gym can't start a session by accident · a small "+ log sauna" link. "Ready to train" was removed. Recent sessions follow.
 
+### 3.21 Polish pass (Oct 2026)
+
+- **Removed:** Expo template leftovers (hello-wave, themed text/view, collapsible, use-theme-color), History's Refresh button (it reloads on focus), the Settings Debug JSON button (long-press the version pill instead). Success pop-ups became a toast (`components/ui/Toast.tsx`, `useToast()`); errors stay as Alerts.
+- **Feel:** light haptic on set taps, success haptic on a PR, a warning buzz once when the rest target is reached; the rest ring goes yellow → orange (≤ 10 s) → red (over); `LayoutAnimation` when exercises finish/undo and Up next changes.
+- **Readability:** no text below 12 pt, greys lightened (`#555/#666 → #888`, `#777 → #999`), bigger tap areas on small buttons.
+- **Session saved screen** shows a summary: minutes · exercises · sets, the muscles you confirmed, and up to 3 PRs hit this session (tracked in `sessionPrsRef` when the PR badge fires).
+- **History:** month headings (SectionList), discarded sessions hidden (still in the DB/Sheet), and a 12-week consistency grid on top (`components/ConsistencyDots.tsx`: a column per week, Monday at the top; green = a day with a workout, sauna-only days don't count).
+- **Resume screen** (`PendingMode`) shows how long ago the session started and what's already logged (`N exercises · N sets: names…`).
+
 ---
 
 ## 4. Important Architectural Decisions
