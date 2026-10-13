@@ -3,12 +3,16 @@
 // tab bar and Android's navigation area. Only for screens inside the tab
 // navigator (uses its tab bar height).
 //
+// Height is capped to the space between the status bar and the tab bar, and
+// the content scrolls inside when it's taller — so a long sheet never runs
+// under the status bar or gets cut off.
+//
 // `raised`: show the sheet at the top of the screen instead — use it while a
 // text field is focused. On Android the keyboard isn't reported to Modal
 // windows (and the app is edge-to-edge, so nothing resizes), so a bottom
 // sheet can't move above the keyboard; the top of the screen is always clear.
 import { ReactNode } from "react";
-import { Modal, Pressable, View } from "react-native";
+import { Modal, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -25,6 +29,10 @@ export default function BottomSheet({
 }) {
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useWindowDimensions();
+  const GAP = 12;
+  const maxHeight =
+    screenHeight - insets.top - GAP - (raised ? GAP : tabBarHeight + GAP);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -47,9 +55,13 @@ export default function BottomSheet({
             borderWidth: 1,
             borderColor: "#222",
             marginHorizontal: 6,
-            paddingHorizontal: 18,
+            marginTop: raised ? 0 : insets.top + GAP,
+            maxHeight,
+            // Also shrink to the space actually left (in case the modal window
+            // doesn't extend under the status bar on some devices).
+            flexShrink: 1,
             paddingTop: 10,
-            paddingBottom: 18,
+            overflow: "hidden",
           }}
         >
           <View
@@ -62,7 +74,14 @@ export default function BottomSheet({
               marginBottom: 12,
             }}
           />
-          {children}
+          <ScrollView
+            style={{ flexGrow: 0, flexShrink: 1 }}
+            contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 18 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator
+          >
+            {children}
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
