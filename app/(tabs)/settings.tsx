@@ -3,6 +3,7 @@ import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Sharing from "expo-sharing";
 import Constants from "expo-constants";
+import { useToast } from "@/components/ui/Toast";
 import { useFocusEffect } from "expo-router";
 
 import { getAllExercises } from "@/db/exercises";
@@ -36,6 +37,8 @@ export default function SettingsScreen() {
   const [syncing, setSyncing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  // Confirmations fade in at the bottom; errors still use Alert.
+  const toast = useToast();
   const [showSessions, setShowSessions] = useState(false);
   const [showExercises, setShowExercises] = useState(false);
   const [lastLibrarySync, setLastLibrarySync] = useState<string | null>(null);
@@ -56,7 +59,7 @@ export default function SettingsScreen() {
     try {
       const path = await exportAllDataToFile();
       console.log("Exported data to:", path);
-      Alert.alert("Export complete", `Backup saved to:\n${path}`);
+      toast.show(`Backup saved · ${path.split("/").pop()}`);
     } catch (e) {
       Alert.alert("Export failed", String(e));
     }
@@ -68,7 +71,7 @@ export default function SettingsScreen() {
 
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) {
-        Alert.alert("Sharing not available on this device");
+        toast.show("Sharing isn't available on this device");
         return;
       }
 
@@ -95,10 +98,9 @@ export default function SettingsScreen() {
             try {
               setRestoring(true);
               const r = await restoreFromGoogleSheets();
-              Alert.alert(
-                "Restore complete",
-                `Added ${r.newSessions} sessions and ${r.newExercises} exercises.\n` +
-                  `Gym set on ${r.gymsUpdated} session${r.gymsUpdated === 1 ? "" : "s"}.`,
+              toast.show(
+                `Restored · +${r.newSessions} sessions, +${r.newExercises} exercises · ` +
+                  `gym set on ${r.gymsUpdated} session${r.gymsUpdated === 1 ? "" : "s"}`,
               );
             } catch (e) {
               Alert.alert("Restore failed", String(e));
@@ -132,7 +134,10 @@ export default function SettingsScreen() {
         }}
       >
         <Text style={{ color: "#fff", fontSize: 18 }}>Settings</Text>
-        <View
+        {/* Long-press the version to show/hide the debug JSON (dev tool). */}
+        <Pressable
+          onLongPress={() => setShowDebug((v) => !v)}
+          delayLongPress={600}
           style={{
             paddingVertical: 3,
             paddingHorizontal: 10,
@@ -145,7 +150,7 @@ export default function SettingsScreen() {
           <Text style={{ color: "#7bc47f", fontSize: 14, fontWeight: "600" }}>
             v{Constants.expoConfig?.version ?? "—"}
           </Text>
-        </View>
+        </Pressable>
       </View>
 
       {!isSyncConfigured() && (
@@ -236,7 +241,7 @@ export default function SettingsScreen() {
               await syncToGoogleSheets();
               const ts = await getLastGoogleSheetsSync();
               setLastSync(ts);
-              Alert.alert("Sync complete", "Workout history synced to Google Sheets.");
+              toast.show("History pushed to Google Sheets");
             } catch (e) {
               Alert.alert("Sync failed", String(e));
             } finally {
@@ -303,7 +308,7 @@ export default function SettingsScreen() {
               const ts = await getLastExerciseLibrarySync();
               setLastLibrarySync(ts);
               setUnsyncedNames(getLoggedExercisesNotInLibrary());
-              Alert.alert("Library synced", `${count} exercises in library.`);
+              toast.show(`Library pulled · ${count} exercises`);
             } catch (e) {
               Alert.alert("Library sync failed", String(e));
             } finally {
@@ -395,22 +400,6 @@ export default function SettingsScreen() {
 
       <View style={{ height: 16 }} />
 
-      <Pressable
-        onPress={() => setShowDebug((v) => !v)}
-        style={{
-          backgroundColor: "#222",
-          paddingVertical: 12,
-          borderRadius: 8,
-          alignItems: "center",
-          borderWidth: 1,
-          borderColor: "#333",
-        }}
-      >
-        <Text style={{ color: "#fff", fontSize: 14 }}>
-          {showDebug ? "Hide Debug JSON" : "Show Debug JSON"}
-        </Text>
-      </Pressable>
-
       {showDebug && (
         <ScrollView
           style={{
@@ -483,6 +472,7 @@ export default function SettingsScreen() {
         </Text>
       </View>
       </View>
+      {toast.element}
     </SafeAreaView>
   );
 }

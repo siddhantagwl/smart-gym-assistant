@@ -144,25 +144,11 @@ export default function HistoryScreen() {
               borderRadius: 8,
               borderWidth: 1,
               borderColor: colors.accent,
-              marginRight: 8,
             }}
           >
             <Text style={{ color: colors.accent, fontSize: 14 }}>
               + Add session
             </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={load}
-            style={{
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text style={{ color: colors.accent, fontSize: 14 }}>Refresh</Text>
           </Pressable>
         </View>
       </View>

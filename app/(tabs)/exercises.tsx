@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, SectionList, Pressable, Linking, Animated } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -16,6 +16,7 @@ import {
 import { getActiveSession } from "@/db/sessions";
 import { addToUpNext, removeFromUpNext, useUpNext } from "@/hooks/use-up-next";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useToast } from "@/components/ui/Toast";
 
 const colors = {
   bg: "#000",
@@ -109,16 +110,8 @@ export default function ExercisesScreen() {
   const queued = sessionId && upNext.sessionId === sessionId ? upNext.items : [];
   const current = sessionId ? upNext.current : null;
 
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  function showToast(msg: string) {
-    setToast(msg);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToast(null), 2200);
-  }
-  useEffect(() => () => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-  }, []);
+  const toast = useToast(2200);
+  const showToast = toast.show;
 
   const muscles = useMemo(() => {
     const map: Record<string, number> = {};
@@ -704,24 +697,7 @@ export default function ExercisesScreen() {
         }
       />
 
-      {toast ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            bottom: 16,
-            alignSelf: "center",
-            paddingVertical: 8,
-            paddingHorizontal: 14,
-            borderRadius: 999,
-            backgroundColor: "#1a2240",
-            borderWidth: 1,
-            borderColor: "#3a5eff",
-          }}
-        >
-          <Text style={{ color: "#c9d4ff", fontSize: 13, fontWeight: "600" }}>{toast}</Text>
-        </View>
-      ) : null}
+      {toast.element}
     </View>
   );
 
