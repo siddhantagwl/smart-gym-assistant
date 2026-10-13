@@ -916,8 +916,12 @@ export default function AddExercise({
         <View style={{ height: 4 }} />
 
 
+        {/* Distinct keys matter: without them React reuses one Pressable for both
+            buttons, so the finger still down after hold-to-finish would land as a
+            tap on "Start Exercise" once Up next loads the next exercise. */}
         {!isExerciseActive ? (
           <Pressable
+            key="start-exercise"
             onPress={() => onSave()}
             disabled={!canStart}
             style={{
@@ -940,6 +944,7 @@ export default function AddExercise({
           </Pressable>
         ) : (
           <Pressable
+            key="finish-exercise"
             disabled={!canFinish}
             delayLongPress={HOLD_MS}
             onPressIn={() => {

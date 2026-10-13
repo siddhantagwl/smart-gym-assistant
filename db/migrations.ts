@@ -116,6 +116,16 @@ const NOTES2_FIXES_2026_10: Record<
 const LATERAL_RAISE_FIX = { id: "1771168514228", weightKg: 10, note: "logged 20 kg = both dumbbells; 10 per dumbbell" };
 const DROP_LABEL = { sessionId: "1783595515984", label: "Chest" };
 
+// 13 Oct 2026: the hold-to-finish bug started the queued Lat Pulldown on
+// finger release (set 1 ran 230 s). Set 1 → 44 s, start moved to when it
+// really began. Mirrors apps-script/FixAutoStart_2026_10_13.gs.
+const AUTOSTART_FIX_2026_10_13 = {
+  id: "1791889222346",
+  startTime: "2026-10-13T10:52:23.044Z",
+  setLog:
+    '[{"reps":8,"weightKg":60,"weightUnit":"kg","durationSec":44},{"reps":8,"weightKg":60,"weightUnit":"kg","durationSec":46},{"reps":8,"weightKg":60,"weightUnit":"kg","durationSec":42}]',
+};
+
 export function runDataMigrations() {
   const row = db.getFirstSync(`PRAGMA user_version;`) as { user_version: number } | null;
   const version = row?.user_version ?? 0;
@@ -204,6 +214,22 @@ export function runDataMigrations() {
         } catch {}
       }
       db.execSync(`PRAGMA user_version = 4;`);
+      db.execSync("COMMIT;");
+    } catch (err) {
+      db.execSync("ROLLBACK;");
+      throw err;
+    }
+  }
+
+  if (version < 5) {
+    db.execSync("BEGIN;");
+    try {
+      db.runSync(`UPDATE exercises SET start_time = ?, set_log = ? WHERE id = ?;`, [
+        AUTOSTART_FIX_2026_10_13.startTime,
+        AUTOSTART_FIX_2026_10_13.setLog,
+        AUTOSTART_FIX_2026_10_13.id,
+      ]);
+      db.execSync(`PRAGMA user_version = 5;`);
       db.execSync("COMMIT;");
     } catch (err) {
       db.execSync("ROLLBACK;");
