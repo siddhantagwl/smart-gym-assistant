@@ -304,7 +304,7 @@ export default function ExercisesScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder={`Search ${movements.length} exercises`}
+          placeholder={`Search ${movements.length} exercises · ${exercises.length} variants`}
           placeholderTextColor="#666"
           style={{
             backgroundColor: colors.card,
