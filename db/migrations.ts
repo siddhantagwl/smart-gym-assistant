@@ -126,6 +126,14 @@ const AUTOSTART_FIX_2026_10_13 = {
     '[{"reps":8,"weightKg":60,"weightUnit":"kg","durationSec":44},{"reps":8,"weightKg":60,"weightUnit":"kg","durationSec":46},{"reps":8,"weightKg":60,"weightUnit":"kg","durationSec":42}]',
 };
 
+// Oct 2026: hip machines renamed so the direction is explicit; logged
+// entries follow (name-based features). Mirrors
+// apps-script/RenameHipMachines_2026_10.gs.
+const HIP_RENAMES_2026_10: Record<string, string> = {
+  machine_hip_abduction: "Machine Hip Abduction (push out)",
+  machine_hip_adduction: "Machine Hip Adduction (squeeze in)",
+};
+
 export function runDataMigrations() {
   const row = db.getFirstSync(`PRAGMA user_version;`) as { user_version: number } | null;
   const version = row?.user_version ?? 0;
@@ -230,6 +238,23 @@ export function runDataMigrations() {
         AUTOSTART_FIX_2026_10_13.id,
       ]);
       db.execSync(`PRAGMA user_version = 5;`);
+      db.execSync("COMMIT;");
+    } catch (err) {
+      db.execSync("ROLLBACK;");
+      throw err;
+    }
+  }
+
+  if (version < 6) {
+    db.execSync("BEGIN;");
+    try {
+      Object.entries(HIP_RENAMES_2026_10).forEach(([libraryId, name]) => {
+        db.runSync(`UPDATE exercises SET name = ? WHERE exercise_library_id = ?;`, [
+          name,
+          libraryId,
+        ]);
+      });
+      db.execSync(`PRAGMA user_version = 6;`);
       db.execSync("COMMIT;");
     } catch (err) {
       db.execSync("ROLLBACK;");
