@@ -364,7 +364,7 @@ Kept to five rows: title + tagline · one quiet line "🔥 3-day streak · 📅 
 - **Feel:** light haptic on set taps, success haptic on a PR, a warning buzz once when the rest target is reached; the rest ring goes yellow → orange (≤ 10 s) → red (over); `LayoutAnimation` when exercises finish/undo and Up next changes.
 - **Readability:** no text below 12 pt, greys lightened (`#555/#666 → #888`, `#777 → #999`), bigger tap areas on small buttons.
 - **Session saved screen** shows a summary: minutes · exercises · sets, the muscles you confirmed, and up to 3 PRs hit this session (tracked in `sessionPrsRef` when the PR badge fires).
-- **History:** month headings (SectionList), discarded sessions hidden (still in the DB/Sheet), each card shows the 📍 gym, a 12-week consistency grid pinned above the list (`components/ConsistencyDots.tsx`: a column per week, Monday at the top; green = a day with a workout, sauna-only days don't count).
+- **History:** month headings (SectionList), discarded sessions hidden (still in the DB/Sheet), each card shows the 📍 gym, a 12-week consistency grid pinned above the list (`components/ConsistencyDots.tsx`: a column per week, M–S labels down the side; a day with a workout is green, brighter for more sets (< 12 · 12–17 · 18–22 · 23+, from `getSetTotalsBySession`); sauna-only days don't count. Tap a day → one line under the grid with muscles · sets · minutes · gym (or "rest day"); otherwise that line shows the shade legend. Stats: days in 12 weeks, weeks with 3+ days out of 12, days this week).
 - **Resume screen** (`PendingMode`) shows how long ago the session started and what's already logged (`N exercises · N sets: names…`).
 
 ---

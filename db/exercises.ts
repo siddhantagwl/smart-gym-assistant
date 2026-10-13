@@ -188,6 +188,18 @@ export function getExercisesForSession(sessionId: string): StoredExercise[] {
   }));
 }
 
+// Total sets per session id, in one query (History's workload shading).
+export function getSetTotalsBySession(): Record<string, number> {
+  const rows = db.getAllSync(
+    `SELECT session_id, SUM(sets) as s FROM exercises GROUP BY session_id;`
+  ) as any[];
+  const out: Record<string, number> = {};
+  rows.forEach((r) => {
+    out[String(r.session_id)] = Number(r.s) || 0;
+  });
+  return out;
+}
+
 export function getExerciseCountForSession(sessionId: string): number {
   const row = db.getFirstSync(
     `SELECT COUNT(1) as c FROM exercises WHERE session_id = ?;`,

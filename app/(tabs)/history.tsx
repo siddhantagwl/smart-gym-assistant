@@ -10,9 +10,9 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, SectionList, Text, View } from "react-native";
 
-import ConsistencyDots, { dayKey } from "@/components/ConsistencyDots";
+import ConsistencyDots, { DayInfo, dayKey } from "@/components/ConsistencyDots";
 
-import { getExerciseCountForSession } from "@/db/exercises";
+import { getExerciseCountForSession, getSetTotalsBySession } from "@/db/exercises";
 import { getAllSessions, StoredSession } from "@/db/sessions";
 
 const colors = {
@@ -43,7 +43,7 @@ function durationMinutes(start: Date, end: Date) {
   return `${mins} min`;
 }
 
-type Row = StoredSession & { exerciseCount: number };
+type Row = StoredSession & { exerciseCount: number; sets: number };
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -53,6 +53,7 @@ export default function HistoryScreen() {
   // so that we can safely use it in useEffect and useFocusEffect without causing unnecessary re-renders or infinite loops.
   const load = useCallback(() => {
     const sessions = getAllSessions();
+    const setTotals = getSetTotalsBySession();
 
     // Discarded sessions stay in the database (and the Sheet) but aren't shown.
     const enriched = sessions
@@ -60,6 +61,7 @@ export default function HistoryScreen() {
       .map((s) => ({
         ...s,
         exerciseCount: getExerciseCountForSession(s.id),
+        sets: setTotals[s.id] ?? 0,
       }))
       .sort((a, b) => {
         const at = new Date(a.startTime).getTime();
@@ -84,16 +86,27 @@ export default function HistoryScreen() {
     return out;
   }, [rows]);
 
-  // Days with a workout (sauna-only sessions don't count).
-  const trainedDays = useMemo(
-    () =>
-      new Set(
-        rows
-          .filter((r) => r.exerciseCount > 0 || r.sessionLabels.some((l) => l !== "Sauna"))
-          .map((r) => dayKey(new Date(r.startTime))),
-      ),
-    [rows],
-  );
+  // Each day with a workout, for the dots (sauna-only sessions don't count).
+  const days = useMemo(() => {
+    const out = new Map<string, DayInfo>();
+    rows
+      .filter((r) => r.exerciseCount > 0 || r.sessionLabels.some((l) => l !== "Sauna"))
+      .forEach((r) => {
+        const start = new Date(r.startTime);
+        const key = dayKey(start);
+        const d = out.get(key) ?? { sets: 0, minutes: 0, muscles: [], gyms: [] };
+        d.sets += r.sets;
+        if (r.endTime) {
+          d.minutes += Math.max(0, Math.round((new Date(r.endTime).getTime() - start.getTime()) / 60000));
+        }
+        r.sessionLabels
+          .filter((l) => l !== "Sauna" && !d.muscles.includes(l))
+          .forEach((l) => d.muscles.push(l));
+        if (r.gym && !d.gyms.includes(r.gym)) d.gyms.push(r.gym);
+        out.set(key, d);
+      });
+    return out;
+  }, [rows]);
 
   // render historyscreen for fisrt time.
   // load will query db and update rows state, which will
@@ -185,7 +198,7 @@ export default function HistoryScreen() {
       {/* Stays put; only the sessions below scroll. */}
       {rows.length > 0 && (
         <View style={{ paddingHorizontal: 16 }}>
-          <ConsistencyDots trainedDays={trainedDays} />
+          <ConsistencyDots days={days} />
         </View>
       )}
 
