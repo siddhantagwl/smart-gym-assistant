@@ -182,6 +182,13 @@ export default function HistoryScreen() {
         </View>
       </View>
 
+      {/* Stays put; only the sessions below scroll. */}
+      {rows.length > 0 && (
+        <View style={{ paddingHorizontal: 16 }}>
+          <ConsistencyDots trainedDays={trainedDays} />
+        </View>
+      )}
+
       {rows.length === 0 ? (
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <Text style={{ color: colors.muted, fontSize: 16 }}>
@@ -194,7 +201,6 @@ export default function HistoryScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
           stickySectionHeadersEnabled={false}
-          ListHeaderComponent={<ConsistencyDots trainedDays={trainedDays} />}
           renderSectionHeader={({ section }) => (
             <Text
               style={{
@@ -333,6 +339,7 @@ export default function HistoryScreen() {
                 </View>
 
                 <Text
+                  numberOfLines={1}
                   style={{
                     color: colors.muted,
                     marginBottom: item.note ? 6 : 10,
@@ -340,6 +347,7 @@ export default function HistoryScreen() {
                 >
                   {formatTime(start)}
                   {end ? ` to ${formatTime(end)}` : ""}
+                  {item.gym ? `  ·  📍 ${item.gym}` : ""}
                 </Text>
 
                 {item.note ? (
