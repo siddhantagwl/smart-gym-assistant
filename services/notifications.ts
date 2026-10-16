@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 import { SetEntry } from "@/domain/exercise";
+import { RestLive } from "@/modules/rest-live";
 
 // Rest-done alert + the over-time nudge: long vibration so it's hard to miss.
 // Android locks a channel's vibration once created, hence "-v2"; the old
@@ -157,11 +158,18 @@ export function showRestNotifications(
     await clearRest();
     if (seconds <= 0) return;
     const t = restTexts(kind, total, details);
-    await Notifications.scheduleNotificationAsync({
-      identifier: REST_ID,
-      content: { title: t.start.title, body: t.start.body, sound: false, data: { quiet: true } },
-      trigger: Platform.OS === "android" ? { channelId: REST_STATUS_CHANNEL_ID } : null,
-    });
+    if (RestLive) {
+      // Native: countdown ticks by itself in the shade / lock screen, and on
+      // Android 16 shows as a Live Update chip. Same "rest" slot, so the alert
+      // below still replaces it.
+      RestLive.post(REST_ID, REST_STATUS_CHANNEL_ID, t.start.title, t.start.body, Date.now() + seconds * 1000);
+    } else {
+      await Notifications.scheduleNotificationAsync({
+        identifier: REST_ID,
+        content: { title: t.start.title, body: t.start.body, sound: false, data: { quiet: true } },
+        trigger: Platform.OS === "android" ? { channelId: REST_STATUS_CHANNEL_ID } : null,
+      });
+    }
     await Notifications.scheduleNotificationAsync({
       identifier: REST_ID,
       content: { title: t.done.title, body: t.done.body, sound: "default" },
