@@ -30,6 +30,7 @@
     },
     "plugins": [
       "expo-router",
+      "./modules/rest-pip/app.plugin.js",
       [
         "expo-splash-screen",
         {
