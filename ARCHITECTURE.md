@@ -104,12 +104,12 @@ A mobile-first gym logging application focused on:
 Target platform is Android. When the app is backgrounded (user switches apps, locks screen), Android suspends/throttles the JS thread — `setInterval` stops, JS-driven `Animated` pauses. The system handles this in three coordinated pieces, all keyed off `restStartRef`:
 
 1. **Visible counter (`restSeconds`)** — every `setInterval` tick recomputes the displayed value as `duration - secondsBetween(new Date(), restStartRef.current)`, **not** `prev - 1`. So when JS resumes in the foreground, the next tick (within ~1s) snaps the counter to the correct elapsed value. Counter goes negative past 0 to indicate "rest exceeded". Don't refactor this back to decrementing — that's the broken pattern we replaced.
-2. **OS-scheduled local notification** — `services/notifications.ts` schedules an `expo-notifications` time-interval notification at `restStartRef + duration` whenever rest starts. ID kept in `restNotificationIdRef`. Fires regardless of JS state — app backgrounded, screen off, app killed. Two kinds:
-   - `"set"` (type target: 2:30 compound / 1:15 isolation / 1:00 cardio / 1:30 other) → title "Rest done", body "Time for your next set"
-   - `"transition"` (120s) → title "Next exercise", body "Ready for the next exercise"
+2. **Rest notifications** — whenever rest starts, `showRestNotifications()` in `services/notifications.ts` posts a notice now (`rest-status-v2` channel: HIGH importance so it pops up, no sound/vibration; replaced the DEFAULT-importance `rest-status`, which only reached the shade — channel importance can't be raised after creation) and schedules an `expo-notifications` time-interval alert at `restStartRef + duration` (`rest-timer-v2` channel, long ~2s vibration). Both use the identifier `"rest"`, so the alert replaces the notice. A nudge (`"rest-nudge"`) is also scheduled 30s after the end — "Rest +0:30 · Set N" / "Switch +0:30" — in case the first buzz was missed. The alert fires regardless of JS state — app backgrounded, screen off, app killed. They're normal (not ongoing) notifications so watch apps forward them; text is kept to the timer + exercise for the user's small watch screen. Two kinds:
+   - `"set"` (type target: 2:30 compound / 1:15 isolation / 1:00 cardio / 1:30 other) → notice "Rest 2:30" / "Bench Press · set 3 next"; alert "Rest done · Set 3" / "Bench Press"
+   - `"transition"` (120s) → notice "Switch 2:00" / "Bench Press done"; alert "Next exercise" / "Bench Press done"
 3. **Saved rest value** — `secondsBetween(new Date(), restStartRef)` accumulated into `accumulatedRest` on `stopRestTimer`. Wall-clock math, independent of JS thread state.
 
-**Cancellation invariants:** at most one rest notification scheduled at any time. `startRestTimer` cancels any prior `restNotificationIdRef` before scheduling a new one. `stopRestTimer` cancels the saved ID. Every code path that ends rest goes through `stopRestTimer`.
+**Cancellation invariants:** only one rest's notifications at any time. `showRestNotifications` clears the `"rest"` and `"rest-nudge"` notifications (cancel scheduled + dismiss shown) before posting new ones; `stopRestTimer` calls `clearRestNotifications()`. All of these run through a serial promise queue, so a stop immediately followed by a start can't dismiss the new notice. Every code path that ends rest goes through `stopRestTimer`.
 
 **Notification handler:** `Notifications.setNotificationHandler` runs at module load in `services/notifications.ts`. Without it, `expo-notifications` suppresses banner/sound while the app is foregrounded — meaning the user wouldn't see the buzz if they were staring at the rest screen. Override forces show.
 
@@ -486,7 +486,7 @@ This means the user can edit the library outside the app and have changes propag
 ### Services
 
 - `services/googleSheetsSync.ts` — sessions + exercises POST sync, GET-based restore, library sync via `?type=library`, plus `isSyncConfigured()` and `getSpreadsheetUrl()` helpers for the Settings UI.
-- `services/notifications.ts` — `expo-notifications` wrapper. Configures the rest-timer Android channel + permission request (`setupNotifications`, called from `_layout.tsx`), exposes `scheduleRestDoneNotification(seconds, kind)` and `cancelRestNotification(id)`, sets a foreground notification handler at module load.
+- `services/notifications.ts` — `expo-notifications` wrapper. Configures the rest-timer Android channel + permission request (`setupNotifications`, called from `_layout.tsx`), plus the silent rest-status channel, exposes `showRestNotifications(remaining, total, kind, details)` and `clearRestNotifications()`, sets a foreground notification handler at module load.
 
 ### UI
 
@@ -555,10 +555,9 @@ sequenceDiagram
   participant OS as Android OS
   User->>ActiveSession: Finish Set
   ActiveSession->>ActiveSession: restStartRef = now
-  ActiveSession->>Notif: scheduleRestDoneNotification(90, "set")
-  Notif->>OS: schedule local notification at +90s
-  OS-->>Notif: id
-  Notif-->>ActiveSession: id (stored in restNotificationIdRef)
+  ActiveSession->>Notif: showRestNotifications(90, 90, "set", details)
+  Notif->>OS: post quiet "resting" notice (id "rest")
+  Notif->>OS: schedule alert at +90s (id "rest", replaces notice)
   ActiveSession->>TimerUI: show 90s countdown
   loop Every second (foreground only)
     ActiveSession->>TimerUI: restSeconds = duration - secondsBetween(now, restStartRef)
@@ -574,14 +573,14 @@ sequenceDiagram
   end
   alt User starts next set (or finishes exercise / manual close)
     User->>ActiveSession: Start Set
-    ActiveSession->>Notif: cancelRestNotification(restNotificationIdRef)
-    Notif->>OS: cancel scheduled alarm
+    ActiveSession->>Notif: clearRestNotifications()
+    Notif->>OS: cancel scheduled alarm + dismiss notice
     ActiveSession->>ActiveSession: elapsed = now - restStartRef
     ActiveSession->>ActiveSession: accumulatedRest += elapsed
     ActiveSession->>TimerUI: hide timer
     opt Saving Set rest, restart for next set
       ActiveSession->>ActiveSession: restStartRef = now
-      ActiveSession->>Notif: scheduleRestDoneNotification(90, "set")
+      ActiveSession->>Notif: showRestNotifications(90, 90, "set", details)
     end
   end
 ```

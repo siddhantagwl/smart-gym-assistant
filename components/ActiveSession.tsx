@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { useKeepAwake } from "expo-keep-awake";
 import {
-  scheduleRestDoneNotification,
-  cancelRestNotification,
+  clearRestNotifications,
+  RestDetails,
+  showRestNotifications,
 } from "@/services/notifications";
 import { Animated, LayoutAnimation, Pressable, Text, TextInput, View } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -624,14 +625,16 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     }
   }, [isResting]);
 
-  // Holds the OS-scheduled "rest done" notification ID so we can cancel it
-  // when rest is stopped early (Start Set, Finish Exercise, manual close).
-  const restNotificationIdRef = useRef<string | null>(null);
+  // What the rest notifications (phone + watch) show; see services/notifications.ts.
+  function restDetails(name: string, log: SetEntry[]): RestDetails {
+    return { exercise: name.trim() || "Exercise", log };
+  }
 
   // `startedAt` lets Undo resume a rest that began before the exercise was finished.
   function startRestTimer(
-    duration: number = 90,
-    kind: "set" | "transition" = "set",
+    duration: number,
+    kind: "set" | "transition",
+    details: RestDetails,
     startedAt: Date = new Date(),
   ) {
     if (intervalRef.current) {
@@ -641,13 +644,8 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     const alreadyElapsed = secondsBetween(new Date(), startedAt);
     const remaining = duration - alreadyElapsed;
 
-    cancelRestNotification(restNotificationIdRef.current);
-    restNotificationIdRef.current = null;
-    if (remaining > 0) {
-      scheduleRestDoneNotification(remaining, kind).then((id) => {
-        restNotificationIdRef.current = id;
-      });
-    }
+    // Quiet "resting" notice now, alert when the rest ends; replaces any previous one.
+    showRestNotifications(remaining, duration, kind, details);
 
     restStartRef.current = startedAt;
     restKindRef.current = kind;
@@ -701,8 +699,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       intervalRef.current = null;
     }
 
-    cancelRestNotification(restNotificationIdRef.current);
-    restNotificationIdRef.current = null;
+    clearRestNotifications();
 
     restRingProgress.stopAnimation();
     setRestSeconds(null);
@@ -1226,7 +1223,11 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     }
     setSets((prev) => prev + 1);
     setRestType("set");
-    startRestTimer(restTarget.seconds, "set");
+    startRestTimer(
+      restTarget.seconds,
+      "set",
+      restDetails(exerciseName, [...setLogRef.current]),
+    );
     onScrollToTop?.();
 
     // PR check: fire once per exercise instance, when this set's weight
@@ -1316,7 +1317,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     // Start transition rest after finishing exercise
     setRestType("transition");
-    startRestTimer(120, "transition");
+    startRestTimer(120, "transition", restDetails(exerciseName, [...setLogRef.current]));
 
     resetExerciseState();
 
@@ -1365,6 +1366,8 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     });
     setIsExerciseActive(true);
 
+    const rows = getExercisesForSession(activeSession.id);
+
     if (u.restStartedAt) {
       setRestType(u.restType ?? "set");
       startRestTimer(
@@ -1373,6 +1376,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
             exerciseLibrary.find((l) => l.name === u.name)?.tags,
         ).seconds,
         "set",
+        restDetails(u.name, u.setLog),
         new Date(u.restStartedAt),
       );
     } else {
@@ -1380,7 +1384,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     }
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setSessionExercises(getExercisesForSession(activeSession.id));
+    setSessionExercises(rows);
     onScrollToTop?.();
   }
 
