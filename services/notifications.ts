@@ -40,6 +40,23 @@ Notifications.setNotificationHandler({
 
 let setupRan = false;
 
+// False when Android would swallow the rest alert: the app's notification
+// permission is off, or the user switched off the "Rest timer" channel.
+// Settings shows a red "Notifications off" line — otherwise this fails silently.
+export async function restNotificationsEnabled(): Promise<boolean> {
+  try {
+    const perm = await Notifications.getPermissionsAsync();
+    if (!perm.granted) return false;
+    if (Platform.OS === "android") {
+      const channel = await Notifications.getNotificationChannelAsync(REST_CHANNEL_ID);
+      if (channel && channel.importance === Notifications.AndroidImportance.NONE) return false;
+    }
+    return true;
+  } catch {
+    return true; // can't tell — don't nag
+  }
+}
+
 // Idempotent: requests permission, configures the Android channel.
 // Called once on app boot. Safe to call again — the OS no-ops on dupes.
 export async function setupNotifications(): Promise<boolean> {

@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, AppState, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Sharing from "expo-sharing";
 import Constants from "expo-constants";
@@ -19,6 +19,7 @@ import {
   isSyncConfigured,
   getSpreadsheetUrl,
 } from "@/services/googleSheetsSync";
+import { restNotificationsEnabled } from "@/services/notifications";
 
 function formatDateTime(ts: string) {
   const d = new Date(ts);
@@ -47,8 +48,20 @@ export default function SettingsScreen() {
     { name: string; count: number; lastLogged: string }[]
   >([]);
 
+  const [notificationsOn, setNotificationsOn] = useState(true);
+
+  // Also re-check when coming back from the system settings screen (that
+  // returns to the app, not to this tab, so focus doesn't fire).
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") restNotificationsEnabled().then(setNotificationsOn);
+    });
+    return () => sub.remove();
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
+      restNotificationsEnabled().then(setNotificationsOn);
       getLastGoogleSheetsSync().then(setLastSync);
       getLastExerciseLibrarySync().then(setLastLibrarySync);
       setUnsyncedNames(getLoggedExercisesNotInLibrary());
@@ -152,6 +165,25 @@ export default function SettingsScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {!notificationsOn && (
+        <Pressable
+          onPress={() => Linking.openSettings()}
+          style={{
+            backgroundColor: "rgba(229, 57, 53, 0.15)",
+            borderColor: "#e53935",
+            borderWidth: 1,
+            borderRadius: 8,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            marginBottom: 16,
+          }}
+        >
+          <Text numberOfLines={1} style={{ color: "#ff8a80", fontSize: 13, fontWeight: "600" }}>
+            🔕 Rest notifications off · Open settings ›
+          </Text>
+        </Pressable>
+      )}
 
       {!isSyncConfigured() && (
         <View
