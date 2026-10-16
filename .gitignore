@@ -43,3 +43,6 @@ app-example
 /android
 
 .env
+# Gradle output of local native modules (modules/*/android)
+modules/*/android/build/
+modules/*/android/.cxx/
