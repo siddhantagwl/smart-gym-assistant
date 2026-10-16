@@ -8,7 +8,7 @@
 
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, SectionList, Text, View } from "react-native";
+import { Pressable, ScrollView, SectionList, Text, View } from "react-native";
 
 import ConsistencyDots, { DayInfo, dayKey } from "@/components/ConsistencyDots";
 
@@ -48,6 +48,7 @@ type Row = StoredSession & { exerciseCount: number; sets: number };
 export default function HistoryScreen() {
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>([]);
+  const [gymFilter, setGymFilter] = useState<string | null>(null);
 
   // useCallback will ensure that the load function is stable across renders,
   // so that we can safely use it in useEffect and useFocusEffect without causing unnecessary re-renders or infinite loops.
@@ -72,10 +73,44 @@ export default function HistoryScreen() {
     setRows(enriched);
   }, []);
 
+  // Gyms in use, most recent first (rows are newest-first).
+  const gyms = useMemo(
+    () => [...new Set(rows.map((r) => r.gym).filter(Boolean))],
+    [rows],
+  );
+
+  // A gym that no longer appears (e.g. renamed) falls back to All.
+  const activeGym = gymFilter && gyms.includes(gymFilter) ? gymFilter : null;
+  const visible = useMemo(
+    () => (activeGym ? rows.filter((r) => r.gym === activeGym) : rows),
+    [rows, activeGym],
+  );
+
+  // One-line summary for the selected gym.
+  const gymStats = useMemo(() => {
+    if (!activeGym || visible.length === 0) return null;
+    const sets = visible.reduce((n, r) => n + r.sets, 0);
+    const timed = visible.filter((r) => r.endTime);
+    const avgMin = timed.length
+      ? Math.round(
+          timed.reduce(
+            (n, r) => n + (new Date(r.endTime!).getTime() - new Date(r.startTime).getTime()) / 60000,
+            0,
+          ) / timed.length,
+        )
+      : null;
+    const last = new Date(visible[0].startTime).toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    });
+    return { sets, avgMin, last };
+  }, [activeGym, visible]);
+
   // Newest month first; rows are already newest-first.
   const sections = useMemo(() => {
     const out: { title: string; data: Row[] }[] = [];
-    rows.forEach((r) => {
+    visible.forEach((r) => {
       const title = new Date(r.startTime)
         .toLocaleDateString("en-GB", { month: "long", year: "numeric" })
         .toUpperCase();
@@ -84,12 +119,12 @@ export default function HistoryScreen() {
       else out.push({ title, data: [r] });
     });
     return out;
-  }, [rows]);
+  }, [visible]);
 
   // Each day with a workout, for the dots (sauna-only sessions don't count).
   const days = useMemo(() => {
     const out = new Map<string, DayInfo>();
-    rows
+    visible
       .filter((r) => r.exerciseCount > 0 || r.sessionLabels.some((l) => l !== "Sauna"))
       .forEach((r) => {
         const start = new Date(r.startTime);
@@ -106,7 +141,7 @@ export default function HistoryScreen() {
         out.set(key, d);
       });
     return out;
-  }, [rows]);
+  }, [visible]);
 
   // render historyscreen for fisrt time.
   // load will query db and update rows state, which will
@@ -166,7 +201,7 @@ export default function HistoryScreen() {
                 letterSpacing: 0.4,
               }}
             >
-              {rows.length} SESSIONS
+              {visible.length} SESSIONS
             </Text>
           </View>
         </View>
@@ -178,6 +213,45 @@ export default function HistoryScreen() {
             alignItems: "center",
           }}
         >
+          {gyms.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flex: 1, marginRight: 10 }}
+            >
+              {[null, ...gyms].map((g) => {
+                const on = g === activeGym;
+                return (
+                  <Pressable
+                    key={g ?? "__all__"}
+                    onPress={() => setGymFilter(g)}
+                    style={{
+                      paddingVertical: 5,
+                      paddingHorizontal: 12,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: on ? "#00B3FF" : colors.border,
+                      backgroundColor: on ? "rgba(0,150,255,0.12)" : "#141414",
+                      marginRight: 6,
+                      maxWidth: 140,
+                    }}
+                  >
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        color: on ? "#00B3FF" : colors.muted,
+                        fontSize: 13,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {g ?? "All"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+
           <Pressable
             onPress={() => router.push("/manual-session")}
             style={{
@@ -193,6 +267,13 @@ export default function HistoryScreen() {
             </Text>
           </Pressable>
         </View>
+
+        {gymStats && (
+          <Text numberOfLines={2} style={{ color: colors.muted, fontSize: 13, marginTop: 10 }}>
+            📍 {activeGym} · {visible.length} {visible.length === 1 ? "session" : "sessions"} · {gymStats.sets} sets
+            {gymStats.avgMin !== null ? ` · avg ${gymStats.avgMin} min` : ""} · last {gymStats.last}
+          </Text>
+        )}
       </View>
 
       {/* Stays put; only the sessions below scroll. */}
