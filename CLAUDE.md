@@ -121,6 +121,8 @@ Three cooperating pieces, all keyed off `restStartRef`:
 
 **Notification setup:** `setupNotifications()` in `services/notifications.ts` is called once on app boot from `app/_layout.tsx`. It registers the "rest-timer" Android channel (importance HIGH, vibration pattern, default sound) and requests notification permission. Idempotent. The module also calls `Notifications.setNotificationHandler` at module load to allow notifications to show even when the app is foregrounded — without this, `expo-notifications` suppresses everything while the app is on screen.
 
+**Exact alarms:** `app.json` declares `android.permission.USE_EXACT_ALARM` (auto-granted on Android 13+; fine for a sideloaded APK, though Play restricts it to alarm/timer apps). Without it, `expo-notifications` falls back to an inexact alarm (`setAndAllowWhileIdle`) and Android delays the rest-done alert by minutes — the alert must fire when the timer hits 0.
+
 **Android battery optimization caveat:** Android's Doze mode can delay scheduled notifications by 10-30+ seconds when the device is idle (screen off, in pocket — exactly the rest scenario). To get on-time delivery, the user must set the app to "Unrestricted" battery in system Settings. We don't request the `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission programmatically; that's a documented one-time per-device setup. The breathing-cat ring animation (`Animated.timing` on `restRingProgress`) is also JS-driven and will visually drift on long backgrounds — known cosmetic, not blocking.
 
 ### Path alias

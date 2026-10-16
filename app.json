@@ -21,7 +21,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.sidhant29.gymlog"
+      "package": "com.sidhant29.gymlog",
+      "permissions": ["android.permission.USE_EXACT_ALARM"]
     },
     "web": {
       "output": "static",
