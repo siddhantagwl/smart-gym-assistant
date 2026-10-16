@@ -6,6 +6,7 @@ import {
   RestDetails,
   showRestNotifications,
 } from "@/services/notifications";
+import { armRestPip, disarmRestPip } from "@/modules/rest-pip";
 import { Animated, LayoutAnimation, Pressable, Text, TextInput, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import Svg, { Circle } from "react-native-svg";
@@ -551,6 +552,8 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     setUpNextCurrent(name ? { name, active: isExerciseActive } : null);
   }, [exerciseName, isExerciseActive]);
   useEffect(() => () => setUpNextCurrent(null), []);
+  // Session screen gone (ended / discarded): no floating timer on leaving the app.
+  useEffect(() => () => disarmRestPip(), []);
 
   function formatDuration(totalSeconds: number) {
     const h = Math.floor(totalSeconds / 3600);
@@ -646,6 +649,12 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     // Quiet "resting" notice now, alert when the rest ends; replaces any previous one.
     showRestNotifications(remaining, duration, kind, details);
+    // Leaving the app during this rest opens the mini floating timer.
+    armRestPip(
+      new Date(startedAt.getTime() + duration * 1000),
+      kind === "set" ? `${details.exercise} · set ${details.log.length + 1}` : "Switch exercise",
+      kind,
+    );
 
     restStartRef.current = startedAt;
     restKindRef.current = kind;
@@ -700,6 +709,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     }
 
     clearRestNotifications();
+    disarmRestPip();
 
     restRingProgress.stopAnimation();
     setRestSeconds(null);
