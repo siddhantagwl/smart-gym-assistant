@@ -5,6 +5,7 @@
 import { getExerciseCountForSession, getSetTotalsBySession } from "@/db/exercises";
 import { getAllSessions } from "@/db/sessions";
 import { setWidgetDays } from "@/modules/home-widget";
+import { getPrefs } from "@/services/preferences";
 
 const DAYS_BACK = 14;
 
@@ -27,7 +28,7 @@ export function refreshHomeWidget(): void {
         const key = isoDay(new Date(s.startTime));
         days[key] = (days[key] ?? 0) + (setTotals[s.id] ?? 0);
       });
-    setWidgetDays(days);
+    setWidgetDays(days, getPrefs().weeklyTargetDays);
   } catch (e) {
     if (__DEV__) console.log("[widget] refresh failed:", e);
   }

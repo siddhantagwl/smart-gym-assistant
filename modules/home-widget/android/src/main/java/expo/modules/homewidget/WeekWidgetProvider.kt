@@ -25,7 +25,8 @@ class WeekWidgetProvider : AppWidgetProvider() {
   companion object {
     const val PREFS = "sadhana_home_widget"
     const val KEY_DAYS = "days"
-    private const val TARGET_DAYS = 3
+    const val KEY_TARGET = "target_days"
+    private const val DEFAULT_TARGET_DAYS = 3
 
     private val DOTS = intArrayOf(
       R.id.week_d0, R.id.week_d1, R.id.week_d2, R.id.week_d3, R.id.week_d4, R.id.week_d5, R.id.week_d6,
@@ -64,7 +65,9 @@ class WeekWidgetProvider : AppWidgetProvider() {
 
     fun render(context: Context): RemoteViews {
       val views = RemoteViews(context.packageName, R.layout.week_widget)
-      val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_DAYS, null)
+      val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+      val raw = prefs.getString(KEY_DAYS, null)
+      val targetDays = prefs.getInt(KEY_TARGET, DEFAULT_TARGET_DAYS)
       val days = runCatching { JSONObject(raw ?: "{}") }.getOrDefault(JSONObject())
 
       val today = Calendar.getInstance()
@@ -91,7 +94,7 @@ class WeekWidgetProvider : AppWidgetProvider() {
       }
 
       views.setTextViewText(R.id.week_count, "$trained/wk")
-      views.setTextColor(R.id.week_count, Color.parseColor(if (trained >= TARGET_DAYS) "#3BAF75" else "#FFFFFF"))
+      views.setTextColor(R.id.week_count, Color.parseColor(if (trained >= targetDays) "#3BAF75" else "#FFFFFF"))
 
       views.setOnClickPendingIntent(R.id.week_dots, openApp(context, 1, "history"))
       views.setOnClickPendingIntent(R.id.week_count, openApp(context, 1, "history"))
