@@ -7,6 +7,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEffect, useState } from "react";
 import { initDb } from "@/db/schema";
 import { setupNotifications } from "@/services/notifications";
+import { refreshHomeWidget } from "@/services/homeWidget";
+import { AppState } from "react-native";
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -20,6 +22,12 @@ export default function RootLayout() {
     initDb();
     setDbReady(true);
     setupNotifications();
+    refreshHomeWidget();
+    // Leaving the app: push the latest training days to the home widget.
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "background") refreshHomeWidget();
+    });
+    return () => sub.remove();
   }, []);
 
   if (!dbReady) {

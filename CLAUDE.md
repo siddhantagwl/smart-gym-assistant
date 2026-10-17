@@ -137,7 +137,7 @@ Three cooperating pieces, all keyed off `restStartRef`:
 
 ### Native modules
 
-Local Expo modules live in `modules/` (autolinked, Android only, JS wrappers no-op elsewhere): `rest-pip` (floating timer), `rest-live` (live countdown notification + buttons), `volume-keys`. Kotlin changes need a native rebuild (`./gradlew assembleRelease` in `android/`), not just Metro. Their `android/build/` output is gitignored.
+Local Expo modules live in `modules/` (autolinked, Android only, JS wrappers no-op elsewhere): `rest-pip` (floating timer), `rest-live` (live countdown notification + buttons), `volume-keys`, `home-widget` (4×1 "this week" widget: `WeekWidgetProvider` renders M–S dots from `{"yyyy-mm-dd": sets}` that `services/homeWidget.ts` pushes on boot and on every app → background; the week is computed natively at render, hourly, so it rolls over without the app; Start → `sadhana://`, dots → `sadhana://history`). Kotlin changes need a native rebuild (`./gradlew assembleRelease` in `android/`), not just Metro. Their `android/build/` output is gitignored.
 
 ### Path alias
 
