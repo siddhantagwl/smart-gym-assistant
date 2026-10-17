@@ -16,9 +16,10 @@ export default function IdleMode(props: {
   weekly?: MuscleVolume[];
   plan?: PlannedExercise[];
   gym: string;
+  gymAuto?: boolean; // gym was preselected by GPS auto-detect
   onGymChange: (gym: string) => void;
 }) {
-  const { colors, onStart, onLogSauna, todayFocus, weekly, plan, gym, onGymChange } = props;
+  const { colors, onStart, onLogSauna, todayFocus, weekly, plan, gym, gymAuto, onGymChange } = props;
 
   // Starts a session; with a plan, its exercises go into Up next in order
   // (the first one loads into the picker as soon as the session mounts).
@@ -85,7 +86,12 @@ export default function IdleMode(props: {
               <Text numberOfLines={1} style={{ color: gym ? "#ddd" : "#888", fontSize: 13, fontWeight: "600", flexShrink: 1 }}>
                 📍 {gym || "Gym"}
               </Text>
-              <Text style={{ color: "#888", fontSize: 12, marginLeft: 4 }}>▾</Text>
+              {gymAuto ? (
+                // Picked by GPS auto-detect (services/gymLocation.ts).
+                <Text style={{ color: "#3BAF75", fontSize: 10, fontWeight: "700", marginLeft: 4 }}>auto</Text>
+              ) : (
+                <Text style={{ color: "#888", fontSize: 12, marginLeft: 4 }}>▾</Text>
+              )}
             </Pressable>
           )}
         />

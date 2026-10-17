@@ -10,6 +10,7 @@ import { buildSession, BuilderLibraryItem, BuilderLogEntry } from "@/domain/sess
 import { computeTodayFocus, TodayFocus } from "@/domain/todayFocus";
 import { MuscleVolume, weeklyVolume } from "@/domain/weeklyVolume";
 import { loadSelectedGym, saveSelectedGym } from "@/services/gymPreference";
+import { detectGym, learnGymLocation } from "@/services/gymLocation";
 
 import IdleMode from "@/components/home/IdleMode";
 import ActiveMode from "@/components/home/ActiveMode";
@@ -88,6 +89,28 @@ export default function HomeScreen() {
   useEffect(() => {
     loadSelectedGym().then(setGym);
   }, []);
+
+  // GPS gym auto-detect (services/gymLocation.ts): on Home with nothing
+  // running, switch the 📍 pill to the known gym you're at. A gym you picked
+  // yourself wins for 2 hours.
+  const [gymAuto, setGymAuto] = useState(false);
+  const manualGymAtRef = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (activeSession || pendingSession) return;
+      let alive = true;
+      detectGym().then((found) => {
+        if (!alive || !found) return;
+        if (Date.now() - manualGymAtRef.current < 2 * 60 * 60 * 1000) return;
+        setGym(found);
+        saveSelectedGym(found);
+        setGymAuto(true);
+      });
+      return () => {
+        alive = false;
+      };
+    }, [activeSession, pendingSession]),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -242,7 +265,10 @@ export default function HomeScreen() {
             weekly={weekly}
             plan={plan}
             gym={gym}
+            gymAuto={gymAuto}
             onGymChange={(g) => {
+              manualGymAtRef.current = Date.now();
+              setGymAuto(false);
               setGym(g);
               saveSelectedGym(g);
             }}
@@ -256,6 +282,8 @@ export default function HomeScreen() {
                 gym: session.gym ?? "",
               });
               setActiveSession(session);
+              // Remember where this gym is, for auto-detect next time.
+              learnGymLocation(session.gym ?? "");
             }}
             onLogSauna={() => setSaunaOpen(true)}
           />
