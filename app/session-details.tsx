@@ -24,6 +24,7 @@ import {
 import { deleteSession, getAllSessions } from "@/db/sessions";
 import Svg, { Polyline } from "react-native-svg";
 import SetBreakdown from "@/components/SetBreakdown";
+import WatchHeartRate from "@/components/WatchHeartRate";
 
 const LB_TO_KG = 0.45359237;
 
@@ -310,6 +311,7 @@ export default function SessionDetailsScreen() {
                   </Text>
                 )}
               </View>
+              <WatchHeartRate start={startTime} end={endTime} />
             </>
           )}
           {Array.isArray(sessionLabels) && sessionLabels.length > 0 ? (
