@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 4×1 strip. updatePeriodMillis: hourly re-render so the week rolls over on
+     Monday even if the app isn't opened (dates are stored, the week is
+     computed at render time). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  android:minWidth="250dp"
+  android:minHeight="40dp"
+  android:targetCellWidth="4"
+  android:targetCellHeight="1"
+  android:minResizeWidth="180dp"
+  android:resizeMode="horizontal"
+  android:updatePeriodMillis="3600000"
+  android:initialLayout="@layout/week_widget"
+  android:previewLayout="@layout/week_widget"
+  android:description="@string/week_widget_description"
+  android:widgetCategory="home_screen" />

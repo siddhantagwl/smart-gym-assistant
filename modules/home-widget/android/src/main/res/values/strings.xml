@@ -1,0 +1,4 @@
+<resources>
+  <string name="week_widget_label">Sadhana · this week</string>
+  <string name="week_widget_description">This week\'s training days, with a Start button</string>
+</resources>
