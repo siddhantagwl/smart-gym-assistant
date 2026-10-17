@@ -23,6 +23,16 @@ const REST_ID = "rest";
 const NUDGE_ID = "rest-nudge";
 const NUDGE_AFTER_SECONDS = 30;
 
+// Buttons on the rest notifications. Tapping one opens the app, which applies
+// it to the running rest (services/restActions.ts → ActiveSession).
+export type RestAction = "plus30" | "skip";
+export const REST_ACTIONS: { id: RestAction; title: string }[] = [
+  { id: "plus30", title: "+30s" },
+  { id: "skip", title: "Skip rest" },
+];
+// expo category carrying the same buttons on the alert + nudge.
+const REST_CATEGORY_ID = "rest-actions";
+
 // Default expo-notifications behavior is to suppress notifications while the
 // app is foregrounded. We want the buzz even if the user is staring at the
 // rest screen — so let them through.
@@ -82,6 +92,15 @@ export async function setupNotifications(): Promise<boolean> {
       vibrationPattern: null,
     });
   }
+
+  await Notifications.setNotificationCategoryAsync(
+    REST_CATEGORY_ID,
+    REST_ACTIONS.map((a) => ({
+      identifier: a.id,
+      buttonTitle: a.title,
+      options: { opensAppToForeground: true },
+    })),
+  ).catch(() => {});
 
   const existing = await Notifications.getPermissionsAsync();
   if (existing.granted) return true;
@@ -162,7 +181,15 @@ export function showRestNotifications(
       // Native: countdown ticks by itself in the shade / lock screen, and on
       // Android 16 shows as a Live Update chip. Same "rest" slot, so the alert
       // below still replaces it.
-      RestLive.post(REST_ID, REST_STATUS_CHANNEL_ID, t.start.title, t.start.body, Date.now() + seconds * 1000);
+      RestLive.post(
+        REST_ID,
+        REST_STATUS_CHANNEL_ID,
+        t.start.title,
+        t.start.body,
+        Date.now() + seconds * 1000,
+        REST_ACTIONS.map((a) => a.id),
+        REST_ACTIONS.map((a) => a.title),
+      );
     } else {
       await Notifications.scheduleNotificationAsync({
         identifier: REST_ID,
@@ -172,12 +199,12 @@ export function showRestNotifications(
     }
     await Notifications.scheduleNotificationAsync({
       identifier: REST_ID,
-      content: { title: t.done.title, body: t.done.body, sound: "default" },
+      content: { title: t.done.title, body: t.done.body, sound: "default", categoryIdentifier: REST_CATEGORY_ID },
       trigger: alertTrigger(seconds),
     });
     await Notifications.scheduleNotificationAsync({
       identifier: NUDGE_ID,
-      content: { title: t.nudge.title, body: t.nudge.body, sound: "default" },
+      content: { title: t.nudge.title, body: t.nudge.body, sound: "default", categoryIdentifier: REST_CATEGORY_ID },
       trigger: alertTrigger(seconds + NUDGE_AFTER_SECONDS),
     });
     if (__DEV__) console.log(`[notif] rest-${kind} notice posted, alert in ${seconds}s`);

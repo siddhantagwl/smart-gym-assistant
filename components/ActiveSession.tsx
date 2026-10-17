@@ -7,6 +7,7 @@ import {
   showRestNotifications,
 } from "@/services/notifications";
 import { armRestPip, disarmRestPip } from "@/modules/rest-pip";
+import { subscribeRestActions } from "@/services/restActions";
 import { Animated, LayoutAnimation, Pressable, Text, TextInput, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import Svg, { Circle } from "react-native-svg";
@@ -555,6 +556,28 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   // Session screen gone (ended / discarded): no floating timer on leaving the app.
   useEffect(() => () => disarmRestPip(), []);
 
+  // +30s / Skip rest tapped on a rest notification (the tap opened the app).
+  // Same as the in-app Skip rest; +30s keeps the rest's start and gives at
+  // least 30s from now.
+  function handleRestAction(action: "plus30" | "skip") {
+    const startedAt = restStartRef.current;
+    const kind = restKindRef.current;
+    const details = restDetailsRef.current;
+    if (!startedAt || !kind || !details) return; // no rest running
+    if (action === "skip") {
+      stopRestTimer(true);
+      return;
+    }
+    const elapsed = secondsBetween(new Date(), startedAt);
+    const total = Math.max((restTotalRef.current ?? 0) + 30, elapsed + 30);
+    startRestTimer(total, kind, details, startedAt);
+  }
+  const restActionRef = useRef(handleRestAction);
+  useEffect(() => {
+    restActionRef.current = handleRestAction;
+  });
+  useEffect(() => subscribeRestActions((a) => restActionRef.current(a)), []);
+
   function formatDuration(totalSeconds: number) {
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
@@ -633,6 +656,10 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     return { exercise: name.trim() || "Exercise", log };
   }
 
+  // The running rest's target and notification details, for the +30s button.
+  const restTotalRef = useRef<number | null>(null);
+  const restDetailsRef = useRef<RestDetails | null>(null);
+
   // `startedAt` lets Undo resume a rest that began before the exercise was finished.
   function startRestTimer(
     duration: number,
@@ -658,6 +685,8 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     restStartRef.current = startedAt;
     restKindRef.current = kind;
+    restTotalRef.current = duration;
+    restDetailsRef.current = details;
     // Buzz once when the countdown reaches 0 while the app is open (a resumed
     // rest that's already past 0 doesn't buzz again).
     let buzzed = remaining <= 0;
@@ -702,6 +731,8 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       restStartRef.current = null;
     }
     restKindRef.current = null;
+    restTotalRef.current = null;
+    restDetailsRef.current = null;
 
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
