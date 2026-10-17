@@ -1,9 +1,11 @@
-import { ReactNode, useMemo, useState, useEffect, useRef } from "react";
+import { ReactNode, useCallback, useMemo, useState, useEffect, useRef } from "react";
+import { useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Animated } from "react-native";
 import { View, Text, Pressable, TextInput, Keyboard, ScrollView } from "react-native";
 import { SetEntry, WeightUnit } from "@/domain/exercise";
 import { formatSetLabel, formatSetLoad, SetColumn } from "@/components/SetBreakdown";
+import { captureVolumeDown } from "@/modules/volume-keys";
 
 const KG_PER_LB = 0.45359237;
 
@@ -392,6 +394,19 @@ export default function AddExercise({
       setSetNow(new Date());
     }
   }
+
+  // Volume-down = the set button while this screen is focused and an exercise
+  // is active (same debounce + haptic). Elsewhere the volume keys stay normal.
+  const setButtonRef = useRef(onSetButton);
+  useEffect(() => {
+    setButtonRef.current = onSetButton;
+  });
+  useFocusEffect(
+    useCallback(() => {
+      if (!isExerciseActive) return;
+      return captureVolumeDown(() => setButtonRef.current());
+    }, [isExerciseActive]),
+  );
 
   // Finish Exercise is hold-to-confirm: a quick tap only shows a hint.
   const HOLD_MS = 600;

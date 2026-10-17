@@ -131,6 +131,14 @@ Three cooperating pieces, all keyed off `restStartRef`:
 
 **Android battery optimization caveat:** Android's Doze mode can delay scheduled notifications by 10-30+ seconds when the device is idle (screen off, in pocket — exactly the rest scenario). To get on-time delivery, the user must set the app to "Unrestricted" battery in system Settings. We don't request the `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission programmatically; that's a documented one-time per-device setup. The breathing-cat ring animation (`Animated.timing` on `restRingProgress`) is also JS-driven and will visually drift on long backgrounds — known cosmetic, not blocking.
 
+### Volume-down = set button
+
+`modules/volume-keys` (local Expo module) wraps the activity window's `Window.Callback` to swallow `KEYCODE_VOLUME_DOWN` and emit `onVolumeDown` while enabled. `AddExercise` enables it via `captureVolumeDown` only while its screen is focused (`useFocusEffect`) and `isExerciseActive`, and routes presses to `onSetButton` (Start ↔ Finish Set, 700ms debounce, haptic). Volume-up and every other state keep normal volume keys; key events only arrive while the app is on screen.
+
+### Native modules
+
+Local Expo modules live in `modules/` (autolinked, Android only, JS wrappers no-op elsewhere): `rest-pip` (floating timer), `rest-live` (live countdown notification + buttons), `volume-keys`. Kotlin changes need a native rebuild (`./gradlew assembleRelease` in `android/`), not just Metro. Their `android/build/` output is gitignored.
+
 ### Path alias
 
 `@/*` maps to repo root (`tsconfig.json`). Use it for all cross-directory imports — e.g. `@/db/sessions`, `@/components/AddExercise`.
