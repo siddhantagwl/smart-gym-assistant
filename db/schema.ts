@@ -43,6 +43,18 @@ export function initDb() {
         );
     `);
 
+    // Where each gym is (learned when a session starts there) — for
+    // preselecting the gym on Home. Phone-only, not synced to Sheets.
+    db.execSync(`
+        CREATE TABLE IF NOT EXISTS gym_locations (
+            gym TEXT PRIMARY KEY NOT NULL,
+            lat REAL NOT NULL,
+            lon REAL NOT NULL,
+            samples INTEGER NOT NULL DEFAULT 1,
+            updated_at TEXT NOT NULL
+        );
+    `);
+
     // Migrations: bring older databases up to the current schema.
     // CREATE TABLE IF NOT EXISTS won't add columns to a pre-existing table,
     // so any column added since the original schema must be ALTER-ed in here.
