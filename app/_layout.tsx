@@ -39,6 +39,14 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="session-details" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen
+          name="preferences"
+          options={{
+            title: "Workout preferences",
+            headerStyle: { backgroundColor: "#000" },
+            headerTintColor: "#fff",
+          }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

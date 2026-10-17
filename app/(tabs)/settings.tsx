@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Sharing from "expo-sharing";
 import Constants from "expo-constants";
 import { useToast } from "@/components/ui/Toast";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 
 import { getAllExercises } from "@/db/exercises";
 import { getLoggedExercisesNotInLibrary } from "@/db/exerciseLibrary";
@@ -40,6 +40,7 @@ export default function SettingsScreen() {
   const [showDebug, setShowDebug] = useState(false);
   // Confirmations fade in at the bottom; errors still use Alert.
   const toast = useToast();
+  const router = useRouter();
   const [showSessions, setShowSessions] = useState(false);
   const [showExercises, setShowExercises] = useState(false);
   const [lastLibrarySync, setLastLibrarySync] = useState<string | null>(null);
@@ -214,6 +215,26 @@ export default function SettingsScreen() {
           </Text>
         </View>
       )}
+
+      <Pressable
+        onPress={() => router.push("/preferences")}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: "#333",
+          backgroundColor: "#111",
+          marginBottom: 16,
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
+        <Text style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}>⚙ Workout preferences</Text>
+        <Text style={{ color: "#888", fontSize: 16 }}>›</Text>
+      </Pressable>
 
       <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 8 }}>
         Local backup
