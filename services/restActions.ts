@@ -5,14 +5,14 @@
 import * as Notifications from "expo-notifications";
 
 import { RestLive } from "@/modules/rest-live";
-import { REST_ACTIONS, RestAction } from "@/services/notifications";
+import { REST_ACTION_IDS, RestAction } from "@/services/notifications";
 
 // An expo response for a notification older than this is stale (tapped while
 // no session screen was mounted) — ignore it.
 const MAX_RESPONSE_AGE_MS = 15 * 60 * 1000;
 
 function asAction(id: string | null | undefined): RestAction | null {
-  return REST_ACTIONS.find((a) => a.id === id)?.id ?? null;
+  return REST_ACTION_IDS.find((a) => a === id) ?? null;
 }
 
 export function subscribeRestActions(onAction: (action: RestAction) => void): () => void {
