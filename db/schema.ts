@@ -43,6 +43,15 @@ export function initDb() {
         );
     `);
 
+    // Workout preferences (services/preferences.ts): key → JSON value.
+    // Phone-only, not synced.
+    db.execSync(`
+        CREATE TABLE IF NOT EXISTS preferences (
+            key TEXT PRIMARY KEY NOT NULL,
+            value TEXT NOT NULL
+        );
+    `);
+
     // Where each gym is (learned when a session starts there) — for
     // preselecting the gym on Home. Phone-only, not synced to Sheets.
     db.execSync(`

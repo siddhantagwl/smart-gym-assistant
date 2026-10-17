@@ -1,4 +1,5 @@
 // Rest countdown target after Finish Set, by exercise type (library tags).
+// Defaults below; the user can change each in Workout preferences.
 // The countdown is only a target — actual rest is still measured from
 // wall-clock, so going over/under never loses data.
 //   compound  (squat, bench, rows…) → 2:30
@@ -8,12 +9,18 @@
 
 export type RestTarget = { seconds: number; label: string };
 
-export const DEFAULT_REST: RestTarget = { seconds: 90, label: "default" };
+// Seconds per type; the user's values come from Workout preferences.
+export type RestTargets = { compound: number; isolation: number; cardio: number; other: number };
 
-export function restTargetFor(tags: string[] | null | undefined): RestTarget {
+export const DEFAULT_REST_TARGETS: RestTargets = { compound: 150, isolation: 75, cardio: 60, other: 90 };
+
+export function restTargetFor(
+  tags: string[] | null | undefined,
+  targets: RestTargets = DEFAULT_REST_TARGETS,
+): RestTarget {
   const t = new Set((tags ?? []).map((x) => x.trim().toLowerCase()));
-  if (t.has("compound")) return { seconds: 150, label: "compound" };
-  if (t.has("isolation")) return { seconds: 75, label: "isolation" };
-  if (t.has("cardio")) return { seconds: 60, label: "cardio" };
-  return DEFAULT_REST;
+  if (t.has("compound")) return { seconds: targets.compound, label: "compound" };
+  if (t.has("isolation")) return { seconds: targets.isolation, label: "isolation" };
+  if (t.has("cardio")) return { seconds: targets.cardio, label: "cardio" };
+  return { seconds: targets.other, label: "default" };
 }
