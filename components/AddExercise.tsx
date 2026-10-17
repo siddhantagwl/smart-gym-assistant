@@ -6,6 +6,7 @@ import { View, Text, Pressable, TextInput, Keyboard, ScrollView } from "react-na
 import { SetEntry, WeightUnit } from "@/domain/exercise";
 import { formatSetLabel, formatSetLoad, SetColumn } from "@/components/SetBreakdown";
 import { captureVolumeDown } from "@/modules/volume-keys";
+import { usePrefs } from "@/services/preferences";
 
 const KG_PER_LB = 0.45359237;
 
@@ -396,16 +397,18 @@ export default function AddExercise({
   }
 
   // Volume-down = the set button while this screen is focused and an exercise
-  // is active (same debounce + haptic). Elsewhere the volume keys stay normal.
+  // is active (same debounce + haptic), if on in Workout preferences.
+  // Elsewhere the volume keys stay normal.
+  const { volumeDownSet } = usePrefs();
   const setButtonRef = useRef(onSetButton);
   useEffect(() => {
     setButtonRef.current = onSetButton;
   });
   useFocusEffect(
     useCallback(() => {
-      if (!isExerciseActive) return;
+      if (!isExerciseActive || !volumeDownSet) return;
       return captureVolumeDown(() => setButtonRef.current());
-    }, [isExerciseActive]),
+    }, [isExerciseActive, volumeDownSet]),
   );
 
   // Finish Exercise is hold-to-confirm: a quick tap only shows a hint.

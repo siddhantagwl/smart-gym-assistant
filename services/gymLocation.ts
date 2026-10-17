@@ -1,4 +1,5 @@
-// Gym auto-detect by GPS (foreground only — no background tracking).
+// Gym auto-detect by GPS (foreground only — no background tracking). Off in
+// Workout preferences → both functions do nothing.
 // - learnGymLocation(gym): on Start session, remember where this gym is. The
 //   first call asks for location permission (in context); the session starts
 //   either way.
@@ -6,6 +7,7 @@
 import * as Location from "expo-location";
 
 import { addGymLocationFix, getGymLocations, GymLocation } from "@/db/gymLocations";
+import { getPrefs } from "@/services/preferences";
 
 const NEAR_M = 250; // "at this gym"
 const MAX_FIX_ACCURACY_M = 100; // ignore worse fixes when learning
@@ -36,6 +38,7 @@ async function currentFix(): Promise<Location.LocationObject | null> {
 
 export async function detectGym(): Promise<string | null> {
   try {
+    if (!getPrefs().gymAutoDetect) return null;
     const gyms = getGymLocations();
     if (gyms.length === 0) return null;
     const perm = await Location.getForegroundPermissionsAsync();
@@ -50,7 +53,7 @@ export async function detectGym(): Promise<string | null> {
 }
 
 export async function learnGymLocation(gym: string): Promise<void> {
-  if (!gym.trim()) return;
+  if (!gym.trim() || !getPrefs().gymAutoDetect) return;
   try {
     let perm = await Location.getForegroundPermissionsAsync();
     if (!perm.granted && perm.canAskAgain) perm = await Location.requestForegroundPermissionsAsync();

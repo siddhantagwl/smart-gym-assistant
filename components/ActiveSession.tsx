@@ -22,7 +22,8 @@ const REST_RING_RADIUS = (REST_RING_SIZE - REST_RING_STROKE) / 2;
 const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
 import { ExerciseLibraryItem, getAllLibraryExercises, groupMovements } from "@/db/exerciseLibrary";
 import { suggestNext } from "@/domain/progression";
-import { DEFAULT_REST, restTargetFor } from "@/domain/restTarget";
+import { restTargetFor } from "@/domain/restTarget";
+import { getPrefs, restTargetsOf, usePrefs } from "@/services/preferences";
 import { equipmentOf, isGymScoped, weightUnitSuffix } from "@/domain/movement";
 import { overlapHint, sessionCoverage } from "@/domain/patternCoverage";
 import {
@@ -406,13 +407,15 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     setSessionExercises(rows);
   }, [activeSession.id]);
 
-  // Rest countdown target by exercise type (domain/restTarget.ts).
+  // Rest countdown target by exercise type (domain/restTarget.ts), with the
+  // seconds from Workout preferences.
+  const prefs = usePrefs();
   const restTarget = useMemo(() => {
     const lib =
       (exerciseLibraryId && exerciseLibrary.find((l) => l.id === exerciseLibraryId)) ||
       exerciseLibrary.find((l) => l.name.toLowerCase() === exerciseName.trim().toLowerCase());
-    return lib ? restTargetFor(lib.tags) : DEFAULT_REST;
-  }, [exerciseLibraryId, exerciseName, exerciseLibrary]);
+    return restTargetFor(lib?.tags, restTargetsOf(prefs));
+  }, [exerciseLibraryId, exerciseName, exerciseLibrary, prefs]);
 
   // "Try today" target from the last 3 logs of this exercise. Recomputed when
   // the exercise, display unit (kg/lb step) or this session's logs change.
@@ -556,10 +559,10 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   // Session screen gone (ended / discarded): no floating timer on leaving the app.
   useEffect(() => () => disarmRestPip(), []);
 
-  // +30s / Skip rest tapped on a rest notification (the tap opened the app).
-  // Same as the in-app Skip rest; +30s keeps the rest's start and gives at
-  // least 30s from now.
-  function handleRestAction(action: "plus30" | "skip") {
+  // +N s / Skip rest tapped on a rest notification (the tap opened the app).
+  // Same as the in-app Skip rest; +N keeps the rest's start and gives at
+  // least N s from now (N = Workout preferences → Button).
+  function handleRestAction(action: "plus" | "skip") {
     const startedAt = restStartRef.current;
     const kind = restKindRef.current;
     const details = restDetailsRef.current;
@@ -568,8 +571,9 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
       stopRestTimer(true);
       return;
     }
+    const plus = getPrefs().plusSeconds;
     const elapsed = secondsBetween(new Date(), startedAt);
-    const total = Math.max((restTotalRef.current ?? 0) + 30, elapsed + 30);
+    const total = Math.max((restTotalRef.current ?? 0) + plus, elapsed + plus);
     startRestTimer(total, kind, details, startedAt);
   }
   const restActionRef = useRef(handleRestAction);
@@ -676,8 +680,9 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     // Quiet "resting" notice now, alert when the rest ends; replaces any previous one.
     showRestNotifications(remaining, duration, kind, details);
-    // Leaving the app during this rest opens the mini floating timer.
-    armRestPip(
+    // Leaving the app during this rest opens the mini floating timer (if on).
+    if (!getPrefs().floatingTimer) disarmRestPip();
+    else armRestPip(
       new Date(startedAt.getTime() + duration * 1000),
       kind === "set" ? `${details.exercise} · set ${details.log.length + 1}` : "Switch exercise",
       kind,
@@ -1358,7 +1363,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     // Start transition rest after finishing exercise
     setRestType("transition");
-    startRestTimer(120, "transition", restDetails(exerciseName, [...setLogRef.current]));
+    startRestTimer(getPrefs().switchSeconds, "transition", restDetails(exerciseName, [...setLogRef.current]));
 
     resetExerciseState();
 
@@ -1415,6 +1420,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
         restTargetFor(
           (u.libraryId && exerciseLibrary.find((l) => l.id === u.libraryId)?.tags) ||
             exerciseLibrary.find((l) => l.name === u.name)?.tags,
+          restTargetsOf(getPrefs()),
         ).seconds,
         "set",
         restDetails(u.name, u.setLog),

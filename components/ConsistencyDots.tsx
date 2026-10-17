@@ -4,11 +4,11 @@
 // after today are left blank. Tap a day to see what you did; tap again to hide.
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import { usePrefs } from "@/services/preferences";
 
 const WEEKS = 12;
 const DOT = 12;
 const GAP = 4;
-const TARGET_DAYS = 3; // a week "on target" has this many training days
 
 // Shades for 1 – 4 workload levels (sets that day). Your sessions run about
 // 9 – 25 sets, so the steps split that range.
@@ -42,6 +42,8 @@ export default function ConsistencyDots({
   now?: Date;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
+  // A week "on target" has this many training days (Workout preferences).
+  const targetDays = usePrefs().weeklyTargetDays;
 
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const monday = new Date(today);
@@ -61,7 +63,7 @@ export default function ConsistencyDots({
   );
   const weekCounts = columns.map((col) => col.filter((c) => c.info).length);
   const total = weekCounts.reduce((a, b) => a + b, 0);
-  const onTarget = weekCounts.filter((n) => n >= TARGET_DAYS).length;
+  const onTarget = weekCounts.filter((n) => n >= targetDays).length;
   const thisWeek = weekCounts[WEEKS - 1];
 
   const picked = selected ? columns.flat().find((c) => c.key === selected) : undefined;
@@ -140,7 +142,7 @@ export default function ConsistencyDots({
             {total} {total === 1 ? "day" : "days"}
           </Text>
           <Text style={{ color: "#999", fontSize: 12, marginTop: 4 }} numberOfLines={1}>
-            {TARGET_DAYS}+ day weeks
+            {targetDays}+ day weeks
           </Text>
           <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
             {onTarget} / {WEEKS}

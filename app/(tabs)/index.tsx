@@ -11,6 +11,7 @@ import { computeTodayFocus, TodayFocus } from "@/domain/todayFocus";
 import { MuscleVolume, weeklyVolume } from "@/domain/weeklyVolume";
 import { loadSelectedGym, saveSelectedGym } from "@/services/gymPreference";
 import { detectGym, learnGymLocation } from "@/services/gymLocation";
+import { getPrefs } from "@/services/preferences";
 
 import IdleMode from "@/components/home/IdleMode";
 import ActiveMode from "@/components/home/ActiveMode";
@@ -99,6 +100,7 @@ export default function HomeScreen() {
     useCallback(() => {
       if (activeSession || pendingSession) return;
       let alive = true;
+      if (!getPrefs().gymAutoDetect) setGymAuto(false);
       detectGym().then((found) => {
         if (!alive || !found) return;
         if (Date.now() - manualGymAtRef.current < 2 * 60 * 60 * 1000) return;

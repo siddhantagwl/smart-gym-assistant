@@ -8,11 +8,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, Text } from "react-native";
 
 import { HealthConnect, WatchStats } from "@/modules/health-connect";
+import { usePrefs } from "@/services/preferences";
 
 type State = { kind: "hidden" } | { kind: "connect" } | { kind: "stats"; stats: WatchStats };
 
 export default function WatchHeartRate({ start, end }: { start: string | null; end: string | null }) {
   const [state, setState] = useState<State>({ kind: "hidden" });
+  const { heartRateLine } = usePrefs(); // Workout preferences → off hides it
 
   const load = useCallback(async () => {
     if (!HealthConnect?.isAvailable() || !start || !end) return setState({ kind: "hidden" });
@@ -25,7 +27,7 @@ export default function WatchHeartRate({ start, end }: { start: string | null; e
     load().catch(() => setState({ kind: "hidden" }));
   }, [load]);
 
-  if (state.kind === "hidden") return null;
+  if (!heartRateLine || state.kind === "hidden") return null;
 
   if (state.kind === "connect") {
     return (
