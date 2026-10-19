@@ -43,6 +43,7 @@ export default function IdleMode(props: {
           weekly={weekly ?? []}
           plan={plan ?? []}
           onStartPlan={(items) => startSession(items)}
+          gym={gym}
         />
       ) : null}
 

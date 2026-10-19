@@ -14,14 +14,20 @@ import { PlannedExercise } from "@/domain/sessionBuilder";
 
 const BAR_TARGET = "#43a047"; // validated (dataviz) on the #111 sheet
 const BAR_OFF = "#FFC107"; // low / high — always labelled in text too
+// Add-on muscles (skipped last time, now due — domain/todayFocus.ts): blue +
+// "⁺" everywhere they appear, so they read as extras on top of the rotation.
+const ADD_ON = "#64B5F6";
 
 export default function TodayFocusCard({
   focus,
   weekly,
   plan,
   onStartPlan,
+  gym,
 }: {
   focus: TodayFocus;
+  // The 📍 pill's gym — the plan prefers equipment used there (sessionBuilder).
+  gym: string;
   weekly: MuscleVolume[];
   plan: PlannedExercise[];
   onStartPlan: (items: PlannedExercise[]) => void;
@@ -38,7 +44,19 @@ export default function TodayFocusCard({
     router.navigate({ pathname: "/exercises", params: { muscle, t: String(Date.now()) } });
   }
 
-  const focusSet = new Set(focus.focus);
+  const focusSet = new Set([...focus.focus, ...focus.addOns.map((a) => a.muscle)]);
+  // "Chest + Triceps + Traps⁺" with the add-ons in blue.
+  const title = (
+    <>
+      {focus.focus.join(" + ")}
+      {focus.addOns.map((a) => (
+        <Text key={a.muscle} style={{ color: ADD_ON }}>
+          {" + "}
+          {a.muscle}⁺
+        </Text>
+      ))}
+    </>
+  );
   const heading = focus.trainedToday ? "Next" : "Today";
 
   return (
@@ -68,7 +86,7 @@ export default function TodayFocusCard({
           style={{ color: "#cfe9d4", fontSize: 14, fontWeight: "600", flexShrink: 1 }}
           numberOfLines={1}
         >
-          🎯 {heading}: {focus.focus.join(" + ")}
+          🎯 {heading}: {title}
         </Text>
         {focus.comeback ? <Text style={{ color: "#FFC107", fontSize: 13 }}>  ⚠</Text> : null}
         <Text style={{ color: "#7bc47f", fontSize: 16, marginLeft: 6 }}>›</Text>
@@ -79,10 +97,15 @@ export default function TodayFocusCard({
         <Text style={{ color: "#7bc47f", fontSize: 12, fontWeight: "700", letterSpacing: 0.8 }}>
           {focus.trainedToday ? "NEXT UP" : "TODAY'S FOCUS"}
         </Text>
-        <Text style={{ color: "#fff", fontSize: 20, fontWeight: "700", marginTop: 4 }}>
-          {focus.focus.join(" + ")}
-        </Text>
+        <Text style={{ color: "#fff", fontSize: 20, fontWeight: "700", marginTop: 4 }}>{title}</Text>
         <Text style={{ color: "#aaa", fontSize: 13, marginTop: 4 }}>{focus.reason}</Text>
+
+        {focus.addOns.map((a) => (
+          <Text key={a.muscle} style={{ color: ADD_ON, fontSize: 13, marginTop: 6 }}>
+            <Text style={{ fontWeight: "700" }}>{a.muscle}⁺ added</Text>
+            <Text style={{ color: "#999" }}> · {a.reason}</Text>
+          </Text>
+        ))}
 
         {focus.trainedToday ? (
           <Text style={{ color: "#888", fontSize: 12, marginTop: 4 }}>
@@ -99,8 +122,14 @@ export default function TodayFocusCard({
         {plan.length > 0 ? (
           <View style={{ marginTop: 14 }}>
             <Text style={{ color: "#999", fontSize: 12, marginBottom: 6 }}>
-              {focus.trainedToday ? "Suggested next session" : "Suggested session"} · covers what
-              you haven&apos;t done this week
+              {focus.trainedToday ? "Suggested next session" : "Suggested session"}
+              {gym ? (
+                <>
+                  {" at "}
+                  <Text style={{ color: "#ddd", fontWeight: "700" }}>📍 {gym}</Text>
+                </>
+              ) : null}{" "}
+              · covers what you haven&apos;t done this week
             </Text>
             {plan.map((p, i) => {
               const off = dropped.has(p.libraryId);
@@ -113,7 +142,10 @@ export default function TodayFocusCard({
                     <Text style={{ color: "#eee", fontSize: 13 }} numberOfLines={1}>
                       {i + 1}. {p.name}
                     </Text>
-                    <Text style={{ color: "#888", fontSize: 12 }} numberOfLines={1}>
+                    <Text
+                      style={{ color: p.reason.startsWith("add-on") ? ADD_ON : "#888", fontSize: 12 }}
+                      numberOfLines={1}
+                    >
                       {p.reason}
                     </Text>
                   </View>
