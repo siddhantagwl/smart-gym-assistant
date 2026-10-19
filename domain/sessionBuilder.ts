@@ -52,6 +52,8 @@ export function buildSession(
   log: BuilderLogEntry[],
   gym: string,
   now: Date = new Date(),
+  // Today's focus add-ons (domain/todayFocus.ts): one exercise each, after the main muscles.
+  addOns: string[] = [],
 ): PlannedExercise[] {
   const t = now.getTime();
   const byId = new Map(library.map((l) => [l.id, l]));
@@ -74,7 +76,8 @@ export function buildSession(
   });
 
   const out: PlannedExercise[] = [];
-  muscles.forEach((muscle) => {
+  const isAddOn = (m: string) => addOns.includes(m) && !muscles.includes(m);
+  [...muscles, ...addOns.filter((m) => !muscles.includes(m))].forEach((muscle) => {
     const items = library.filter((l) => l.primaryMuscle === muscle);
     const patterns = new Map<string, BuilderLibraryItem[]>();
     items.forEach((i) => patterns.set(i.pattern, [...(patterns.get(i.pattern) ?? []), i]));
@@ -95,7 +98,7 @@ export function buildSession(
           a.pattern.localeCompare(b.pattern),
       );
 
-    ranked.slice(0, BIG_MUSCLES.has(muscle) ? 3 : 2).forEach(({ pattern, variants, weekSets }) => {
+    ranked.slice(0, isAddOn(muscle) ? 1 : BIG_MUSCLES.has(muscle) ? 3 : 2).forEach(({ pattern, variants, weekSets }) => {
       const pool = variants.some((v) => !weekVariants.has(v.id))
         ? variants.filter((v) => !weekVariants.has(v.id))
         : variants;
@@ -115,7 +118,13 @@ export function buildSession(
           : weekVariants.has(pick.id)
             ? `${p} · done this week, least so far`
             : `${p} · ${doneThisWeek.join(", ")} this week → ${pick.variant}`;
-      out.push({ muscle, pattern, libraryId: pick.id, name: pick.name, reason });
+      out.push({
+        muscle,
+        pattern,
+        libraryId: pick.id,
+        name: pick.name,
+        reason: isAddOn(muscle) ? `add-on · ${reason}` : reason,
+      });
     });
   });
   return out;

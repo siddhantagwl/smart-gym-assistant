@@ -135,7 +135,14 @@ export default function HomeScreen() {
   const plan = useMemo(
     () =>
       todayFocus && todayFocus.focus.length > 0
-        ? buildSession(todayFocus.focus, builderLibrary, builderLog, gym)
+        ? buildSession(
+            todayFocus.focus,
+            builderLibrary,
+            builderLog,
+            gym,
+            new Date(),
+            todayFocus.addOns.map((a) => a.muscle),
+          )
         : [],
     [todayFocus, builderLibrary, builderLog, gym],
   );

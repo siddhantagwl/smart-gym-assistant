@@ -10,6 +10,10 @@
 //    muscle it's most often paired with.
 // Recovering = trained today or yesterday. A break of 7+ days adds an
 // "ease back in" note.
+// 4. Add-ons (split mode): a rotation muscle that was skipped the last time
+//    its combo was done (e.g. no shrugs on the last leg day) and is now due
+//    (7+ days, not recovering) is added to today with one exercise and the
+//    reason — at most 2, longest gap first.
 
 export type TrainingLogEntry = { startTime: string; muscles: string[] };
 
@@ -19,9 +23,13 @@ export type MuscleStatus = {
   recovering: boolean;
 };
 
+export type FocusAddOn = { muscle: string; reason: string };
+
 export type TodayFocus = {
   focus: string[];
   reason: string;
+  // Small extras on top of `focus` (see 4. above); [] when none.
+  addOns: FocusAddOn[];
   // Present when the user hasn't trained for a while.
   comeback: { daysOff: number; note: string } | null;
   trainedToday: string[] | null;
@@ -30,6 +38,8 @@ export type TodayFocus = {
 };
 
 const WINDOW_DAYS = 56;
+const ADD_ON_DAYS = 7; // a skipped rotation muscle is "due" after this many days
+const MAX_ADD_ONS = 2;
 const MAX_SESSIONS = 12;
 const IGNORED = new Set(["Cardio", "Sauna"]);
 
@@ -110,11 +120,16 @@ export function computeTodayFocus(
   // of its muscles — not only an exact label match. Otherwise a leg day
   // labelled "Legs + Shoulders" doesn't count for the usual "Legs + Shoulders
   // + Traps", and that combo gets suggested again 3 days later.
+  // comboLastMuscles: what that session actually trained (for add-ons).
+  const comboLastMuscles = new Map<string, string[]>();
   sessions.forEach((s) => {
     recurring.forEach((k) => {
       const combo = comboMuscles.get(k) ?? [];
       const hit = combo.filter((m) => s.muscles.includes(m)).length;
-      if (hit * 2 >= combo.length && s.day > (comboLastDay.get(k) ?? -Infinity)) comboLastDay.set(k, s.day);
+      if (hit * 2 >= combo.length && s.day > (comboLastDay.get(k) ?? -Infinity)) {
+        comboLastDay.set(k, s.day);
+        comboLastMuscles.set(k, s.muscles);
+      }
     });
   });
 
@@ -127,6 +142,28 @@ export function computeTodayFocus(
     const ago = today - (comboLastDay.get(pick) ?? today);
     const rotation = byOldest.map((k) => comboMuscles.get(k) ?? []);
 
+    // Add-ons: rotation muscles skipped last time their combo was done, now due.
+    const focusMuscles = comboMuscles.get(pick) ?? [];
+    const addOns: (FocusAddOn & { gap: number })[] = [];
+    if (ready.length > 0) {
+      recurring.forEach((k) => {
+        const combo = comboMuscles.get(k) ?? [];
+        const lastDone = comboLastMuscles.get(k) ?? combo;
+        combo
+          .filter((m) => !lastDone.includes(m))
+          .forEach((m) => {
+            const gap = daysSince(m);
+            if (focusMuscles.includes(m) || isRecovering(m) || gap < ADD_ON_DAYS) return;
+            if (addOns.some((a) => a.muscle === m)) return;
+            addOns.push({
+              muscle: m,
+              gap,
+              reason: `skipped on your last ${combo.join(" + ")} day (${dayLabel(comboLastDay.get(k) ?? today)}) · last trained ${agoText(gap)}`,
+            });
+          });
+      });
+    }
+
     let reason: string;
     if (ready.length === 0) {
       reason = "Everything in your rotation was hit in the last 2 days — consider a rest or light day";
@@ -137,8 +174,12 @@ export function computeTodayFocus(
     }
 
     return {
-      focus: comboMuscles.get(pick) ?? [],
+      focus: focusMuscles,
       reason,
+      addOns: addOns
+        .sort((a, b) => b.gap - a.gap)
+        .slice(0, MAX_ADD_ONS)
+        .map(({ muscle, reason: why }) => ({ muscle, reason: why })),
       comeback,
       trainedToday,
       muscles,
@@ -152,6 +193,7 @@ export function computeTodayFocus(
     return {
       focus: muscles.length ? [muscles[0].muscle] : [],
       reason: "Everything you train regularly was hit in the last 2 days — consider a rest or light day",
+      addOns: [],
       comeback,
       trainedToday,
       muscles,
@@ -176,11 +218,22 @@ export function computeTodayFocus(
   return {
     focus: partner ? [first, partner] : [first],
     reason: `${first} is your longest gap · ${agoText(daysSince(first))}`,
+    addOns: [],
     comeback,
     trainedToday,
     muscles,
     rotation: null,
   };
+}
+
+// dayIndex() → "Thu 16 Oct".
+function dayLabel(day: number) {
+  return new Date(day * 86_400_000).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
 }
 
 function agoText(days: number) {
