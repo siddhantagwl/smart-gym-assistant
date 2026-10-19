@@ -106,6 +106,18 @@ export function computeTodayFocus(
   const covered = window.filter((s) => recurring.includes(keyOf(s.muscles))).length;
   const isSplit = recurring.length >= 1 && window.length >= 3 && covered / window.length >= 0.6;
 
+  // A combo was "last done" on the latest session that trained at least half
+  // of its muscles — not only an exact label match. Otherwise a leg day
+  // labelled "Legs + Shoulders" doesn't count for the usual "Legs + Shoulders
+  // + Traps", and that combo gets suggested again 3 days later.
+  sessions.forEach((s) => {
+    recurring.forEach((k) => {
+      const combo = comboMuscles.get(k) ?? [];
+      const hit = combo.filter((m) => s.muscles.includes(m)).length;
+      if (hit * 2 >= combo.length && s.day > (comboLastDay.get(k) ?? -Infinity)) comboLastDay.set(k, s.day);
+    });
+  });
+
   if (isSplit) {
     const byOldest = [...recurring].sort(
       (a, b) => (comboLastDay.get(a) ?? 0) - (comboLastDay.get(b) ?? 0),
