@@ -4,6 +4,9 @@
 //   first call asks for location permission (in context); the session starts
 //   either way.
 // - detectGym(): on Home (idle), the known gym within NEAR_M of you, if any.
+// Neither ever prompts when the phone's Location toggle is off: a fresh fix
+// would make expo-location show Google's "Turn on device location" dialog —
+// on every Home visit. They just skip until location is on.
 import * as Location from "expo-location";
 
 import { addGymLocationFix, getGymLocations, GymLocation } from "@/db/gymLocations";
@@ -31,6 +34,11 @@ function nearest(lat: number, lon: number, gyms: GymLocation[]): { gym: string; 
   return best;
 }
 
+// Location toggle on? (Checked before any fresh fix — see top.)
+async function locationOn(): Promise<boolean> {
+  return Location.hasServicesEnabledAsync().catch(() => false);
+}
+
 async function currentFix(): Promise<Location.LocationObject | null> {
   const recent = await Location.getLastKnownPositionAsync({ maxAge: 2 * 60 * 1000, requiredAccuracy: 200 });
   return recent ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
@@ -42,7 +50,7 @@ export async function detectGym(): Promise<string | null> {
     const gyms = getGymLocations();
     if (gyms.length === 0) return null;
     const perm = await Location.getForegroundPermissionsAsync();
-    if (!perm.granted) return null;
+    if (!perm.granted || !(await locationOn())) return null;
     const fix = await currentFix();
     if (!fix) return null;
     const n = nearest(fix.coords.latitude, fix.coords.longitude, gyms);
@@ -57,7 +65,7 @@ export async function learnGymLocation(gym: string): Promise<void> {
   try {
     let perm = await Location.getForegroundPermissionsAsync();
     if (!perm.granted && perm.canAskAgain) perm = await Location.requestForegroundPermissionsAsync();
-    if (!perm.granted) return;
+    if (!perm.granted || !(await locationOn())) return;
     const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
     if ((fix.coords.accuracy ?? Infinity) > MAX_FIX_ACCURACY_M) return;
     const { latitude: lat, longitude: lon } = fix.coords;

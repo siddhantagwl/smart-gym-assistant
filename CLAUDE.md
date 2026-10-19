@@ -141,7 +141,7 @@ Three cooperating pieces, all keyed off `restStartRef`:
 
 ### Gym auto-detect (GPS)
 
-`services/gymLocation.ts` (expo-location, foreground only). `learnGymLocation(gym)` runs on Start session: asks for "while using" location the first time, takes a fix (≤100 m accuracy) and averages it into `gym_locations` (`db/gymLocations.ts`, phone-only, not synced) — skipped when a *different* known gym is within 250 m, so a wrong pick doesn't teach the wrong spot. `detectGym()` runs on Home focus when idle and returns the known gym within 250 m; Home preselects it with a green "auto" tag on the 📍 pill. A manual pick wins for 2 hours.
+`services/gymLocation.ts` (expo-location, foreground only). `learnGymLocation(gym)` runs on Start session: asks for "while using" location the first time, takes a fix (≤100 m accuracy) and averages it into `gym_locations` (`db/gymLocations.ts`, phone-only, not synced) — skipped when a *different* known gym is within 250 m, so a wrong pick doesn't teach the wrong spot. `detectGym()` runs on Home focus when idle and returns the known gym within 250 m; Home preselects it with a green "auto" tag on the 📍 pill. A manual pick wins for 2 hours. Both skip when the phone's Location toggle is off (`hasServicesEnabledAsync`) — a fresh fix with location off makes expo-location show Google's "Turn on device location" dialog, which used to pop on every Home visit.
 
 ### Native modules
 
