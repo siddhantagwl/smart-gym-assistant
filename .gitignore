@@ -46,3 +46,4 @@ app-example
 # Gradle output of local native modules (modules/*/android)
 modules/*/android/build/
 modules/*/android/.cxx/
+modules/*/android/.gradle/
