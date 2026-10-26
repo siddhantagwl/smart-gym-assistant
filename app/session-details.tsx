@@ -16,6 +16,7 @@ import { WeightUnit } from "@/domain/exercise";
 import { getAllLibraryExercises } from "@/db/exerciseLibrary";
 import { weightUnitSuffix } from "@/domain/movement";
 import {
+  deleteExercise,
   getAllExercises,
   getExercisesForSession,
   StoredExercise,
@@ -128,6 +129,29 @@ export default function SessionDetailsScreen() {
 
     setExercises(getExercisesForSession(sessionId));
     setEditing(null);
+  }
+
+  // From the edit dialog; asks first since it can't be undone.
+  function confirmDeleteExercise() {
+    const item = editing;
+    if (!item) return;
+    const w = item.weightKg > 0 ? ` @ ${item.weightKg}kg` : "";
+    Alert.alert(
+      `Delete ${item.name}?`,
+      `${item.sets} × ${item.reps}${w} will be removed from this session. This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            deleteExercise(item.id);
+            setExercises(getExercisesForSession(sessionId));
+            setEditing(null);
+          },
+        },
+      ],
+    );
   }
 
   function handleDeleteSession() {
@@ -811,6 +835,22 @@ export default function SessionDetailsScreen() {
                 <Text style={{ color: "#00ff99", fontWeight: "700" }}>Save</Text>
               </Pressable>
             </View>
+
+            <Pressable
+              onPress={confirmDeleteExercise}
+              hitSlop={6}
+              style={({ pressed }) => ({
+                alignSelf: "center",
+                marginTop: 14,
+                paddingVertical: 6,
+                paddingHorizontal: 12,
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <Text style={{ color: "#ff6b6b", fontSize: 14, fontWeight: "600" }}>
+                Delete exercise
+              </Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
