@@ -506,7 +506,33 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   // ----- Up next queue (filled from the Exercises tab) -----
   const upNext = useUpNextItems(activeSession.id);
 
+  // The queued item sitting in the picker, not started yet. Typing over it,
+  // clearing it or picking a different movement puts it back at the front of
+  // the queue instead of losing it; Start Exercise consumes it.
+  const queuedPickRef = useRef<UpNextItem | null>(null);
+  // Set when we put an item back ourselves, so the auto-load below doesn't
+  // immediately pull it into the (just cleared) picker again.
+  const skipAutoLoadRef = useRef(false);
+
+  function returnQueuedPick() {
+    const item = queuedPickRef.current;
+    if (!item) return;
+    queuedPickRef.current = null;
+    skipAutoLoadRef.current = true;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    pushFrontUpNext(activeSession.id, item);
+  }
+
+  function isQueuedPickMovement(movementKey: string) {
+    const item = queuedPickRef.current;
+    if (!item) return false;
+    const movement =
+      item.movement ?? exerciseLibrary.find((x) => x.id === item.libraryId)?.movement;
+    return movement === movementKey;
+  }
+
   function loadIntoPicker(item: UpNextItem) {
+    queuedPickRef.current = item;
     if (item.movement && movements.some((m) => m.movement === item.movement)) {
       selectMovement(item.movement);
       return;
@@ -529,6 +555,10 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     const justFinished = prevExerciseActiveForQueue.current && !isExerciseActive;
     prevUpNextLen.current = upNext.length;
     prevExerciseActiveForQueue.current = isExerciseActive;
+    if (skipAutoLoadRef.current) {
+      skipAutoLoadRef.current = false;
+      return;
+    }
 
     if ((grew || justFinished) && !isExerciseActive && !exerciseName.trim()) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -544,7 +574,9 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
     const taken = takeUpNext(activeSession.id, item.name);
     if (!taken) return;
     const current = exerciseName.trim();
-    if (current && exerciseLibraryId) {
+    if (queuedPickRef.current) {
+      returnQueuedPick();
+    } else if (current && exerciseLibraryId) {
       pushFrontUpNext(activeSession.id, { libraryId: exerciseLibraryId, name: current });
     }
     loadIntoPicker(taken);
@@ -1209,6 +1241,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
   function startExercise() {
     if (!exerciseName.trim()) return;
     clearUndo();
+    queuedPickRef.current = null;
 
     setIsExerciseActive(true);
     setCurrentExerciseStart(new Date());
@@ -1386,7 +1419,9 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
 
     // Whatever the Up next queue auto-loaded into the picker goes back to the front.
     const picked = exerciseName.trim();
-    if (picked && exerciseLibraryId) {
+    if (queuedPickRef.current) {
+      returnQueuedPick();
+    } else if (picked && exerciseLibraryId) {
       pushFrontUpNext(activeSession.id, { libraryId: exerciseLibraryId, name: picked });
     }
 
@@ -1718,7 +1753,10 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
           variants={currentVariants}
           selectedVariantId={exerciseLibraryId}
           onSelectVariant={selectVariant}
-          onSelectMovement={selectMovement}
+          onSelectMovement={(key) => {
+            if (!isQueuedPickMovement(key)) returnQueuedPick();
+            selectMovement(key);
+          }}
           overlapHint={overlap}
           exerciseName={exerciseName}
           sets={sets}
@@ -1728,6 +1766,7 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
           onWeightUnitChange={setWeightUnit}
           note={exerciseNote}
           onExerciseNameChange={(text) => {
+            returnQueuedPick();
             setExerciseName(text);
             setExerciseLibraryId(null);
           }}
