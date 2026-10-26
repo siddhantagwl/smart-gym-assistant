@@ -13,6 +13,7 @@ import * as Haptics from "expo-haptics";
 import Svg, { Circle } from "react-native-svg";
 
 import AddExercise from "@/components/AddExercise";
+import GymPicker from "@/components/home/GymPicker";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -61,6 +62,8 @@ type Props = {
   colors: Colors;
   // Home scrolls back up so the timers are visible after Finish Set / Finish Exercise / Undo.
   onScrollToTop?: () => void;
+  // 📍 in the header: fix the session's gym without ending it.
+  onGymChange?: (gym: string) => void;
 };
 
 // Rest countdown colour: amber, orange in the last 10 s, red once over time.
@@ -177,7 +180,7 @@ function SessionExerciseList({
   );
 }
 
-export default function ActiveSession({ activeSession, onEnd, colors, onScrollToTop }: Props) {
+export default function ActiveSession({ activeSession, onEnd, colors, onScrollToTop, onGymChange }: Props) {
   // Screen stays on for the whole session so it doesn't lock between sets.
   // Tied to this component's lifetime: it stays mounted while the user is on
   // other tabs, and unmounts on save/discard, which releases the lock.
@@ -1547,13 +1550,39 @@ export default function ActiveSession({ activeSession, onEnd, colors, onScrollTo
           minHeight: 30,
         }}
       >
-        <Text style={{ color: colors.text, fontSize: 15 }}>
-          Started{" "}
-          {activeSession.startTime.toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", flexShrink: 1, marginRight: 8 }}>
+          <Text style={{ color: colors.text, fontSize: 15 }}>
+            Started{" "}
+            {activeSession.startTime.toLocaleTimeString("en-GB", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+          {onGymChange ? (
+            <GymPicker
+              value={gym}
+              onChange={onGymChange}
+              renderTrigger={(openGym) => (
+                <Pressable
+                  onPress={openGym}
+                  hitSlop={8}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    flexShrink: 1,
+                    marginLeft: 8,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Text numberOfLines={1} style={{ color: "#9ca3af", fontSize: 15, flexShrink: 1 }}>
+                    ·  📍 {gym || "Gym"}
+                  </Text>
+                  <Text style={{ color: "#888", fontSize: 12, marginLeft: 4 }}>▾</Text>
+                </Pressable>
+              )}
+            />
+          ) : null}
+        </View>
 
         {!isExerciseActive ? (
           <Pressable

@@ -6,8 +6,9 @@ export default function ActiveMode(props: {
   onEnd: () => void;
   colors: { text: string; accent: string };
   onScrollToTop?: () => void;
+  onGymChange?: (gym: string) => void;
 }) {
-  const { session, onEnd, colors, onScrollToTop } = props;
+  const { session, onEnd, colors, onScrollToTop, onGymChange } = props;
 
   return (
     <ActiveSession
@@ -15,6 +16,7 @@ export default function ActiveMode(props: {
       onEnd={onEnd}
       colors={colors}
       onScrollToTop={onScrollToTop}
+      onGymChange={onGymChange}
     />
   );
 }

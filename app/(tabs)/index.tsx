@@ -4,7 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Session } from "@/domain/session";
-import { StoredSession, getActiveSession, insertSession, endSession, getWorkoutStats, getTrainingLog, getSetsByMuscleSince, getLogEntriesSince } from "@/db/sessions";
+import { StoredSession, getActiveSession, insertSession, endSession, setSessionGym, getWorkoutStats, getTrainingLog, getSetsByMuscleSince, getLogEntriesSince } from "@/db/sessions";
 import { getAllLibraryExercises } from "@/db/exerciseLibrary";
 import { buildSession, BuilderLibraryItem, BuilderLogEntry } from "@/domain/sessionBuilder";
 import { computeTodayFocus, TodayFocus } from "@/domain/todayFocus";
@@ -96,6 +96,14 @@ export default function HomeScreen() {
   // yourself wins for 2 hours.
   const [gymAuto, setGymAuto] = useState(false);
   const manualGymAtRef = useRef(0);
+
+  // A gym picked by hand wins over auto-detect for a while.
+  function pickGym(g: string) {
+    manualGymAtRef.current = Date.now();
+    setGymAuto(false);
+    setGym(g);
+    saveSelectedGym(g);
+  }
   useFocusEffect(
     useCallback(() => {
       if (activeSession || pendingSession) return;
@@ -233,6 +241,14 @@ export default function HomeScreen() {
               onEnd={() => setActiveSession(null)}
               colors={{ text: colors.text, accent: colors.accent }}
               onScrollToTop={scrollToSessionTop}
+              onGymChange={(g) => {
+                // Fixing the gym mid-session: the session row, Home's pill
+                // and (if it's right here) the gym's location all follow.
+                setSessionGym(activeSession.id, g);
+                setActiveSession({ ...activeSession, gym: g });
+                pickGym(g);
+                learnGymLocation(g);
+              }}
             />
           </View>
         )}
@@ -275,12 +291,7 @@ export default function HomeScreen() {
             plan={plan}
             gym={gym}
             gymAuto={gymAuto}
-            onGymChange={(g) => {
-              manualGymAtRef.current = Date.now();
-              setGymAuto(false);
-              setGym(g);
-              saveSelectedGym(g);
-            }}
+            onGymChange={pickGym}
             onStart={(session: Session) => {
               insertSession({
                 id: session.id,
